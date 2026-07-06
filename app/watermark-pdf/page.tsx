@@ -1,0 +1,47 @@
+import type { Metadata } from "next";
+import { siteConfig } from "@/config/site";
+import { WatermarkPdfTool } from "@/components/tools/watermark-pdf-tool";
+import { ToolPageShell } from "@/components/tools/tool-page-shell";
+
+const title = "Watermark PDF Online - Add Text or Image Watermark | LiftPDF";
+const description =
+  "Add text or image watermarks to PDF files online for free. Customize position, opacity, rotation and style with LiftPDF.";
+
+export const metadata: Metadata = {
+  title: { absolute: title },
+  description,
+  alternates: { canonical: "/watermark-pdf" },
+  openGraph: { title, description, url: `${siteConfig.url}/watermark-pdf` },
+  twitter: { card: "summary_large_image", title, description },
+};
+
+export default function WatermarkPdfPage() {
+  return (
+    <ToolPageShell
+      title="Watermark PDF Online"
+      description="Add a custom text or image watermark to every PDF page with live preview and precise styling controls."
+      seoTitle="Add text or image watermarks"
+      seoText="LiftPDF lets you watermark PDFs directly in your browser. Choose a text or image watermark, adjust position, opacity and rotation, preview every page and download a finished PDF without a backend API."
+      currentHref="/watermark-pdf"
+      faq={[
+        {
+          question: "Can I add an image watermark?",
+          answer:
+            "Yes. Upload PNG, JPG, JPEG or WEBP images and LiftPDF will place the image watermark on each page.",
+        },
+        {
+          question: "Can I repeat the watermark across the page?",
+          answer:
+            "Yes. Use Tile / Repeat to place the watermark multiple times across every PDF page.",
+        },
+        {
+          question: "Are my PDFs uploaded to a server?",
+          answer:
+            "No. Preview and watermark generation run client-side with PDF.js, canvas and pdf-lib.",
+        },
+      ]}
+    >
+      <WatermarkPdfTool />
+    </ToolPageShell>
+  );
+}
