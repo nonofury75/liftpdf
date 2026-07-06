@@ -9,6 +9,9 @@ export const defaultMetadata: Metadata = {
   },
   description: siteConfig.description,
   applicationName: siteConfig.name,
+  verification: {
+    google: "fZO1i1fR7-xh1-1IVLwz-vzuf-kLKw0FEmmSCMWBqLU",
+  },
   alternates: {
     canonical: "/",
   },
