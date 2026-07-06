@@ -32,3 +32,5 @@ tests/e2e/.fixtures/
 
 # typescript
 *.tsbuildinfo
+
+.vercel
