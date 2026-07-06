@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { PDFDocument } from "pdf-lib";
 import { ensureFixtures, fixturesDir } from "./fixtures";
 
@@ -24,8 +24,45 @@ const toolPages = [
   { href: "/pdf-to-text", title: "PDF to Text" },
 ];
 
+const clientRuntimeErrors = new WeakMap<TestInfo, string[]>();
+
 test.beforeAll(async () => {
   await ensureFixtures();
+});
+
+test.beforeEach(async ({ page }, testInfo) => {
+  const errors: string[] = [];
+  clientRuntimeErrors.set(testInfo, errors);
+
+  page.on("pageerror", (error) => {
+    errors.push(`pageerror: ${error.stack ?? error.message}`);
+  });
+
+  page.on("requestfailed", (request) => {
+    const url = request.url();
+    const errorText = request.failure()?.errorText ?? "";
+    const isCriticalAsset =
+      url.includes("/_next/") ||
+      url.includes("/qpdf/") ||
+      url.includes("pdf.worker") ||
+      url.endsWith(".wasm");
+
+    if (isCriticalAsset && !errorText.includes("ERR_ABORTED")) {
+      errors.push(
+        `requestfailed: ${url} ${errorText}`.trim(),
+      );
+    }
+  });
+});
+
+test.afterEach(async ({ page }, testInfo) => {
+  const errors = clientRuntimeErrors.get(testInfo) ?? [];
+
+  if (errors.length === 0) {
+    await expect(page.getByText(/Application error|Erreur d'application/i)).toHaveCount(0);
+  }
+
+  expect(errors).toEqual([]);
 });
 
 test.describe("navigation and catalog", () => {
