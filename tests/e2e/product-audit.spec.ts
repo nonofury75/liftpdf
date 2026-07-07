@@ -60,6 +60,11 @@ test.afterEach(async ({ page }, testInfo) => {
 
   if (errors.length === 0) {
     await expect(page.getByText(/Application error|Erreur d'application/i)).toHaveCount(0);
+    await expect(
+      page.getByText(
+        /Something went wrong|The app needs to reload|Quelque chose s'est mal passé|L'outil n'a pas pu se charger/i,
+      ),
+    ).toHaveCount(0);
   }
 
   expect(errors).toEqual([]);
@@ -192,6 +197,7 @@ test.describe("critical PDF workflows", () => {
 
     await page.goto("/protect-pdf");
     await uploadFirstFile(page, fixtures.text1);
+    await expect(page.getByText(/1 page/i).first()).toBeVisible();
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByLabel("Confirm password", { exact: true }).fill(password);
     const protectedBytes = await downloadBytes(

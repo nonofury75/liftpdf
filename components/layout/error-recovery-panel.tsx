@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type ErrorRecoveryPanelProps = {
   error: Error & { digest?: string };
@@ -18,6 +18,8 @@ export function ErrorRecoveryPanel({
   framed = false,
 }: ErrorRecoveryPanelProps) {
   useRecoverFromClientError(error);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const errorDetails = useMemo(() => createErrorDetails(error), [error]);
 
   const content = (
     <>
@@ -53,6 +55,35 @@ export function ErrorRecoveryPanel({
           Clear cache
         </button>
       </div>
+      <div className="mt-8 w-full max-w-2xl rounded-xl border border-slate-200 bg-slate-50 p-4 text-left">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-sm font-semibold text-slate-950">
+            Error details
+          </h2>
+          <button
+            type="button"
+            onClick={async () => {
+              const copied = await copyText(errorDetails);
+              setCopyStatus(
+                copied
+                  ? "Copied error details."
+                  : "Could not copy. Select the text manually.",
+              );
+            }}
+            className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600"
+          >
+            Copy error details
+          </button>
+        </div>
+        <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-white p-3 text-xs leading-5 text-slate-700">
+          {errorDetails}
+        </pre>
+        {copyStatus ? (
+          <p className="mt-2 text-sm font-medium text-slate-600" aria-live="polite">
+            {copyStatus}
+          </p>
+        ) : null}
+      </div>
     </>
   );
 
@@ -69,6 +100,54 @@ export function ErrorRecoveryPanel({
       {content}
     </main>
   );
+}
+
+function createErrorDetails(error: Error & { digest?: string }) {
+  const now = new Date().toISOString();
+  const route =
+    typeof window === "undefined"
+      ? "unknown"
+      : `${window.location.pathname}${window.location.search}`;
+  const browser =
+    typeof navigator === "undefined" ? "unknown" : navigator.userAgent;
+
+  return [
+    `timestamp: ${now}`,
+    `route: ${route}`,
+    `browser: ${browser}`,
+    `error.name: ${error.name || "Unknown"}`,
+    `error.message: ${error.message || "No message"}`,
+    `error.digest: ${error.digest ?? "none"}`,
+    "componentStack: unavailable in Next.js App Router error.tsx",
+    "error.stack:",
+    error.stack ?? "No stack",
+  ].join("\n");
+}
+
+async function copyText(text: string) {
+  try {
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.clipboard &&
+      typeof navigator.clipboard.writeText === "function"
+    ) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "true");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    return copied;
+  } catch {
+    return false;
+  }
 }
 
 function useRecoverFromClientError(error: Error) {

@@ -12,6 +12,9 @@ export const defaultMetadata: Metadata = {
   verification: {
     google: "fZO1i1fR7-xh1-1IVLwz-vzuf-kLKw0FEmmSCMWBqLU",
   },
+  other: {
+    google: "notranslate",
+  },
   alternates: {
     canonical: "/",
   },
