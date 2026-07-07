@@ -2,7 +2,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
-export const fixturesDir = path.join(process.cwd(), "tests", "e2e", ".fixtures");
+export const fixturesDir = path.join(
+  process.cwd(),
+  "tests",
+  "e2e",
+  `.fixtures-${process.env.TEST_WORKER_INDEX ?? "default"}`,
+);
 
 const onePixelPng =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
@@ -46,11 +51,11 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     createTextPdf(paths.text100, 100),
     createTextPdf(paths.text200, 200),
     createImageOnlyPdf(paths.imageOnly),
-    fs.writeFile(paths.invalidPdf, "not a pdf"),
-    fs.writeFile(paths.emptyPdf, ""),
-    fs.writeFile(paths.png, Buffer.from(onePixelPng, "base64")),
-    fs.writeFile(paths.jpg, Buffer.from(onePixelJpg, "base64")),
-    fs.writeFile(paths.webp, Buffer.from(onePixelWebp, "base64")),
+    writeFileAtomic(paths.invalidPdf, Buffer.from("not a pdf")),
+    writeFileAtomic(paths.emptyPdf, Buffer.from("")),
+    writeFileAtomic(paths.png, Buffer.from(onePixelPng, "base64")),
+    writeFileAtomic(paths.jpg, Buffer.from(onePixelJpg, "base64")),
+    writeFileAtomic(paths.webp, Buffer.from(onePixelWebp, "base64")),
   ]);
 
   return paths;
@@ -79,7 +84,7 @@ async function createTextPdf(filePath: string, pageCount: number) {
     });
   }
 
-  await fs.writeFile(filePath, await pdf.save());
+  await writeFileAtomic(filePath, Buffer.from(await pdf.save()));
 }
 
 async function createImageOnlyPdf(filePath: string) {
@@ -108,5 +113,14 @@ async function createImageOnlyPdf(filePath: string) {
     color: rgb(0.38, 0.43, 0.5),
   });
 
-  await fs.writeFile(filePath, await pdf.save());
+  await writeFileAtomic(filePath, Buffer.from(await pdf.save()));
+}
+
+async function writeFileAtomic(filePath: string, data: Buffer) {
+  const temporaryPath = `${filePath}.${Date.now()}-${Math.random()
+    .toString(16)
+    .slice(2)}.tmp`;
+
+  await fs.writeFile(temporaryPath, data);
+  await fs.rename(temporaryPath, filePath);
 }

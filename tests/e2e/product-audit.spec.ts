@@ -265,8 +265,15 @@ test.describe("critical PDF workflows", () => {
     await page.goto("/jpg-to-pdf");
     await uploadFirstFile(page, fixtures.jpg);
     await expect(page.getByText(/sample.jpg/i)).toBeVisible();
-    await page.getByRole("button", { name: /^A4$/ }).click();
-    await page.getByRole("button", { name: /^Small$/ }).click();
+    const livePreview = page.getByLabel("Live PDF page preview");
+    await expect(livePreview).toBeVisible();
+    await page.getByRole("button", { name: /^Portrait$/ }).click();
+    await expect(livePreview).toHaveAttribute("data-preview-orientation", "portrait");
+    await page.getByRole("button", { name: /^Landscape$/ }).click();
+    await expect(livePreview).toHaveAttribute("data-preview-orientation", "landscape");
+    await page.getByRole("button", { name: /^Large$/ }).click();
+    await expect(livePreview).toHaveAttribute("data-preview-margin", "large");
+    await page.getByRole("button", { name: /^A4/ }).click();
     await page.getByRole("button", { name: /^Fit$/ }).click();
     const jpgPdf = await generateThenDownloadBytes(
       page,
@@ -291,7 +298,7 @@ test.describe("critical PDF workflows", () => {
     await uploadFirstFile(page, [fixtures.jpg, fixtures.png]);
     await expect(page.getByText(/sample.jpg/i)).toBeVisible();
     await expect(page.getByText(/sample.png/i)).toBeVisible();
-    await page.getByRole("button", { name: /^Letter$/ }).click();
+    await page.getByRole("button", { name: /^Letter/ }).click();
     await page.getByRole("button", { name: /^Landscape$/ }).click();
     await page.getByRole("button", { name: /^Fill$/ }).click();
     const imagesPdf = await generateThenDownloadBytes(

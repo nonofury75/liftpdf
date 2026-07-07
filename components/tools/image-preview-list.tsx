@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { ArrowDown, ArrowUp, ImageIcon, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ImageIcon, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type UploadedImage = {
@@ -16,43 +16,53 @@ type ImagePreviewListProps = {
   images: UploadedImage[];
   onRemove: (id: string) => void;
   onMove: (id: string, direction: "up" | "down") => void;
+  onAddMore?: () => void;
 };
 
 export function ImagePreviewList({
   images,
   onRemove,
   onMove,
+  onAddMore,
 }: ImagePreviewListProps) {
   if (!images.length) {
     return null;
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card">
-      <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3">
+    <div className="rounded-lg border border-border bg-card shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">
+          <h2 className="text-base font-semibold text-foreground">
             Selected images
           </h2>
           <p className="text-sm text-muted-foreground">
             {images.length} {images.length === 1 ? "image" : "images"} ready
           </p>
         </div>
-        <ImageIcon className="size-5 text-primary" aria-hidden="true" />
+        <div className="flex items-center gap-2">
+          {onAddMore ? (
+            <Button type="button" variant="outline" size="sm" onClick={onAddMore}>
+              <Plus className="size-4" aria-hidden="true" />
+              Add more images
+            </Button>
+          ) : null}
+          <ImageIcon className="size-5 text-primary" aria-hidden="true" />
+        </div>
       </div>
 
-      <ul className="divide-y divide-border">
+      <ul className="grid gap-3 p-4">
         {images.map((image, index) => (
           <li
             key={image.id}
-            className="grid gap-4 p-4 sm:grid-cols-[72px_1fr_auto]"
+            className="grid gap-4 rounded-lg border border-border bg-background p-3 sm:grid-cols-[112px_1fr_auto]"
           >
-            <div className="relative size-[72px] overflow-hidden rounded-md border border-border bg-muted">
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-md border border-border bg-muted sm:size-28">
               <Image
                 src={image.previewUrl}
                 alt=""
                 fill
-                sizes="72px"
+                sizes="112px"
                 className="object-cover"
                 unoptimized
               />
@@ -63,12 +73,12 @@ export function ImagePreviewList({
                 {image.file.name}
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {formatFileSize(image.file.size)} · {image.width} ×{" "}
+                {formatFileSize(image.file.size)} - {image.width} x{" "}
                 {image.height}px
               </p>
             </div>
 
-            <div className="flex items-center gap-2 self-center">
+            <div className="flex items-center gap-2 self-center justify-self-start sm:justify-self-end">
               <Button
                 type="button"
                 variant="outline"

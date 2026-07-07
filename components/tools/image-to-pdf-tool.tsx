@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import NextImage from "next/image";
 import { Download, FileCheck2, Loader2, RotateCcw } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
@@ -18,14 +19,19 @@ type ImageToPdfToolProps = {
 
 type ImagePdfPageSize = "auto" | "a4" | "letter";
 type ImagePdfOrientation = "auto" | "portrait" | "landscape";
-type ImagePdfMargin = "none" | "small" | "medium";
+type ImagePdfMargin = "none" | "small" | "large";
 type ImageFitMode = "fit" | "fill";
 
 const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const pageSizeOptions: Array<{ label: string; value: ImagePdfPageSize }> = [
-  { label: "Auto", value: "auto" },
-  { label: "A4", value: "a4" },
-  { label: "Letter", value: "letter" },
+const acceptedImageTypes = "image/jpeg,image/png,image/webp";
+const pageSizeOptions: Array<{
+  label: string;
+  value: ImagePdfPageSize;
+  description?: string;
+}> = [
+  { label: "Auto", value: "auto", description: "Match image ratio" },
+  { label: "A4", value: "a4", description: "210 x 297 mm" },
+  { label: "Letter", value: "letter", description: "8.5 x 11 in" },
 ];
 const orientationOptions: Array<{
   label: string;
@@ -38,7 +44,7 @@ const orientationOptions: Array<{
 const marginOptions: Array<{ label: string; value: ImagePdfMargin }> = [
   { label: "None", value: "none" },
   { label: "Small", value: "small" },
-  { label: "Medium", value: "medium" },
+  { label: "Large", value: "large" },
 ];
 const fitOptions: Array<{ label: string; value: ImageFitMode }> = [
   { label: "Fit", value: "fit" },
@@ -51,7 +57,7 @@ const fixedPageSizes: Record<Exclude<ImagePdfPageSize, "auto">, PageBox> = {
 const marginSizes: Record<ImagePdfMargin, number> = {
   none: 0,
   small: 24,
-  medium: 48,
+  large: 72,
 };
 
 export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
@@ -65,10 +71,22 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const imagesRef = useRef<UploadedImage[]>([]);
   const pdfUrlRef = useRef<string | null>(null);
+  const addMoreInputRef = useRef<HTMLInputElement>(null);
 
   const totalSize = useMemo(
     () => images.reduce((sum, image) => sum + image.file.size, 0),
     [images],
+  );
+  const previewModel = useMemo(
+    () =>
+      createPreviewModel({
+        fitMode,
+        image: images[0],
+        margin,
+        orientation,
+        pageSize,
+      }),
+    [fitMode, images, margin, orientation, pageSize],
   );
 
   useEffect(() => {
@@ -119,6 +137,16 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
     }
 
     setImages((currentImages) => [...currentImages, ...uploadedImages]);
+  }
+
+  function handleAddMoreChange(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFiles = event.target.files;
+
+    if (selectedFiles?.length) {
+      void handleFilesSelected(Array.from(selectedFiles));
+    }
+
+    event.target.value = "";
   }
 
   function handleRemove(id: string) {
@@ -237,9 +265,11 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
-        <ImageUploadZone onFilesSelected={handleFilesSelected} />
+        {!images.length ? (
+          <ImageUploadZone onFilesSelected={handleFilesSelected} />
+        ) : null}
 
         {error ? (
           <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -247,21 +277,40 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
           </p>
         ) : null}
 
-        <ImagePreviewList
-          images={images}
-          onRemove={handleRemove}
-          onMove={handleMove}
-        />
+        {images.length ? (
+          <>
+            <PdfLivePreview
+              image={images[0]}
+              margin={margin}
+              model={previewModel}
+            />
+            <input
+              ref={addMoreInputRef}
+              type="file"
+              accept={acceptedImageTypes}
+              multiple
+              aria-label="Add more images"
+              className="hidden"
+              onChange={handleAddMoreChange}
+            />
+            <ImagePreviewList
+              images={images}
+              onRemove={handleRemove}
+              onMove={handleMove}
+              onAddMore={() => addMoreInputRef.current?.click()}
+            />
+          </>
+        ) : null}
       </div>
 
-      <aside className="h-fit rounded-lg border border-border bg-card p-5">
+      <aside className="h-fit rounded-lg border border-border bg-card p-5 shadow-sm xl:sticky xl:top-24">
         <h2 className="text-lg font-semibold text-foreground">PDF settings</h2>
         <div className="mt-5 space-y-3 text-sm">
-          <SummaryRow label="Page size" value={labelFor(pageSizeOptions, pageSize)} />
           <SummaryRow
             label="Orientation"
             value={labelFor(orientationOptions, orientation)}
           />
+          <SummaryRow label="Page size" value={labelFor(pageSizeOptions, pageSize)} />
           <SummaryRow label="Margins" value={labelFor(marginOptions, margin)} />
           <SummaryRow label="Image fit" value={labelFor(fitOptions, fitMode)} />
           <SummaryRow label="Images" value={String(images.length)} />
@@ -270,6 +319,13 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
 
         <div className="mt-6 space-y-5">
           <OptionGroup
+            label="Page orientation"
+            options={orientationOptions}
+            value={orientation}
+            onChange={setOrientation}
+            onBeforeChange={clearPdfUrl}
+          />
+          <OptionGroup
             label="Page size"
             options={pageSizeOptions}
             value={pageSize}
@@ -277,14 +333,7 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
             onBeforeChange={clearPdfUrl}
           />
           <OptionGroup
-            label="Orientation"
-            options={orientationOptions}
-            value={orientation}
-            onChange={setOrientation}
-            onBeforeChange={clearPdfUrl}
-          />
-          <OptionGroup
-            label="Margins"
+            label="Margin"
             options={marginOptions}
             value={margin}
             onChange={setMargin}
@@ -310,36 +359,30 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
           </Button>
 
           {pdfUrl ? (
-            <Button asChild variant="outline">
-              <a href={pdfUrl} download={downloadFileName}>
-                <Download className="size-4" aria-hidden="true" />
-                Download PDF
-              </a>
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() =>
-                setError("Convert your images before downloading the PDF.")
-              }
-            >
-              <Download className="size-4" aria-hidden="true" />
-              Download PDF
-            </Button>
-          )}
+            <>
+              <p className="rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
+                PDF created successfully.
+              </p>
+              <Button asChild variant="outline">
+                <a href={pdfUrl} download={downloadFileName}>
+                  <Download className="size-4" aria-hidden="true" />
+                  Download PDF
+                </a>
+              </Button>
+              <Button type="button" variant="ghost" onClick={handleReset}>
+                <RotateCcw className="size-4" aria-hidden="true" />
+                Convert another file
+              </Button>
+            </>
+          ) : null}
 
-          <Button type="button" variant="ghost" onClick={handleReset}>
-            <RotateCcw className="size-4" aria-hidden="true" />
-            Reset
-          </Button>
+          {!pdfUrl ? (
+            <Button type="button" variant="ghost" onClick={handleReset}>
+              <RotateCcw className="size-4" aria-hidden="true" />
+              Reset
+            </Button>
+          ) : null}
         </div>
-
-        {pdfUrl ? (
-          <p className="mt-4 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
-            Your PDF is ready to download.
-          </p>
-        ) : null}
       </aside>
     </div>
   );
@@ -347,7 +390,7 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
 
 type OptionGroupProps<T extends string> = {
   label: string;
-  options: Array<{ label: string; value: T }>;
+  options: Array<{ description?: string; label: string; value: T }>;
   value: T;
   onChange: (value: T) => void;
   onBeforeChange: () => void;
@@ -381,7 +424,12 @@ function OptionGroup<T extends string>({
               onChange(option.value);
             }}
           >
-            {option.label}
+            <span className="block">{option.label}</span>
+            {option.description ? (
+              <span className="mt-1 block text-xs font-medium text-muted-foreground">
+                {option.description}
+              </span>
+            ) : null}
           </button>
         ))}
       </div>
@@ -401,6 +449,107 @@ function SummaryRow({ label, value }: SummaryRowProps) {
       <span className="font-semibold text-foreground">{value}</span>
     </div>
   );
+}
+
+type PdfLivePreviewProps = {
+  image: UploadedImage;
+  margin: ImagePdfMargin;
+  model: PreviewModel;
+};
+
+function PdfLivePreview({ image, margin, model }: PdfLivePreviewProps) {
+  return (
+    <section className="rounded-xl border border-border bg-muted/50 p-4 shadow-sm sm:p-6">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">
+            PDF preview
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            The first page updates instantly as you change settings.
+          </p>
+        </div>
+        <span className="rounded-md bg-background px-3 py-1 text-xs font-semibold text-muted-foreground">
+          {Math.round(model.pageWidth)} x {Math.round(model.pageHeight)} pt
+        </span>
+      </div>
+
+      <div className="flex min-h-[360px] items-center justify-center overflow-hidden rounded-lg bg-slate-200/70 p-5 sm:min-h-[520px]">
+        <div
+          aria-label="Live PDF page preview"
+          data-preview-orientation={model.isLandscape ? "landscape" : "portrait"}
+          data-preview-margin={margin}
+          className="relative bg-white shadow-2xl ring-1 ring-black/10 transition-all duration-200"
+          style={{
+            aspectRatio: `${model.pageWidth} / ${model.pageHeight}`,
+            width: model.isLandscape ? "min(100%, 520px)" : "min(78%, 360px)",
+            maxHeight: "460px",
+          }}
+        >
+          <div
+            className="absolute overflow-hidden rounded-sm border border-dashed border-primary/25 bg-primary/5 transition-all duration-200"
+            style={{
+              inset: `${model.marginPercent}%`,
+            }}
+          >
+            <NextImage
+              src={image.previewUrl}
+              alt=""
+              fill
+              sizes="520px"
+              className="transition-all duration-200"
+              unoptimized
+              style={{
+                objectFit: model.fitMode === "fill" ? "cover" : "contain",
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+type PreviewModel = {
+  fitMode: ImageFitMode;
+  isLandscape: boolean;
+  marginPercent: number;
+  pageHeight: number;
+  pageWidth: number;
+};
+
+function createPreviewModel({
+  fitMode,
+  image,
+  margin,
+  orientation,
+  pageSize,
+}: {
+  fitMode: ImageFitMode;
+  image: UploadedImage | undefined;
+  margin: ImagePdfMargin;
+  orientation: ImagePdfOrientation;
+  pageSize: ImagePdfPageSize;
+}): PreviewModel {
+  const imageWidth = image?.width ?? 595;
+  const imageHeight = image?.height ?? 842;
+  const marginSize = marginSizes[margin];
+  const pageBox = getPageBox({
+    imageHeight,
+    imageWidth,
+    margin: marginSize,
+    orientation,
+    pageSize,
+  });
+  const shortestSide = Math.min(pageBox.width, pageBox.height);
+
+  return {
+    fitMode,
+    isLandscape: pageBox.width > pageBox.height,
+    marginPercent: Math.min(22, (marginSize / shortestSide) * 100),
+    pageHeight: pageBox.height,
+    pageWidth: pageBox.width,
+  };
 }
 
 async function readImageDimensions(src: string) {

@@ -13,11 +13,17 @@ import { cn } from "@/lib/utils";
 
 type ImageUploadZoneProps = {
   onFilesSelected: (files: File[]) => void;
+  buttonLabel?: string;
+  compact?: boolean;
 };
 
 const acceptedImageTypes = "image/jpeg,image/png,image/webp";
 
-export function ImageUploadZone({ onFilesSelected }: ImageUploadZoneProps) {
+export function ImageUploadZone({
+  onFilesSelected,
+  buttonLabel = "Choose files",
+  compact = false,
+}: ImageUploadZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -50,10 +56,15 @@ export function ImageUploadZone({ onFilesSelected }: ImageUploadZoneProps) {
     handleFiles(event.dataTransfer.files);
   }
 
+  function openFilePicker() {
+    inputRef.current?.click();
+  }
+
   return (
     <div
       className={cn(
         "flex min-h-80 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card p-8 text-center shadow-sm transition-colors",
+        compact && "min-h-40 p-5",
         isDragging && "border-primary bg-primary/10 ring-2 ring-primary/20",
       )}
       onDragOver={handleDragOver}
@@ -65,30 +76,41 @@ export function ImageUploadZone({ onFilesSelected }: ImageUploadZoneProps) {
         type="file"
         accept={acceptedImageTypes}
         multiple
-        aria-label="Choose image files"
+        aria-label={buttonLabel}
         className="hidden"
         onChange={handleInputChange}
       />
 
-      <span className="grid size-16 place-items-center rounded-xl bg-primary/10 text-primary">
-        <ImagePlus className="size-8" aria-hidden="true" />
+      <span
+        className={cn(
+          "grid size-16 place-items-center rounded-xl bg-primary/10 text-primary",
+          compact && "size-12",
+        )}
+      >
+        <ImagePlus className={cn("size-8", compact && "size-6")} aria-hidden="true" />
       </span>
 
-      <h2 className="mt-5 text-xl font-semibold text-foreground">
+      <h2
+        className={cn(
+          "mt-5 text-xl font-semibold text-foreground",
+          compact && "mt-3 text-base",
+        )}
+      >
         Drop your images here
       </h2>
-      <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+      <p
+        className={cn(
+          "mt-2 max-w-md text-sm leading-6 text-muted-foreground",
+          compact && "max-w-sm",
+        )}
+      >
         Drop files here or choose files. Upload JPG, JPEG, PNG or WEBP files.
-        Each image will become one A4 PDF page.
+        Each image will become one PDF page.
       </p>
 
-      <Button
-        type="button"
-        className="mt-6"
-        onClick={() => inputRef.current?.click()}
-      >
+      <Button type="button" className="mt-6" onClick={openFilePicker}>
         <Upload className="size-4" aria-hidden="true" />
-        Choose files
+        {buttonLabel}
       </Button>
 
       <div className="mt-5 flex flex-wrap justify-center gap-2">
