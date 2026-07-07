@@ -30,8 +30,8 @@ export function ImagePreviewList({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-md">
+      <div className="flex flex-col gap-3 border-b border-border bg-muted/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-base font-semibold text-foreground">
             Selected images
@@ -42,7 +42,13 @@ export function ImagePreviewList({
         </div>
         <div className="flex items-center gap-2">
           {onAddMore ? (
-            <Button type="button" variant="outline" size="sm" onClick={onAddMore}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-primary/25 bg-background text-primary transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm"
+              onClick={onAddMore}
+            >
               <Plus className="size-4" aria-hidden="true" />
               Add more images
             </Button>
@@ -51,18 +57,18 @@ export function ImagePreviewList({
         </div>
       </div>
 
-      <ul className="grid gap-3 p-4">
+      <ul className="grid gap-4 p-5">
         {images.map((image, index) => (
           <li
             key={image.id}
-            className="grid gap-4 rounded-lg border border-border bg-background p-3 sm:grid-cols-[112px_1fr_auto]"
+            className="grid gap-4 rounded-xl border border-border bg-background p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md sm:grid-cols-[136px_1fr_auto]"
           >
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-md border border-border bg-muted sm:size-28">
+            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-border bg-muted shadow-inner sm:size-[136px]">
               <Image
                 src={image.previewUrl}
                 alt=""
                 fill
-                sizes="112px"
+                sizes="136px"
                 className="object-cover"
                 unoptimized
               />
@@ -78,11 +84,12 @@ export function ImagePreviewList({
               </p>
             </div>
 
-            <div className="flex items-center gap-2 self-center justify-self-start sm:justify-self-end">
+            <div className="grid grid-cols-3 gap-2 self-center justify-self-start sm:grid-cols-1 sm:justify-self-end">
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
+                className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
                 aria-label={`Move ${image.file.name} up`}
                 disabled={index === 0}
                 onClick={() => onMove(image.id, "up")}
@@ -93,6 +100,7 @@ export function ImagePreviewList({
                 type="button"
                 variant="outline"
                 size="icon"
+                className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
                 aria-label={`Move ${image.file.name} down`}
                 disabled={index === images.length - 1}
                 onClick={() => onMove(image.id, "down")}
@@ -103,6 +111,7 @@ export function ImagePreviewList({
                 type="button"
                 variant="outline"
                 size="icon"
+                className="transition-all duration-200 hover:-translate-y-0.5 hover:border-red-200 hover:bg-red-50 hover:text-red-600 hover:shadow-sm"
                 aria-label={`Remove ${image.file.name}`}
                 onClick={() => onRemove(image.id)}
               >

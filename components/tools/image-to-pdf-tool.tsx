@@ -2,7 +2,13 @@
 
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import NextImage from "next/image";
-import { Download, FileCheck2, Loader2, RotateCcw } from "lucide-react";
+import {
+  CheckCircle2,
+  Download,
+  FileCheck2,
+  Loader2,
+  RotateCcw,
+} from "lucide-react";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
 import {
@@ -265,8 +271,8 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
   }
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-      <div className="space-y-6">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
+      <div className="order-1 space-y-6 xl:col-start-1 xl:row-start-1">
         {!images.length ? (
           <ImageUploadZone onFilesSelected={handleFilesSelected} />
         ) : null}
@@ -293,19 +299,13 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
               className="hidden"
               onChange={handleAddMoreChange}
             />
-            <ImagePreviewList
-              images={images}
-              onRemove={handleRemove}
-              onMove={handleMove}
-              onAddMore={() => addMoreInputRef.current?.click()}
-            />
           </>
         ) : null}
       </div>
 
-      <aside className="h-fit rounded-lg border border-border bg-card p-5 shadow-sm xl:sticky xl:top-24">
-        <h2 className="text-lg font-semibold text-foreground">PDF settings</h2>
-        <div className="mt-5 space-y-3 text-sm">
+      <aside className="order-2 h-fit rounded-2xl border border-border bg-card p-6 shadow-md xl:sticky xl:top-24 xl:col-start-2 xl:row-span-2 xl:row-start-1">
+        <h2 className="text-xl font-semibold text-foreground">PDF settings</h2>
+        <div className="mt-5 space-y-3 rounded-xl border border-border bg-muted/30 p-4 text-sm">
           <SummaryRow
             label="Orientation"
             value={labelFor(orientationOptions, orientation)}
@@ -317,7 +317,7 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
           <SummaryRow label="Total size" value={formatFileSize(totalSize)} />
         </div>
 
-        <div className="mt-6 space-y-5">
+        <div className="mt-7 space-y-7">
           <OptionGroup
             label="Page orientation"
             options={orientationOptions}
@@ -348,8 +348,13 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
           />
         </div>
 
-        <div className="mt-6 grid gap-3">
-          <Button type="button" onClick={handleConvert} disabled={isConverting}>
+        <div className="mt-7 grid gap-3">
+          <Button
+            type="button"
+            onClick={handleConvert}
+            disabled={isConverting}
+            className="h-12 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+          >
             {isConverting ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
@@ -360,16 +365,29 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
 
           {pdfUrl ? (
             <>
-              <p className="rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
-                PDF created successfully.
+              <p
+                className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm transition-all duration-200"
+                aria-live="polite"
+              >
+                <CheckCircle2 className="mr-2 inline size-4" aria-hidden="true" />
+                PDF created successfully
               </p>
-              <Button asChild variant="outline">
+              <Button
+                asChild
+                variant="outline"
+                className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
+              >
                 <a href={pdfUrl} download={downloadFileName}>
                   <Download className="size-4" aria-hidden="true" />
                   Download PDF
                 </a>
               </Button>
-              <Button type="button" variant="ghost" onClick={handleReset}>
+              <Button
+                type="button"
+                variant="ghost"
+                className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
+                onClick={handleReset}
+              >
                 <RotateCcw className="size-4" aria-hidden="true" />
                 Convert another file
               </Button>
@@ -384,6 +402,17 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
           ) : null}
         </div>
       </aside>
+
+      {images.length ? (
+        <div className="order-3 xl:col-start-1 xl:row-start-2">
+          <ImagePreviewList
+            images={images}
+            onRemove={handleRemove}
+            onMove={handleMove}
+            onAddMore={() => addMoreInputRef.current?.click()}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -414,7 +443,7 @@ function OptionGroup<T extends string>({
             key={option.value}
             type="button"
             className={cn(
-              "rounded-md border border-border px-3 py-2 text-left text-sm font-medium transition-colors",
+              "rounded-lg border border-border px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm",
               value === option.value
                 ? "border-primary bg-primary/10 text-primary"
                 : "bg-background text-foreground hover:bg-muted",
@@ -444,9 +473,9 @@ type SummaryRowProps = {
 
 function SummaryRow({ label, value }: SummaryRowProps) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-border pb-3 last:border-b-0 last:pb-0">
+    <div className="flex items-center justify-between gap-4 border-b border-border/80 pb-3 last:border-b-0 last:pb-0">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-semibold text-foreground">{value}</span>
+      <span className="text-right font-semibold text-foreground">{value}</span>
     </div>
   );
 }
@@ -459,7 +488,7 @@ type PdfLivePreviewProps = {
 
 function PdfLivePreview({ image, margin, model }: PdfLivePreviewProps) {
   return (
-    <section className="rounded-xl border border-border bg-muted/50 p-4 shadow-sm sm:p-6">
+    <section className="rounded-2xl border border-border bg-card p-4 shadow-md sm:p-6">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-foreground">
@@ -474,20 +503,20 @@ function PdfLivePreview({ image, margin, model }: PdfLivePreviewProps) {
         </span>
       </div>
 
-      <div className="flex min-h-[360px] items-center justify-center overflow-hidden rounded-lg bg-slate-200/70 p-5 sm:min-h-[520px]">
+      <div className="flex min-h-[420px] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 p-3 shadow-inner sm:min-h-[610px] sm:p-5 xl:min-h-[660px]">
         <div
           aria-label="Live PDF page preview"
           data-preview-orientation={model.isLandscape ? "landscape" : "portrait"}
           data-preview-margin={margin}
-          className="relative bg-white shadow-2xl ring-1 ring-black/10 transition-all duration-200"
+          className="relative bg-white shadow-[0_24px_70px_rgba(15,23,42,0.24)] ring-1 ring-black/10 transition-[aspect-ratio,width,max-height,transform,box-shadow] duration-200 ease-out"
           style={{
             aspectRatio: `${model.pageWidth} / ${model.pageHeight}`,
-            width: model.isLandscape ? "min(100%, 520px)" : "min(78%, 360px)",
-            maxHeight: "460px",
+            width: model.isLandscape ? "min(100%, 720px)" : "min(90%, 470px)",
+            maxHeight: "620px",
           }}
         >
           <div
-            className="absolute overflow-hidden rounded-sm border border-dashed border-primary/25 bg-primary/5 transition-all duration-200"
+            className="absolute overflow-hidden rounded-sm border border-dashed border-primary/25 bg-primary/5 transition-[inset,transform] duration-200 ease-out"
             style={{
               inset: `${model.marginPercent}%`,
             }}
@@ -497,10 +526,12 @@ function PdfLivePreview({ image, margin, model }: PdfLivePreviewProps) {
               alt=""
               fill
               sizes="520px"
-              className="transition-all duration-200"
+              className="transition-[object-fit,transform] duration-200 ease-out"
               unoptimized
               style={{
                 objectFit: model.fitMode === "fill" ? "cover" : "contain",
+                transform:
+                  model.fitMode === "fill" ? "scale(1.025)" : "scale(1)",
               }}
             />
           </div>
