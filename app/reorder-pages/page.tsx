@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { ReorderPagesTool } from "@/components/tools/reorder-pages-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
+import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Reorder PDF Pages Online Free | LiftPDF";
 const description =
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/reorder-pages" },
-  openGraph: { title, description, url: `${siteConfig.url}/reorder-pages` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/reorder-pages`,
+    images: [{ url: "/images/seo/reorder-pages/og-image.webp", width: 1200, height: 630, alt: "LiftPDF Reorder Pages" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/reorder-pages/og-image.webp"] },
 };
 
 export default function ReorderPagesPage() {
@@ -23,6 +29,7 @@ export default function ReorderPagesPage() {
       seoTitle="Reorder PDF pages online"
       seoText="LiftPDF lets you preview every page, rearrange the order with drag and drop or accessible move buttons, and export a new PDF while preserving page quality."
       currentHref="/reorder-pages"
+      premiumContent={premiumToolContent.reorderPages}
       faq={[
         {
           question: "Can I reorder PDF pages for free?",

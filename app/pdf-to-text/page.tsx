@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
 import { PdfToTextTool } from "@/components/tools/pdf-to-text-tool";
+import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "PDF to Text Online Free | Extract Text from PDF | LiftPDF";
 const description =
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/pdf-to-text" },
-  openGraph: { title, description, url: `${siteConfig.url}/pdf-to-text` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/pdf-to-text`,
+    images: [{ url: "/images/seo/pdf-to-text/og-image.webp", width: 1200, height: 630, alt: "LiftPDF PDF to Text" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/pdf-to-text/og-image.webp"] },
 };
 
 export default function PdfToTextPage() {
@@ -23,6 +29,7 @@ export default function PdfToTextPage() {
       seoTitle="Extract readable text from PDF files"
       seoText="LiftPDF converts selectable PDF text into a clean plain text file locally in your browser. It does not perform OCR, so scanned or image-only PDFs need a dedicated OCR tool."
       currentHref="/pdf-to-text"
+      premiumContent={premiumToolContent.pdfToText}
       faq={[
         {
           question: "Can I convert PDF to text for free?",

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { ProtectPdfTool } from "@/components/tools/protect-pdf-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
+import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Protect PDF Online Free | Add Password to PDF | LiftPDF";
 const description =
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/protect-pdf" },
-  openGraph: { title, description, url: `${siteConfig.url}/protect-pdf` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/protect-pdf`,
+    images: [{ url: "/images/seo/protect-pdf/og-image.webp", width: 1200, height: 630, alt: "LiftPDF Protect PDF" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/protect-pdf/og-image.webp"] },
 };
 
 export default function ProtectPdfPage() {
@@ -23,6 +29,7 @@ export default function ProtectPdfPage() {
       seoTitle="Protect a PDF with a password online"
       seoText="LiftPDF uses QPDF compiled to WebAssembly to apply real PDF password encryption locally in your browser. Your file and password are never uploaded to a server."
       currentHref="/protect-pdf"
+      premiumContent={premiumToolContent.protectPdf}
       faq={[
         {
           question: "Can I protect a PDF for free?",

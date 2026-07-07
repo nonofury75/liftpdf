@@ -1,5 +1,6 @@
 import { ImageToPdfTool } from "@/components/tools/image-to-pdf-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
+import type { PremiumToolContentData } from "@/components/tools/premium-tool-content";
 
 type FaqItem = {
   question: string;
@@ -19,6 +20,7 @@ type ImageToPdfPageProps = {
   compactRelatedTools?: boolean;
   invalidFileMessage?: string;
   presentation?: "standard" | "showcase";
+  premiumContent?: PremiumToolContentData;
   uploadButtonLabel?: string;
   uploadDescription?: string;
   uploadTitle?: string;
@@ -37,6 +39,7 @@ export function ImageToPdfPage({
   compactRelatedTools,
   invalidFileMessage,
   presentation,
+  premiumContent,
   uploadButtonLabel,
   uploadDescription,
   uploadTitle,
@@ -51,6 +54,7 @@ export function ImageToPdfPage({
       currentHref={currentHref}
       compactHero={compactHero}
       compactRelatedTools={compactRelatedTools}
+      premiumContent={premiumContent}
     >
       <ImageToPdfTool
         acceptedImageTypes={acceptedImageTypes}

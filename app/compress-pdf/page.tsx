@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { CompressPdfTool } from "@/components/tools/compress-pdf-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
+import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Compress PDF Online - Free PDF Compressor | LiftPDF";
 const description =
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/compress-pdf" },
-  openGraph: { title, description, url: `${siteConfig.url}/compress-pdf` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/compress-pdf`,
+    images: [{ url: "/images/seo/compress-pdf/og-image.webp", width: 1200, height: 630, alt: "LiftPDF Compress PDF" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/compress-pdf/og-image.webp"] },
 };
 
 export default function CompressPdfPage() {
@@ -23,6 +29,7 @@ export default function CompressPdfPage() {
       seoTitle="Compress PDF files online"
       seoText="LiftPDF provides a safe first-step PDF compression tool that runs in your browser. It rebuilds the document, keeps every page and removes or minimizes metadata where possible."
       currentHref="/compress-pdf"
+      premiumContent={premiumToolContent.compressPdf}
       faq={[
         {
           question: "Is this advanced PDF compression?",

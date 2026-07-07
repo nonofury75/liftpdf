@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { SplitPdfTool } from "@/components/tools/split-pdf-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
+import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Split PDF Online - Free PDF Splitter | LiftPDF";
 const description =
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/split-pdf" },
-  openGraph: { title, description, url: `${siteConfig.url}/split-pdf` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/split-pdf`,
+    images: [{ url: "/images/seo/split-pdf/og-image.webp", width: 1200, height: 630, alt: "LiftPDF Split PDF" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/split-pdf/og-image.webp"] },
 };
 
 export default function SplitPdfPage() {
@@ -23,6 +29,7 @@ export default function SplitPdfPage() {
       seoTitle="Split PDF files online"
       seoText="LiftPDF helps you split a PDF without installing software. Choose specific pages like 1,3,5-8 to create one new PDF, or split every page into separate PDF files inside a ZIP archive."
       currentHref="/split-pdf"
+      premiumContent={premiumToolContent.splitPdf}
       faq={[
         {
           question: "Can I extract only selected pages?",

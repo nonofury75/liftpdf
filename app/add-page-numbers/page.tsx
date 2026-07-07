@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { AddPageNumbersTool } from "@/components/tools/add-page-numbers-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
+import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Add Page Numbers to PDF Online | LiftPDF";
 const description =
@@ -15,8 +16,9 @@ export const metadata: Metadata = {
     title,
     description,
     url: `${siteConfig.url}/add-page-numbers`,
+    images: [{ url: "/images/seo/add-page-numbers/og-image.webp", width: 1200, height: 630, alt: "LiftPDF Add Page Numbers" }],
   },
-  twitter: { card: "summary_large_image", title, description },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/add-page-numbers/og-image.webp"] },
 };
 
 export default function AddPageNumbersPage() {
@@ -27,6 +29,7 @@ export default function AddPageNumbersPage() {
       seoTitle="Add page numbers online"
       seoText="LiftPDF lets you add page numbers directly in your browser. Choose where numbers appear, customize the font, size, color and format, then download a numbered PDF without uploading files to a backend API."
       currentHref="/add-page-numbers"
+      premiumContent={premiumToolContent.addPageNumbers}
       faq={[
         {
           question: "Can I choose where page numbers appear?",

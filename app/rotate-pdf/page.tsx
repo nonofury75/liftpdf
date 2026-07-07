@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { RotatePdfTool } from "@/components/tools/rotate-pdf-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
+import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Rotate PDF Online - Free PDF Rotator | LiftPDF";
 const description =
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/rotate-pdf" },
-  openGraph: { title, description, url: `${siteConfig.url}/rotate-pdf` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/rotate-pdf`,
+    images: [{ url: "/images/seo/rotate-pdf/og-image.webp", width: 1200, height: 630, alt: "LiftPDF Rotate PDF" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/rotate-pdf/og-image.webp"] },
 };
 
 export default function RotatePdfPage() {
@@ -23,6 +29,7 @@ export default function RotatePdfPage() {
       seoTitle="Rotate PDF pages online"
       seoText="LiftPDF rotates PDF pages directly in your browser. The tool keeps page dimensions and document content intact while applying the page rotation you choose before download."
       currentHref="/rotate-pdf"
+      premiumContent={premiumToolContent.rotatePdf}
       faq={[
         {
           question: "Can I rotate one page only?",

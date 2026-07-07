@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { ExtractPagesTool } from "@/components/tools/extract-pages-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
+import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Extract PDF Pages Online Free | LiftPDF";
 const description =
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/extract-pages" },
-  openGraph: { title, description, url: `${siteConfig.url}/extract-pages` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/extract-pages`,
+    images: [{ url: "/images/seo/extract-pages/og-image.webp", width: 1200, height: 630, alt: "LiftPDF Extract Pages" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/extract-pages/og-image.webp"] },
 };
 
 export default function ExtractPagesPage() {
@@ -23,6 +29,7 @@ export default function ExtractPagesPage() {
       seoTitle="Extract selected PDF pages online"
       seoText="LiftPDF lets you preview every PDF page, select exactly the pages you need and export them into a new PDF while preserving the original page order and quality."
       currentHref="/extract-pages"
+      premiumContent={premiumToolContent.extractPages}
       faq={[
         {
           question: "Can I extract PDF pages for free?",

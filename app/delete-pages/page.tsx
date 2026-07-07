@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { DeletePagesTool } from "@/components/tools/delete-pages-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
+import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Delete PDF Pages Online - Free PDF Page Remover | LiftPDF";
 const description =
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/delete-pages" },
-  openGraph: { title, description, url: `${siteConfig.url}/delete-pages` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/delete-pages`,
+    images: [{ url: "/images/seo/delete-pages/og-image.webp", width: 1200, height: 630, alt: "LiftPDF Delete Pages" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/delete-pages/og-image.webp"] },
 };
 
 export default function DeletePagesPage() {
@@ -23,6 +29,7 @@ export default function DeletePagesPage() {
       seoTitle="Delete pages from PDF files online"
       seoText="LiftPDF lets you preview every PDF page, select the pages you do not need and download a new PDF with the remaining pages preserved in their original order."
       currentHref="/delete-pages"
+      premiumContent={premiumToolContent.deletePages}
       faq={[
         {
           question: "Can I remove pages for free?",

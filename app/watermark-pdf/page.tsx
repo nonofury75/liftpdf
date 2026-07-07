@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { WatermarkPdfTool } from "@/components/tools/watermark-pdf-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
+import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Watermark PDF Online - Add Text or Image Watermark | LiftPDF";
 const description =
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/watermark-pdf" },
-  openGraph: { title, description, url: `${siteConfig.url}/watermark-pdf` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/watermark-pdf`,
+    images: [{ url: "/images/seo/watermark-pdf/og-image.webp", width: 1200, height: 630, alt: "LiftPDF Watermark PDF" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/watermark-pdf/og-image.webp"] },
 };
 
 export default function WatermarkPdfPage() {
@@ -23,6 +29,7 @@ export default function WatermarkPdfPage() {
       seoTitle="Add text or image watermarks"
       seoText="LiftPDF lets you watermark PDFs directly in your browser. Choose a text or image watermark, adjust position, opacity and rotation, preview every page and download a finished PDF without a backend API."
       currentHref="/watermark-pdf"
+      premiumContent={premiumToolContent.watermarkPdf}
       faq={[
         {
           question: "Can I add an image watermark?",

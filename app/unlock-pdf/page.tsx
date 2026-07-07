@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
 import { UnlockPdfTool } from "@/components/tools/unlock-pdf-tool";
+import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Unlock PDF Online Free | Remove PDF Password | LiftPDF";
 const description =
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/unlock-pdf" },
-  openGraph: { title, description, url: `${siteConfig.url}/unlock-pdf` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/unlock-pdf`,
+    images: [{ url: "/images/seo/unlock-pdf/og-image.webp", width: 1200, height: 630, alt: "LiftPDF Unlock PDF" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/unlock-pdf/og-image.webp"] },
 };
 
 export default function UnlockPdfPage() {
@@ -23,6 +29,7 @@ export default function UnlockPdfPage() {
       seoTitle="Unlock a password-protected PDF online"
       seoText="LiftPDF uses QPDF compiled to WebAssembly to decrypt protected PDFs locally in your browser. Enter the current password, remove encryption and download an unlocked copy without uploading your file."
       currentHref="/unlock-pdf"
+      premiumContent={premiumToolContent.unlockPdf}
       faq={[
         {
           question: "Can I unlock a PDF for free?",

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { MergePdfTool } from "@/components/tools/merge-pdf-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
+import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Merge PDF Online - Free PDF Merger | LiftPDF";
 const description =
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/merge-pdf" },
-  openGraph: { title, description, url: `${siteConfig.url}/merge-pdf` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/merge-pdf`,
+    images: [{ url: "/images/seo/merge-pdf/og-image.webp", width: 1200, height: 630, alt: "LiftPDF Merge PDF" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/merge-pdf/og-image.webp"] },
 };
 
 export default function MergePdfPage() {
@@ -23,6 +29,7 @@ export default function MergePdfPage() {
       seoTitle="Merge PDF files online"
       seoText="LiftPDF lets you merge PDFs in the order you choose. Add files, reorder them, remove anything you do not need and download one combined PDF without using a backend API."
       currentHref="/merge-pdf"
+      premiumContent={premiumToolContent.mergePdf}
       faq={[
         {
           question: "Can I merge multiple PDFs at once?",

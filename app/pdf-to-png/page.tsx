@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 import { PdfToPngTool } from "@/components/tools/pdf-to-png-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
+import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "PDF to PNG Converter - Free Online Tool | LiftPDF";
 const description =
@@ -11,8 +12,13 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/pdf-to-png" },
-  openGraph: { title, description, url: `${siteConfig.url}/pdf-to-png` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/pdf-to-png`,
+    images: [{ url: "/images/seo/pdf-to-png/og-image.webp", width: 1200, height: 630, alt: "LiftPDF PDF to PNG converter" }],
+  },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/pdf-to-png/og-image.webp"] },
 };
 
 export default function PdfToPngPage() {
@@ -23,6 +29,7 @@ export default function PdfToPngPage() {
       seoTitle="Convert PDF pages to PNG online"
       seoText="LiftPDF renders your PDF pages in the browser and exports them as high-quality PNG images. Single-page PDFs download as one PNG, while multi-page PDFs are packaged into a ZIP file."
       currentHref="/pdf-to-png"
+      premiumContent={premiumToolContent.pdfToPng}
       faq={[
         {
           question: "Can I convert every page of a PDF to PNG?",

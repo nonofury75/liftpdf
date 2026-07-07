@@ -1,9 +1,18 @@
 import { BadgeCheck, LockKeyhole, MonitorCheck } from "lucide-react";
+import Image from "next/image";
+
+type ToolHeroImage = {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+};
 
 type ToolHeroProps = {
   title: string;
   description: string;
   compact?: boolean;
+  image?: ToolHeroImage;
 };
 
 const trustBadges = [
@@ -21,10 +30,17 @@ const trustBadges = [
   },
 ];
 
-export function ToolHero({ title, description, compact = false }: ToolHeroProps) {
+export function ToolHero({
+  title,
+  description,
+  compact = false,
+  image,
+}: ToolHeroProps) {
   return (
     <section className="border-b border-border bg-muted/40">
-      <div className={`mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ${compact ? "py-10" : "py-12"}`}>
+      <div
+        className={`mx-auto grid w-full max-w-7xl items-center gap-8 px-4 sm:px-6 lg:px-8 ${compact ? "py-10" : "py-12"} ${image ? "lg:grid-cols-[minmax(0,1fr)_420px]" : ""}`}
+      >
         <div className="max-w-4xl">
           <p className="text-sm font-semibold uppercase tracking-normal text-primary">
             Free online PDF tool
@@ -51,6 +67,19 @@ export function ToolHero({ title, description, compact = false }: ToolHeroProps)
             })}
           </div>
         </div>
+        {image ? (
+          <div className="hidden overflow-hidden rounded-3xl border border-border bg-background p-3 shadow-sm lg:block">
+            <Image
+              src={image.src}
+              alt={image.alt}
+              width={image.width}
+              height={image.height}
+              priority
+              className="h-auto w-full rounded-2xl"
+              sizes="420px"
+            />
+          </div>
+        ) : null}
       </div>
     </section>
   );
