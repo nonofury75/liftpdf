@@ -83,10 +83,10 @@ export function ImageToPdfTool({
   uploadTitle,
 }: ImageToPdfToolProps) {
   const [images, setImages] = useState<UploadedImage[]>([]);
-  const [pageSize, setPageSize] = useState<ImagePdfPageSize>("a4");
-  const [orientation, setOrientation] = useState<ImagePdfOrientation>("auto");
-  const [margin, setMargin] = useState<ImagePdfMargin>("small");
-  const [fitMode, setFitMode] = useState<ImageFitMode>("fit");
+  const [pageSize, setPageSize] = useState<ImagePdfPageSize | null>(null);
+  const [orientation, setOrientation] = useState<ImagePdfOrientation | null>(null);
+  const [margin, setMargin] = useState<ImagePdfMargin | null>(null);
+  const [fitMode, setFitMode] = useState<ImageFitMode | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -98,6 +98,10 @@ export function ImageToPdfTool({
     [acceptedImageTypes],
   );
   const acceptedImageTypeList = acceptedImageTypes.join(",");
+  const effectiveFitMode = fitMode ?? "fit";
+  const effectiveMargin = margin ?? "none";
+  const effectiveOrientation = orientation ?? "auto";
+  const effectivePageSize = pageSize ?? "auto";
 
   const totalSize = useMemo(
     () => images.reduce((sum, image) => sum + image.file.size, 0),
@@ -106,13 +110,19 @@ export function ImageToPdfTool({
   const previewModel = useMemo(
     () =>
       createPreviewModel({
-        fitMode,
+        fitMode: effectiveFitMode,
         image: images[0],
-        margin,
-        orientation,
-        pageSize,
+        margin: effectiveMargin,
+        orientation: effectiveOrientation,
+        pageSize: effectivePageSize,
       }),
-    [fitMode, images, margin, orientation, pageSize],
+    [
+      effectiveFitMode,
+      effectiveMargin,
+      effectiveOrientation,
+      effectivePageSize,
+      images,
+    ],
   );
 
   useEffect(() => {
@@ -233,12 +243,12 @@ export function ImageToPdfTool({
             ? await pdfDocument.embedJpg(imageBytes.bytes)
             : await pdfDocument.embedPng(imageBytes.bytes);
         const placement = calculateImagePlacement({
-          fitMode,
+          fitMode: effectiveFitMode,
           imageWidth: embeddedImage.width,
           imageHeight: embeddedImage.height,
-          margin,
-          orientation,
-          pageSize,
+          margin: effectiveMargin,
+          orientation: effectiveOrientation,
+          pageSize: effectivePageSize,
         });
 
         const page = pdfDocument.addPage([
@@ -269,10 +279,10 @@ export function ImageToPdfTool({
   function handleReset() {
     images.forEach((image) => URL.revokeObjectURL(image.previewUrl));
     setImages([]);
-    setPageSize("a4");
-    setOrientation("auto");
-    setMargin("small");
-    setFitMode("fit");
+    setPageSize(null);
+    setOrientation(null);
+    setMargin(null);
+    setFitMode(null);
     setError(null);
     clearPdfUrl();
   }
@@ -310,7 +320,7 @@ export function ImageToPdfTool({
           <>
             <PdfLivePreview
               image={images[0]}
-              margin={margin}
+              margin={effectiveMargin}
               model={previewModel}
               presentation={presentation}
             />
@@ -332,22 +342,22 @@ export function ImageToPdfTool({
         <div className="mt-5 space-y-3 rounded-xl border border-border bg-muted/25 p-4 text-sm">
           <SummaryRow
             label="Orientation"
-            value={labelFor(orientationOptions, orientation)}
+            value={labelFor(orientationOptions, effectiveOrientation)}
             presentation={presentation}
           />
           <SummaryRow
             label="Page size"
-            value={labelFor(pageSizeOptions, pageSize)}
+            value={labelFor(pageSizeOptions, effectivePageSize)}
             presentation={presentation}
           />
           <SummaryRow
             label="Margins"
-            value={labelFor(marginOptions, margin)}
+            value={labelFor(marginOptions, effectiveMargin)}
             presentation={presentation}
           />
           <SummaryRow
             label="Image fit"
-            value={labelFor(fitOptions, fitMode)}
+            value={labelFor(fitOptions, effectiveFitMode)}
             presentation={presentation}
           />
           <SummaryRow
@@ -466,7 +476,7 @@ export function ImageToPdfTool({
 type OptionGroupProps<T extends string> = {
   label: string;
   options: Array<{ description?: string; label: string; value: T }>;
-  value: T;
+  value: T | null;
   onChange: (value: T) => void;
   onBeforeChange: () => void;
 };
@@ -488,6 +498,7 @@ function OptionGroup<T extends string>({
           <button
             key={option.value}
             type="button"
+            aria-pressed={value === option.value}
             className={cn(
               "rounded-lg border border-border px-3 py-2.5 text-left text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm",
               value === option.value

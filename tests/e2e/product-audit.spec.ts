@@ -267,9 +267,19 @@ test.describe("critical PDF workflows", () => {
     await expect(page.getByText(/sample.jpg/i)).toBeVisible();
     const livePreview = page.getByLabel("Live PDF page preview");
     await expect(livePreview).toBeVisible();
+    await expect(page.locator('button[aria-pressed="true"]')).toHaveCount(0);
     await page.getByRole("button", { name: /^None$/ }).click();
+    await expect(page.getByRole("button", { name: /^None$/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await page.getByRole("button", { name: /^Fit$/ }).click();
+    await expect(page.getByRole("button", { name: /^Fit$/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await expect(livePreview).toHaveAttribute("data-preview-margin-px", "0");
+    await page.getByRole("button", { name: /^A4/ }).click();
     await page.getByRole("button", { name: /^Portrait$/ }).click();
     await expect(livePreview).toHaveAttribute("data-preview-orientation", "portrait");
     await page.getByRole("button", { name: /^Landscape$/ }).click();
@@ -294,9 +304,15 @@ test.describe("critical PDF workflows", () => {
     await expect(page.getByText(/sample.png/i)).toBeVisible();
     const pngLivePreview = page.getByLabel("Live PDF page preview");
     await expect(pngLivePreview).toBeVisible();
+    await expect(page.locator('button[aria-pressed="true"]')).toHaveCount(0);
     await page.getByRole("button", { name: /^None$/ }).click();
+    await expect(page.getByRole("button", { name: /^None$/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await page.getByRole("button", { name: /^Fit$/ }).click();
     await expect(pngLivePreview).toHaveAttribute("data-preview-margin-px", "0");
+    await page.getByRole("button", { name: /^A4/ }).click();
     await page.getByRole("button", { name: /^Landscape$/ }).click();
     await expect(pngLivePreview).toHaveAttribute(
       "data-preview-orientation",
@@ -327,10 +343,7 @@ test.describe("critical PDF workflows", () => {
     await uploadFirstFile(page, fixtures.widePng);
     await expect(page.getByText(/wide-2x1.png/i)).toBeVisible();
     const autoNonePreview = page.getByLabel("Live PDF page preview");
-    await page.getByRole("button", { exact: true, name: "Auto" }).click();
-    await page.getByRole("button", { name: /^Auto Match image ratio/ }).click();
-    await page.getByRole("button", { name: /^None$/ }).click();
-    await page.getByRole("button", { name: /^Fit$/ }).click();
+    await expect(page.locator('button[aria-pressed="true"]')).toHaveCount(0);
     await expect(autoNonePreview).toHaveAttribute("data-preview-margin-px", "0");
     await expect(autoNonePreview).toHaveAttribute("data-preview-image-left", "0.000");
     await expect(autoNonePreview).toHaveAttribute("data-preview-image-top", "0.000");
@@ -351,6 +364,10 @@ test.describe("critical PDF workflows", () => {
     const autoNonePage = (await PDFDocument.load(autoNonePdf)).getPage(0);
     const autoNonePageSize = autoNonePage.getSize();
     expect(autoNonePageSize.width / autoNonePageSize.height).toBeCloseTo(2, 3);
+    await page.getByRole("button", { exact: true, name: "Auto" }).click();
+    await expect(
+      page.getByRole("button", { exact: true, name: "Auto" }),
+    ).toHaveAttribute("aria-pressed", "true");
 
     await page.goto("/images-to-pdf");
     await uploadFirstFile(page, fixtures.widePng);
