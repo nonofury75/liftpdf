@@ -9,7 +9,6 @@ export function PdfToPngTool() {
       title="Conversion summary"
       description="Upload one PDF file and convert every page into a high-quality PNG image."
       actionLabel="Convert to PNG"
-      successMessage="Your PNG file is ready to download."
       singlePageFileName="page-1.png"
       zipFileName="pdf-to-png.zip"
       qualityLabel="PNG quality"

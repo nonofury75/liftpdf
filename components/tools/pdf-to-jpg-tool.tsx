@@ -9,7 +9,6 @@ export function PdfToJpgTool() {
       title="Conversion summary"
       description="Upload one PDF file and convert every page into a high-quality JPG image."
       actionLabel="Convert to JPG"
-      successMessage="Your JPG file is ready to download."
       singlePageFileName="page-1.jpg"
       zipFileName="pdf-to-jpg.zip"
       qualityLabel="JPG quality"

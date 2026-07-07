@@ -421,6 +421,47 @@ test.describe("critical PDF workflows", () => {
     expect((await PDFDocument.load(imagesPdf)).getPageCount()).toBe(2);
 
     await page.goto("/pdf-to-jpg");
+    await uploadFirstFile(page, fixtures.text1);
+    await expect(page.getByText(/1 page/i).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^PDF preview$/ })).toBeVisible();
+    await page.getByRole("button", { name: /^High$/ }).click();
+    const singleJpgBytes = await generateThenDownloadBytes(
+      page,
+      /^Convert to JPG$/,
+      /^Download JPG$/,
+      "page-1.jpg",
+    );
+    expect(Buffer.from(singleJpgBytes).subarray(0, 2).toString("hex")).toBe(
+      "ffd8",
+    );
+
+    await page.goto("/pdf-to-jpg");
+    await uploadFirstFile(page, fixtures.text10);
+    await expect(page.getByText(/10 pages/i).first()).toBeVisible();
+    const allJpgZipBytes = await generateThenDownloadBytes(
+      page,
+      /^Convert to JPG$/,
+      /^Download ZIP$/,
+      "pdf-to-jpg.zip",
+    );
+    expect(Buffer.from(allJpgZipBytes).subarray(0, 2).toString()).toBe("PK");
+
+    await page.goto("/pdf-to-jpg");
+    await uploadFirstFile(page, fixtures.text10);
+    await expect(page.getByText(/10 pages/i).first()).toBeVisible();
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("1");
+    const rangeOneJpgBytes = await generateThenDownloadBytes(
+      page,
+      /^Convert to JPG$/,
+      /^Download JPG$/,
+      "page-1.jpg",
+    );
+    expect(Buffer.from(rangeOneJpgBytes).subarray(0, 2).toString("hex")).toBe(
+      "ffd8",
+    );
+
+    await page.goto("/pdf-to-jpg");
     await uploadFirstFile(page, fixtures.text10);
     await expect(page.getByText(/10 pages/i).first()).toBeVisible();
     await page.getByRole("button", { name: /^Page range$/ }).click();
@@ -428,10 +469,40 @@ test.describe("critical PDF workflows", () => {
     const jpgBytes = await generateThenDownloadBytes(
       page,
       /^Convert to JPG$/,
-      /^Download$/,
+      /^Download ZIP$/,
       "pdf-to-jpg.zip",
     );
     expect(Buffer.from(jpgBytes).subarray(0, 2).toString()).toBe("PK");
+
+    await page.goto("/pdf-to-jpg");
+    await uploadFirstFile(page, fixtures.text10);
+    await expect(page.getByText(/10 pages/i).first()).toBeVisible();
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("50");
+    await page.getByRole("button", { name: /^Convert to JPG$/ }).click();
+    await expect(
+      page.getByText(/Page range cannot include pages outside this PDF/i),
+    ).toBeVisible();
+
+    await page.goto("/protect-pdf");
+    await uploadFirstFile(page, fixtures.text1);
+    await expect(page.getByText(/1 page/i).first()).toBeVisible();
+    await page.getByLabel("Password", { exact: true }).fill("StrongPass123");
+    await page
+      .getByLabel("Confirm password", { exact: true })
+      .fill("StrongPass123");
+    const jpgProtectedBytes = await downloadBytes(
+      page,
+      /^Protect PDF$/,
+      "protected.pdf",
+    );
+    const jpgProtectedPath = path.join(fixturesDir, "jpg-protected.pdf");
+    fs.writeFileSync(jpgProtectedPath, jpgProtectedBytes);
+    await page.goto("/pdf-to-jpg");
+    await uploadFirstFile(page, jpgProtectedPath);
+    await expect(
+      page.getByText(/This PDF is password protected. Please unlock it first/i),
+    ).toBeVisible();
 
     await page.goto("/pdf-to-png");
     await uploadFirstFile(page, fixtures.text10);
@@ -441,7 +512,7 @@ test.describe("critical PDF workflows", () => {
     const pngBytes = await generateThenDownloadBytes(
       page,
       /^Convert to PNG$/,
-      /^Download$/,
+      /^Download PNG$/,
       "page-2.png",
     );
     expect(Buffer.from(pngBytes).subarray(1, 4).toString()).toBe("PNG");

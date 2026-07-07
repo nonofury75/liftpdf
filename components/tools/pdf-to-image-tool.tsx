@@ -1,8 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import { Download, FileCheck2, Loader2, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Download,
+  FileCheck2,
+  FileImage,
+  Loader2,
+  RotateCcw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PdfUploadZone } from "@/components/tools/pdf-upload-zone";
 import { PdfFileSummary } from "@/components/tools/pdf/pdf-file-summary";
@@ -12,7 +18,7 @@ import {
 } from "@/components/tools/pdf/pdf-image-export";
 import {
   loadPdfDocument,
-  renderPdfPagePreview,
+  renderPdfPageThumbnail,
 } from "@/components/tools/pdf/pdfjs-client";
 import { PdfSummaryRow } from "@/components/tools/pdf/pdf-summary-row";
 import { cn } from "@/lib/utils";
@@ -23,8 +29,10 @@ type SelectedPdf = {
 };
 
 type PagePreview = {
+  height: number;
   pageNumber: number;
   previewUrl: string;
+  width: number;
 };
 
 type GeneratedFile = {
@@ -39,7 +47,6 @@ type PdfToImageToolProps = {
   title: string;
   description: string;
   actionLabel: string;
-  successMessage: string;
   singlePageFileName: string;
   zipFileName: string;
   qualityLabel: string;
@@ -50,6 +57,10 @@ type PdfToImageToolProps = {
 const resolutionOptions: Array<{ label: string; value: PdfImageResolution }> = [
   { label: "Standard quality", value: "standard" },
   { label: "High quality", value: "high" },
+];
+const jpgQualityOptions: Array<{ label: string; value: PdfImageResolution }> = [
+  { label: "Normal", value: "standard" },
+  { label: "High", value: "high" },
 ];
 const pageSelectionOptions: Array<{ label: string; value: PageSelectionMode }> =
   [
@@ -63,7 +74,6 @@ export function PdfToImageTool({
   title,
   description,
   actionLabel,
-  successMessage,
   singlePageFileName,
   zipFileName,
   qualityLabel,
@@ -89,6 +99,41 @@ export function PdfToImageTool({
   );
   const generatedFileRef = useRef<GeneratedFile | null>(null);
   const pagesRef = useRef<PagePreview[]>([]);
+  const isJpg = format === "jpg";
+  const selectedPages = useMemo(
+    () =>
+      selectedPdf
+        ? getSelectedPagesSafely({
+            mode: pageSelectionMode,
+            pageCount: selectedPdf.pageCount,
+            pageRange,
+            singlePage,
+          })
+        : [],
+    [pageRange, pageSelectionMode, selectedPdf, singlePage],
+  );
+  const previewPages = useMemo(() => {
+    if (!pages.length) {
+      return [];
+    }
+
+    const selectedPageSet = new Set(selectedPages);
+    const filteredPages = selectedPages.length
+      ? pages.filter((page) => selectedPageSet.has(page.pageNumber))
+      : pages;
+
+    return filteredPages.slice(0, isJpg ? 12 : pages.length);
+  }, [isJpg, pages, selectedPages]);
+  const selectedPagesLabel = selectedPdf
+    ? formatSelectedPagesLabel(selectedPages, selectedPdf.pageCount)
+    : "None";
+  const expectedOutputName = getExpectedOutputName({
+    format,
+    selectedPages,
+    selectedPdf,
+    singlePageFileName,
+    zipFileName,
+  });
 
   useEffect(() => {
     generatedFileRef.current = generatedFile;
@@ -136,10 +181,7 @@ export function PdfToImageTool({
       const previews: PagePreview[] = [];
 
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-        previews.push({
-          pageNumber,
-          previewUrl: await renderPdfPagePreview(pdf, pageNumber),
-        });
+        previews.push(await renderPdfPageThumbnail(pdf, pageNumber));
       }
 
       setSelectedPdf({
@@ -148,10 +190,10 @@ export function PdfToImageTool({
       });
       setPages(previews);
       await pdf.destroy();
-    } catch {
+    } catch (loadError) {
       setSelectedPdf(null);
       clearPagePreviews();
-      setError("This PDF could not be read. Please choose another file.");
+      setError(getPdfLoadErrorMessage(loadError));
     } finally {
       setIsLoadingPreview(false);
     }
@@ -245,15 +287,17 @@ export function PdfToImageTool({
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-      <div className="space-y-6">
-        <PdfUploadZone
-          multiple={false}
-          title="Drop your PDF file here"
-          description={description}
-          buttonLabel="Choose PDF file"
-          onFilesSelected={handleFilesSelected}
-        />
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
+      <div className="order-1 space-y-6 xl:col-start-1 xl:row-start-1">
+        {!selectedPdf ? (
+          <PdfUploadZone
+            multiple={false}
+            title="Drop your PDF file here"
+            description={description}
+            buttonLabel="Choose PDF file"
+            onFilesSelected={handleFilesSelected}
+          />
+        ) : null}
 
         {error ? (
           <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -261,173 +305,60 @@ export function PdfToImageTool({
           </p>
         ) : null}
 
-        {selectedPdf ? (
-          <PdfFileSummary
-            fileName={selectedPdf.file.name}
-            fileSize={selectedPdf.file.size}
-            pageCount={selectedPdf.pageCount}
-          />
-        ) : null}
-
-        <div className="rounded-lg border border-border bg-card p-5">
-          <h2 className="text-lg font-semibold text-foreground">
-            Export options
-          </h2>
-
-          <div className="mt-5 space-y-5">
-            <label className="block">
-              <span className="text-sm font-semibold text-foreground">
-                {qualityLabel}: {quality}
-              </span>
-              <input
-                type="range"
-                min={50}
-                max={100}
-                step={1}
-                value={quality}
-                onChange={(event) => {
-                  invalidateGeneratedFile();
-                  setQuality(Number(event.target.value));
-                }}
-                className="mt-3 w-full accent-primary"
-              />
-            </label>
-
-            <fieldset>
-              <legend className="mb-2 text-sm font-semibold text-foreground">
-                Resolution
-              </legend>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {resolutionOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={cn(
-                      "rounded-md border border-border px-3 py-2 text-left text-sm font-medium transition-colors",
-                      resolution === option.value
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "bg-background text-foreground hover:bg-muted",
-                    )}
-                    onClick={() => {
-                      invalidateGeneratedFile();
-                      setResolution(option.value);
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend className="mb-2 text-sm font-semibold text-foreground">
-                Pages
-              </legend>
-              <div className="grid gap-2 sm:grid-cols-3">
-                {pageSelectionOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={cn(
-                      "rounded-md border border-border px-3 py-2 text-left text-sm font-medium transition-colors",
-                      pageSelectionMode === option.value
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "bg-background text-foreground hover:bg-muted",
-                    )}
-                    onClick={() => {
-                      invalidateGeneratedFile();
-                      setPageSelectionMode(option.value);
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-
-              {pageSelectionMode === "single" ? (
-                <label className="mt-3 block">
-                  <span className="text-sm font-semibold text-foreground">
-                    Page number
-                  </span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={selectedPdf?.pageCount ?? 1}
-                    value={singlePage}
-                    onChange={(event) => {
-                      invalidateGeneratedFile();
-                      setSinglePage(event.target.value);
-                    }}
-                    className="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/20"
-                  />
-                </label>
-              ) : null}
-
-              {pageSelectionMode === "range" ? (
-                <label className="mt-3 block">
-                  <span className="text-sm font-semibold text-foreground">
-                    Page range
-                  </span>
-                  <input
-                    value={pageRange}
-                    onChange={(event) => {
-                      invalidateGeneratedFile();
-                      setPageRange(event.target.value);
-                    }}
-                    placeholder="1,3,5-8"
-                    className="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/20"
-                  />
-                </label>
-              ) : null}
-            </fieldset>
-
-            {showTransparentBackground ? (
-              <label className="flex items-center justify-between gap-4 rounded-lg border border-border bg-background p-4">
-                <span>
-                  <span className="block text-sm font-semibold text-foreground">
-                    Transparent background
-                  </span>
-                  <span className="mt-1 block text-sm text-muted-foreground">
-                    Keep transparent PDF areas transparent when possible.
-                  </span>
-                </span>
-                <input
-                  type="checkbox"
-                  checked={transparentBackground}
-                  onChange={(event) => {
-                    invalidateGeneratedFile();
-                    setTransparentBackground(event.target.checked);
-                  }}
-                  className="size-5 accent-primary"
-                />
-              </label>
-            ) : null}
-          </div>
-        </div>
-
         {isLoadingPreview ? (
           <p className="rounded-md bg-muted px-4 py-3 text-sm font-medium text-muted-foreground">
             Loading PDF preview...
           </p>
         ) : null}
 
+        {selectedPdf && pages[0] ? (
+          <section className="rounded-2xl border border-border bg-card p-4 shadow-md sm:p-6">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  PDF preview
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  First page preview. Selected pages appear below.
+                </p>
+              </div>
+              <span className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
+                <FileImage className="size-3.5 text-primary" aria-hidden="true" />
+                Output {format.toUpperCase()}
+              </span>
+            </div>
+
+            <div className="flex min-h-[420px] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-slate-50 to-slate-200/70 p-4 shadow-inner sm:min-h-[620px]">
+              <Image
+                src={pages[0].previewUrl}
+                alt="First page preview"
+                width={Math.max(260, pages[0].width)}
+                height={Math.max(360, pages[0].height)}
+                className="max-h-[560px] w-auto rounded-sm bg-white shadow-[0_24px_70px_rgba(15,23,42,0.22)] ring-1 ring-black/10"
+                unoptimized
+                priority
+              />
+            </div>
+          </section>
+        ) : null}
+
         {pages.length ? (
-          <div className="rounded-lg border border-border bg-card p-5">
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div>
               <h2 className="text-lg font-semibold text-foreground">
                 Page preview
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Each PDF page will be exported as a {format.toUpperCase()}{" "}
-                image.
+                Showing {previewPages.length} of{" "}
+                {selectedPages.length || pages.length} selected pages.
               </p>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {pages.map((page) => (
+            <div className="mt-5 grid max-h-[620px] gap-4 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
+              {previewPages.map((page) => (
                 <article
                   key={page.pageNumber}
-                  className="rounded-lg border border-border bg-background p-3"
+                  className="rounded-xl border border-border bg-background p-3 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md"
                 >
                   <div className="flex min-h-52 items-center justify-center overflow-hidden rounded-md bg-muted p-3">
                     <Image
@@ -449,9 +380,25 @@ export function PdfToImageTool({
         ) : null}
       </div>
 
-      <aside className="h-fit rounded-lg border border-border bg-card p-5">
-        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-        <div className="mt-5 space-y-3 text-sm">
+      <aside className="order-2 h-fit rounded-2xl border border-border bg-card p-6 shadow-md xl:sticky xl:top-24 xl:col-start-2 xl:row-start-1">
+        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+        <div className="mt-2 text-sm leading-6 text-muted-foreground">
+          {isJpg
+            ? "Choose how to export your PDF pages as JPG images."
+            : "Choose how to export your PDF pages as PNG images."}
+        </div>
+
+        {selectedPdf ? (
+          <div className="mt-5">
+            <PdfFileSummary
+              fileName={selectedPdf.file.name}
+              fileSize={selectedPdf.file.size}
+              pageCount={selectedPdf.pageCount}
+            />
+          </div>
+        ) : null}
+
+        <div className="mt-5 space-y-3 rounded-xl border border-border bg-muted/25 p-4 text-sm">
           <PdfSummaryRow
             label="PDF file"
             value={selectedPdf ? selectedPdf.file.name : "None"}
@@ -460,18 +407,172 @@ export function PdfToImageTool({
             label="Pages"
             value={selectedPdf ? String(selectedPdf.pageCount) : "0"}
           />
-          <PdfSummaryRow label="Format" value={format.toUpperCase()} />
+          <PdfSummaryRow label="Output format" value={format.toUpperCase()} />
+          <PdfSummaryRow
+            label="Quality"
+            value={
+              isJpg
+                ? labelFor(jpgQualityOptions, resolution)
+                : `${quality} / ${labelFor(resolutionOptions, resolution)}`
+            }
+          />
+          <PdfSummaryRow label="Selected pages" value={selectedPagesLabel} />
           <PdfSummaryRow
             label="Output"
-            value={
-              generatedFile?.fileName ??
-              (selectedPdf?.pageCount === 1 ? singlePageFileName : zipFileName)
-            }
+            value={generatedFile?.fileName ?? expectedOutputName}
           />
         </div>
 
-        <div className="mt-6 grid gap-3">
-          <Button type="button" onClick={handleConvert} disabled={isConverting}>
+        <div className="mt-7 space-y-6">
+          {isJpg ? (
+            <fieldset>
+              <legend className="mb-2 text-sm font-semibold text-foreground">
+                Mode
+              </legend>
+              <div className="grid gap-2">
+                <button
+                  type="button"
+                  aria-pressed="true"
+                  className="rounded-xl border border-primary bg-primary/10 px-3 py-3 text-left text-sm font-semibold text-primary shadow-sm"
+                >
+                  Page to JPG
+                  <span className="mt-1 block text-xs font-medium text-muted-foreground">
+                    Each selected page becomes one JPG image.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  className="cursor-not-allowed rounded-xl border border-border bg-muted/50 px-3 py-3 text-left text-sm font-semibold text-muted-foreground"
+                >
+                  Extract images
+                  <span className="ml-2 rounded-full bg-background px-2 py-0.5 text-[11px] font-bold uppercase text-muted-foreground">
+                    Coming Soon
+                  </span>
+                </button>
+              </div>
+            </fieldset>
+          ) : null}
+
+          {isJpg ? (
+            <OptionButtons
+              label="Quality"
+              options={jpgQualityOptions}
+              value={resolution}
+              onChange={(value) => {
+                invalidateGeneratedFile();
+                setResolution(value);
+                setQuality(value === "high" ? Math.max(defaultQuality, 92) : 85);
+              }}
+            />
+          ) : (
+            <>
+              <label className="block">
+                <span className="text-sm font-semibold text-foreground">
+                  {qualityLabel}: {quality}
+                </span>
+                <input
+                  type="range"
+                  min={50}
+                  max={100}
+                  step={1}
+                  value={quality}
+                  onChange={(event) => {
+                    invalidateGeneratedFile();
+                    setQuality(Number(event.target.value));
+                  }}
+                  className="mt-3 w-full accent-primary"
+                />
+              </label>
+
+              <OptionButtons
+                label="Resolution"
+                options={resolutionOptions}
+                value={resolution}
+                onChange={(value) => {
+                  invalidateGeneratedFile();
+                  setResolution(value);
+                }}
+              />
+            </>
+          )}
+
+          <OptionButtons
+            label="Pages"
+            options={pageSelectionOptions}
+            value={pageSelectionMode}
+            onChange={(value) => {
+              invalidateGeneratedFile();
+              setPageSelectionMode(value);
+            }}
+          />
+
+          {pageSelectionMode === "single" ? (
+            <label className="block">
+              <span className="text-sm font-semibold text-foreground">
+                Page number
+              </span>
+              <input
+                type="number"
+                min={1}
+                max={selectedPdf?.pageCount ?? 1}
+                value={singlePage}
+                onChange={(event) => {
+                  invalidateGeneratedFile();
+                  setSinglePage(event.target.value);
+                }}
+                className="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/20"
+              />
+            </label>
+          ) : null}
+
+          {pageSelectionMode === "range" ? (
+            <label className="block">
+              <span className="text-sm font-semibold text-foreground">
+                Page range
+              </span>
+              <input
+                value={pageRange}
+                onChange={(event) => {
+                  invalidateGeneratedFile();
+                  setPageRange(event.target.value);
+                }}
+                placeholder="1,3,5-8"
+                className="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/20"
+              />
+            </label>
+          ) : null}
+
+          {showTransparentBackground ? (
+            <label className="flex items-center justify-between gap-4 rounded-lg border border-border bg-background p-4">
+              <span>
+                <span className="block text-sm font-semibold text-foreground">
+                  Transparent background
+                </span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  Keep transparent PDF areas transparent when possible.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={transparentBackground}
+                onChange={(event) => {
+                  invalidateGeneratedFile();
+                  setTransparentBackground(event.target.checked);
+                }}
+                className="size-5 accent-primary"
+              />
+            </label>
+          ) : null}
+        </div>
+
+        <div className="mt-7 grid gap-3">
+          <Button
+            type="button"
+            onClick={handleConvert}
+            disabled={!selectedPdf || isConverting}
+            className="h-12 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-lg"
+          >
             {isConverting ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
@@ -481,24 +582,24 @@ export function PdfToImageTool({
           </Button>
 
           {generatedFile ? (
-            <Button asChild variant="outline">
+            <Button
+              asChild
+              variant="outline"
+              className="transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm"
+            >
               <a href={generatedFile.url} download={generatedFile.fileName}>
                 <Download className="size-4" aria-hidden="true" />
-                Download
+                Download {selectedPages.length === 1 ? format.toUpperCase() : "ZIP"}
               </a>
             </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setError("Convert your PDF before downloading.")}
-            >
-              <Download className="size-4" aria-hidden="true" />
-              Download
-            </Button>
-          )}
+          ) : null}
 
-          <Button type="button" variant="ghost" onClick={handleReset}>
+          <Button
+            type="button"
+            variant="ghost"
+            className="transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm"
+            onClick={handleReset}
+          >
             <RotateCcw className="size-4" aria-hidden="true" />
             Start over
           </Button>
@@ -506,13 +607,15 @@ export function PdfToImageTool({
 
         {progress ? (
           <p className="mt-4 rounded-md bg-muted px-3 py-2 text-sm font-medium text-muted-foreground">
-            {progress}
+            Converting pages... {progress}
           </p>
         ) : null}
 
         {generatedFile ? (
-          <p className="mt-4 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
-            {successMessage}
+          <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm">
+            {selectedPages.length === 1
+              ? `${format.toUpperCase()} created successfully`
+              : "ZIP created successfully"}
           </p>
         ) : null}
       </aside>
@@ -603,4 +706,126 @@ function parsePageRange(value: string, pageCount: number) {
   }
 
   return selectedPages;
+}
+
+type OptionButtonProps<T extends string> = {
+  label: string;
+  onChange: (value: T) => void;
+  options: Array<{ label: string; value: T }>;
+  value: T;
+};
+
+function OptionButtons<T extends string>({
+  label,
+  onChange,
+  options,
+  value,
+}: OptionButtonProps<T>) {
+  return (
+    <fieldset>
+      <legend className="mb-2 text-sm font-semibold text-foreground">
+        {label}
+      </legend>
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-2">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={value === option.value}
+            className={cn(
+              "rounded-xl border border-border px-3 py-2.5 text-left text-sm font-semibold transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm",
+              value === option.value
+                ? "border-primary bg-primary/10 text-primary"
+                : "bg-background text-foreground hover:bg-muted",
+            )}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+function getSelectedPagesSafely({
+  mode,
+  pageCount,
+  pageRange,
+  singlePage,
+}: {
+  mode: PageSelectionMode;
+  pageCount: number;
+  pageRange: string;
+  singlePage: string;
+}) {
+  try {
+    return parseSelectedPages({ mode, pageCount, pageRange, singlePage });
+  } catch {
+    return [];
+  }
+}
+
+function formatSelectedPagesLabel(pageNumbers: number[], pageCount: number) {
+  if (!pageNumbers.length) {
+    return "Invalid";
+  }
+
+  if (pageNumbers.length === pageCount) {
+    return "All pages";
+  }
+
+  if (pageNumbers.length === 1) {
+    return `Page ${pageNumbers[0]}`;
+  }
+
+  return `${pageNumbers.length} pages`;
+}
+
+function getExpectedOutputName({
+  format,
+  selectedPages,
+  selectedPdf,
+  singlePageFileName,
+  zipFileName,
+}: {
+  format: "jpg" | "png";
+  selectedPages: number[];
+  selectedPdf: SelectedPdf | null;
+  singlePageFileName: string;
+  zipFileName: string;
+}) {
+  if (!selectedPdf) {
+    return "None";
+  }
+
+  if (selectedPages.length === 1) {
+    return selectedPages[0] === 1
+      ? singlePageFileName
+      : `page-${selectedPages[0]}.${format}`;
+  }
+
+  return zipFileName;
+}
+
+function labelFor<T extends string>(
+  options: Array<{ label: string; value: T }>,
+  value: T,
+) {
+  return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function getPdfLoadErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  const name = error instanceof Error ? error.name.toLowerCase() : "";
+
+  if (
+    name.includes("password") ||
+    message.includes("password") ||
+    message.includes("encrypted")
+  ) {
+    return "This PDF is password protected. Please unlock it first.";
+  }
+
+  return "This PDF could not be read. Please choose another file.";
 }
