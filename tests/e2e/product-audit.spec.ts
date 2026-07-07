@@ -267,6 +267,9 @@ test.describe("critical PDF workflows", () => {
     await expect(page.getByText(/sample.jpg/i)).toBeVisible();
     const livePreview = page.getByLabel("Live PDF page preview");
     await expect(livePreview).toBeVisible();
+    await page.getByRole("button", { name: /^None$/ }).click();
+    await page.getByRole("button", { name: /^Fit$/ }).click();
+    await expect(livePreview).toHaveAttribute("data-preview-margin-px", "0");
     await page.getByRole("button", { name: /^Portrait$/ }).click();
     await expect(livePreview).toHaveAttribute("data-preview-orientation", "portrait");
     await page.getByRole("button", { name: /^Landscape$/ }).click();
@@ -291,6 +294,9 @@ test.describe("critical PDF workflows", () => {
     await expect(page.getByText(/sample.png/i)).toBeVisible();
     const pngLivePreview = page.getByLabel("Live PDF page preview");
     await expect(pngLivePreview).toBeVisible();
+    await page.getByRole("button", { name: /^None$/ }).click();
+    await page.getByRole("button", { name: /^Fit$/ }).click();
+    await expect(pngLivePreview).toHaveAttribute("data-preview-margin-px", "0");
     await page.getByRole("button", { name: /^Landscape$/ }).click();
     await expect(pngLivePreview).toHaveAttribute(
       "data-preview-orientation",
@@ -316,6 +322,71 @@ test.describe("critical PDF workflows", () => {
       "png-to-pdf.pdf",
     );
     expect((await PDFDocument.load(transparentPngPdf)).getPageCount()).toBe(1);
+
+    await page.goto("/images-to-pdf");
+    await uploadFirstFile(page, fixtures.widePng);
+    await expect(page.getByText(/wide-2x1.png/i)).toBeVisible();
+    const autoNonePreview = page.getByLabel("Live PDF page preview");
+    await page.getByRole("button", { exact: true, name: "Auto" }).click();
+    await page.getByRole("button", { name: /^Auto Match image ratio/ }).click();
+    await page.getByRole("button", { name: /^None$/ }).click();
+    await page.getByRole("button", { name: /^Fit$/ }).click();
+    await expect(autoNonePreview).toHaveAttribute("data-preview-margin-px", "0");
+    await expect(autoNonePreview).toHaveAttribute("data-preview-image-left", "0.000");
+    await expect(autoNonePreview).toHaveAttribute("data-preview-image-top", "0.000");
+    await expect(autoNonePreview).toHaveAttribute(
+      "data-preview-image-width",
+      "100.000",
+    );
+    await expect(autoNonePreview).toHaveAttribute(
+      "data-preview-image-height",
+      "100.000",
+    );
+    const autoNonePdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "images.pdf",
+    );
+    const autoNonePage = (await PDFDocument.load(autoNonePdf)).getPage(0);
+    const autoNonePageSize = autoNonePage.getSize();
+    expect(autoNonePageSize.width / autoNonePageSize.height).toBeCloseTo(2, 3);
+
+    await page.goto("/images-to-pdf");
+    await uploadFirstFile(page, fixtures.widePng);
+    await page.getByRole("button", { name: /^A4/ }).click();
+    await page.getByRole("button", { name: /^Portrait$/ }).click();
+    await page.getByRole("button", { name: /^None$/ }).click();
+    await page.getByRole("button", { name: /^Fit$/ }).click();
+    await expect(page.getByLabel("Live PDF page preview")).toHaveAttribute(
+      "data-preview-margin-px",
+      "0",
+    );
+    const a4PortraitNonePdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "images.pdf",
+    );
+    expect((await PDFDocument.load(a4PortraitNonePdf)).getPageCount()).toBe(1);
+
+    await page.goto("/images-to-pdf");
+    await uploadFirstFile(page, fixtures.widePng);
+    await page.getByRole("button", { name: /^A4/ }).click();
+    await page.getByRole("button", { name: /^Landscape$/ }).click();
+    await page.getByRole("button", { name: /^None$/ }).click();
+    await page.getByRole("button", { name: /^Fill$/ }).click();
+    await expect(page.getByLabel("Live PDF page preview")).toHaveAttribute(
+      "data-preview-margin-px",
+      "0",
+    );
+    const a4LandscapeFillPdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "images.pdf",
+    );
+    expect((await PDFDocument.load(a4LandscapeFillPdf)).getPageCount()).toBe(1);
 
     await page.goto("/images-to-pdf");
     await uploadFirstFile(page, [fixtures.jpg, fixtures.png]);

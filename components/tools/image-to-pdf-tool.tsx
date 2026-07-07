@@ -232,29 +232,24 @@ export function ImageToPdfTool({
           imageBytes.type === "jpg"
             ? await pdfDocument.embedJpg(imageBytes.bytes)
             : await pdfDocument.embedPng(imageBytes.bytes);
-        const marginSize = marginSizes[margin];
-        const pageBox = getPageBox({
+        const placement = calculateImagePlacement({
+          fitMode,
           imageWidth: embeddedImage.width,
           imageHeight: embeddedImage.height,
-          margin: marginSize,
+          margin,
           orientation,
           pageSize,
         });
-        const fittedSize = fitImageOnPage({
-          imageWidth: embeddedImage.width,
-          imageHeight: embeddedImage.height,
-          margin: marginSize,
-          mode: fitMode,
-          pageHeight: pageBox.height,
-          pageWidth: pageBox.width,
-        });
 
-        const page = pdfDocument.addPage([pageBox.width, pageBox.height]);
+        const page = pdfDocument.addPage([
+          placement.pageWidth,
+          placement.pageHeight,
+        ]);
         page.drawImage(embeddedImage, {
-          x: (pageBox.width - fittedSize.width) / 2,
-          y: (pageBox.height - fittedSize.height) / 2,
-          width: fittedSize.width,
-          height: fittedSize.height,
+          x: placement.drawX,
+          y: placement.drawY,
+          width: placement.drawWidth,
+          height: placement.drawHeight,
         });
       }
 
@@ -583,6 +578,11 @@ function PdfLivePreview({
           aria-label="Live PDF page preview"
           data-preview-orientation={model.isLandscape ? "landscape" : "portrait"}
           data-preview-margin={margin}
+          data-preview-margin-px={model.marginPx}
+          data-preview-image-left={model.imageLeftPercent.toFixed(3)}
+          data-preview-image-top={model.imageTopPercent.toFixed(3)}
+          data-preview-image-width={model.imageWidthPercent.toFixed(3)}
+          data-preview-image-height={model.imageHeightPercent.toFixed(3)}
           className={cn(
             "relative bg-white ring-1 ring-black/10 transition-[aspect-ratio,width,max-height,transform,box-shadow] ease-out",
             isShowcase
@@ -604,11 +604,24 @@ function PdfLivePreview({
         >
           <div
             className={cn(
-              "absolute overflow-hidden rounded-sm border border-dashed border-primary/25 bg-primary/5 transition-[inset,transform] ease-out",
+              "pointer-events-none absolute rounded-sm border border-dashed border-primary/25 transition-[inset,opacity] ease-out",
               isShowcase ? "duration-[180ms]" : "duration-200",
             )}
             style={{
-              inset: `${isShowcase ? model.showcaseMarginPercent : model.marginPercent}%`,
+              inset: `${model.marginPercent}%`,
+              opacity: model.marginPx === 0 ? 0 : 1,
+            }}
+          />
+          <div
+            className={cn(
+              "absolute overflow-hidden transition-[left,top,width,height,transform] ease-out",
+              isShowcase ? "duration-[180ms]" : "duration-200",
+            )}
+            style={{
+              left: `${model.imageLeftPercent}%`,
+              top: `${model.imageTopPercent}%`,
+              width: `${model.imageWidthPercent}%`,
+              height: `${model.imageHeightPercent}%`,
             }}
           >
             <NextImage
@@ -617,19 +630,10 @@ function PdfLivePreview({
               fill
               sizes="520px"
               className={cn(
-                "transition-[object-fit,transform] ease-out",
+                "object-fill transition-transform ease-out",
                 isShowcase ? "duration-[180ms]" : "duration-200",
               )}
               unoptimized
-              style={{
-                objectFit: model.fitMode === "fill" ? "cover" : "contain",
-                transform:
-                  model.fitMode === "fill"
-                    ? isShowcase
-                      ? "scale(1.06)"
-                      : "scale(1.025)"
-                    : "scale(1)",
-              }}
             />
           </div>
         </div>
@@ -640,11 +644,15 @@ function PdfLivePreview({
 
 type PreviewModel = {
   fitMode: ImageFitMode;
+  imageHeightPercent: number;
+  imageLeftPercent: number;
+  imageTopPercent: number;
+  imageWidthPercent: number;
   isLandscape: boolean;
+  marginPx: number;
   marginPercent: number;
   pageHeight: number;
   pageWidth: number;
-  showcaseMarginPercent: number;
 };
 
 function createPreviewModel({
@@ -662,30 +670,32 @@ function createPreviewModel({
 }): PreviewModel {
   const imageWidth = image?.width ?? 595;
   const imageHeight = image?.height ?? 842;
-  const marginSize = marginSizes[margin];
-  const pageBox = getPageBox({
+  const placement = calculateImagePlacement({
+    fitMode,
     imageHeight,
     imageWidth,
-    margin: marginSize,
+    margin,
     orientation,
     pageSize,
   });
-  const shortestSide = Math.min(pageBox.width, pageBox.height);
-  const marginPercent = Math.min(22, (marginSize / shortestSide) * 100);
-  const showcaseMarginPercent =
-    margin === "none"
-      ? 0.8
-      : margin === "large"
-        ? Math.min(28, marginPercent * 1.45)
-        : Math.min(18, marginPercent * 1.15);
 
   return {
     fitMode,
-    isLandscape: pageBox.width > pageBox.height,
-    marginPercent,
-    pageHeight: pageBox.height,
-    pageWidth: pageBox.width,
-    showcaseMarginPercent,
+    imageHeightPercent:
+      (placement.drawHeight / placement.pageHeight) * 100,
+    imageLeftPercent: (placement.drawX / placement.pageWidth) * 100,
+    imageTopPercent:
+      ((placement.pageHeight - placement.drawY - placement.drawHeight) /
+        placement.pageHeight) *
+      100,
+    imageWidthPercent: (placement.drawWidth / placement.pageWidth) * 100,
+    isLandscape: placement.pageWidth > placement.pageHeight,
+    marginPx: placement.marginPx,
+    marginPercent:
+      (placement.marginPx / Math.min(placement.pageWidth, placement.pageHeight)) *
+      100,
+    pageHeight: placement.pageHeight,
+    pageWidth: placement.pageWidth,
   };
 }
 
@@ -791,28 +801,58 @@ type PageBox = {
   height: number;
 };
 
-function getPageBox({
+type ImagePlacement = {
+  drawHeight: number;
+  drawWidth: number;
+  drawX: number;
+  drawY: number;
+  marginPx: number;
+  pageHeight: number;
+  pageWidth: number;
+};
+
+function calculateImagePlacement({
+  fitMode,
   imageWidth,
   imageHeight,
   margin,
   orientation,
   pageSize,
 }: {
+  fitMode: ImageFitMode;
   imageWidth: number;
   imageHeight: number;
-  margin: number;
+  margin: ImagePdfMargin;
   orientation: ImagePdfOrientation;
   pageSize: ImagePdfPageSize;
-}) {
+}): ImagePlacement {
+  const marginPx = marginSizes[margin];
   const naturalPage =
     pageSize === "auto"
       ? {
-          width: imageWidth + margin * 2,
-          height: imageHeight + margin * 2,
+          width: imageWidth + marginPx * 2,
+          height: imageHeight + marginPx * 2,
         }
       : fixedPageSizes[pageSize];
+  const pageBox = orientPageBox(naturalPage, orientation, imageWidth >= imageHeight);
+  const availableWidth = Math.max(1, pageBox.width - marginPx * 2);
+  const availableHeight = Math.max(1, pageBox.height - marginPx * 2);
+  const scale =
+    fitMode === "fill"
+      ? Math.max(availableWidth / imageWidth, availableHeight / imageHeight)
+      : Math.min(availableWidth / imageWidth, availableHeight / imageHeight);
+  const drawWidth = imageWidth * scale;
+  const drawHeight = imageHeight * scale;
 
-  return orientPageBox(naturalPage, orientation, imageWidth >= imageHeight);
+  return {
+    drawHeight,
+    drawWidth,
+    drawX: marginPx + (availableWidth - drawWidth) / 2,
+    drawY: marginPx + (availableHeight - drawHeight) / 2,
+    marginPx,
+    pageHeight: pageBox.height,
+    pageWidth: pageBox.width,
+  };
 }
 
 function orientPageBox(
@@ -831,34 +871,6 @@ function orientPageBox(
     : Math.max(pageBox.width, pageBox.height);
 
   return { width, height };
-}
-
-function fitImageOnPage({
-  imageWidth,
-  imageHeight,
-  margin,
-  mode,
-  pageWidth,
-  pageHeight,
-}: {
-  imageWidth: number;
-  imageHeight: number;
-  margin: number;
-  mode: ImageFitMode;
-  pageWidth: number;
-  pageHeight: number;
-}) {
-  const availableWidth = Math.max(1, pageWidth - margin * 2);
-  const availableHeight = Math.max(1, pageHeight - margin * 2);
-  const ratio =
-    mode === "fill"
-      ? Math.max(availableWidth / imageWidth, availableHeight / imageHeight)
-      : Math.min(availableWidth / imageWidth, availableHeight / imageHeight);
-
-  return {
-    width: imageWidth * ratio,
-    height: imageHeight * ratio,
-  };
 }
 
 function labelFor<T extends string>(
