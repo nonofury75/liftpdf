@@ -24,6 +24,7 @@ type ImageToPdfToolProps = {
   acceptedImageTypes?: string[];
   addMoreAriaLabel?: string;
   invalidFileMessage?: string;
+  presentation?: "standard" | "showcase";
   uploadButtonLabel?: string;
   uploadDescription?: string;
   uploadTitle?: string;
@@ -76,6 +77,7 @@ export function ImageToPdfTool({
   acceptedImageTypes = defaultAcceptedImageTypes,
   addMoreAriaLabel = "Add more images",
   invalidFileMessage = "Only JPG, JPEG, PNG and WEBP files are supported.",
+  presentation = "standard",
   uploadButtonLabel = "Choose files",
   uploadDescription,
   uploadTitle,
@@ -315,6 +317,7 @@ export function ImageToPdfTool({
               image={images[0]}
               margin={margin}
               model={previewModel}
+              presentation={presentation}
             />
             <input
               ref={addMoreInputRef}
@@ -331,16 +334,37 @@ export function ImageToPdfTool({
 
       <aside className="order-2 h-fit rounded-2xl border border-border bg-card p-6 shadow-md xl:sticky xl:top-24 xl:col-start-2 xl:row-span-2 xl:row-start-1">
         <h2 className="text-xl font-semibold text-foreground">PDF settings</h2>
-        <div className="mt-5 space-y-3 rounded-xl border border-border bg-muted/30 p-4 text-sm">
+        <div className="mt-5 space-y-3 rounded-xl border border-border bg-muted/25 p-4 text-sm">
           <SummaryRow
             label="Orientation"
             value={labelFor(orientationOptions, orientation)}
+            presentation={presentation}
           />
-          <SummaryRow label="Page size" value={labelFor(pageSizeOptions, pageSize)} />
-          <SummaryRow label="Margins" value={labelFor(marginOptions, margin)} />
-          <SummaryRow label="Image fit" value={labelFor(fitOptions, fitMode)} />
-          <SummaryRow label="Images" value={String(images.length)} />
-          <SummaryRow label="Total size" value={formatFileSize(totalSize)} />
+          <SummaryRow
+            label="Page size"
+            value={labelFor(pageSizeOptions, pageSize)}
+            presentation={presentation}
+          />
+          <SummaryRow
+            label="Margins"
+            value={labelFor(marginOptions, margin)}
+            presentation={presentation}
+          />
+          <SummaryRow
+            label="Image fit"
+            value={labelFor(fitOptions, fitMode)}
+            presentation={presentation}
+          />
+          <SummaryRow
+            label="Images"
+            value={String(images.length)}
+            presentation={presentation}
+          />
+          <SummaryRow
+            label="Total size"
+            value={formatFileSize(totalSize)}
+            presentation={presentation}
+          />
         </div>
 
         <div className="mt-7 space-y-7">
@@ -436,6 +460,7 @@ export function ImageToPdfTool({
             onRemove={handleRemove}
             onMove={handleMove}
             onAddMore={() => addMoreInputRef.current?.click()}
+            presentation={presentation}
           />
         </div>
       ) : null}
@@ -495,13 +520,22 @@ function OptionGroup<T extends string>({
 type SummaryRowProps = {
   label: string;
   value: string;
+  presentation: "standard" | "showcase";
 };
 
-function SummaryRow({ label, value }: SummaryRowProps) {
+function SummaryRow({ label, value, presentation }: SummaryRowProps) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-border/80 pb-3 last:border-b-0 last:pb-0">
       <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-semibold text-foreground">{value}</span>
+      <span
+        className={cn(
+          "text-right font-semibold text-foreground",
+          presentation === "showcase" &&
+            "rounded-full border border-border bg-background px-2.5 py-1 text-xs shadow-sm",
+        )}
+      >
+        {value}
+      </span>
     </div>
   );
 }
@@ -510,9 +544,17 @@ type PdfLivePreviewProps = {
   image: UploadedImage;
   margin: ImagePdfMargin;
   model: PreviewModel;
+  presentation: "standard" | "showcase";
 };
 
-function PdfLivePreview({ image, margin, model }: PdfLivePreviewProps) {
+function PdfLivePreview({
+  image,
+  margin,
+  model,
+  presentation,
+}: PdfLivePreviewProps) {
+  const isShowcase = presentation === "showcase";
+
   return (
     <section className="rounded-2xl border border-border bg-card p-4 shadow-md sm:p-6">
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -529,22 +571,44 @@ function PdfLivePreview({ image, margin, model }: PdfLivePreviewProps) {
         </span>
       </div>
 
-      <div className="flex min-h-[420px] items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 p-3 shadow-inner sm:min-h-[610px] sm:p-5 xl:min-h-[660px]">
+      <div
+        className={cn(
+          "flex items-center justify-center overflow-hidden rounded-xl p-3 shadow-inner sm:p-5",
+          isShowcase
+            ? "min-h-[450px] bg-gradient-to-br from-slate-50 to-slate-200/70 sm:min-h-[650px] xl:min-h-[700px]"
+            : "min-h-[420px] bg-gradient-to-br from-slate-100 to-slate-200 sm:min-h-[610px] xl:min-h-[660px]",
+        )}
+      >
         <div
           aria-label="Live PDF page preview"
           data-preview-orientation={model.isLandscape ? "landscape" : "portrait"}
           data-preview-margin={margin}
-          className="relative bg-white shadow-[0_24px_70px_rgba(15,23,42,0.24)] ring-1 ring-black/10 transition-[aspect-ratio,width,max-height,transform,box-shadow] duration-200 ease-out"
+          className={cn(
+            "relative bg-white ring-1 ring-black/10 transition-[aspect-ratio,width,max-height,transform,box-shadow] ease-out",
+            isShowcase
+              ? "duration-[180ms] shadow-[0_28px_90px_rgba(15,23,42,0.26)]"
+              : "duration-200 shadow-[0_24px_70px_rgba(15,23,42,0.24)]",
+          )}
           style={{
             aspectRatio: `${model.pageWidth} / ${model.pageHeight}`,
-            width: model.isLandscape ? "min(100%, 720px)" : "min(90%, 470px)",
-            maxHeight: "620px",
+            width: model.isLandscape
+              ? isShowcase
+                ? "min(100%, 790px)"
+                : "min(100%, 720px)"
+              : isShowcase
+                ? "min(94%, 520px)"
+                : "min(90%, 470px)",
+            maxHeight: isShowcase ? "670px" : "620px",
+            transform: isShowcase && model.isLandscape ? "scale(1.01)" : "scale(1)",
           }}
         >
           <div
-            className="absolute overflow-hidden rounded-sm border border-dashed border-primary/25 bg-primary/5 transition-[inset,transform] duration-200 ease-out"
+            className={cn(
+              "absolute overflow-hidden rounded-sm border border-dashed border-primary/25 bg-primary/5 transition-[inset,transform] ease-out",
+              isShowcase ? "duration-[180ms]" : "duration-200",
+            )}
             style={{
-              inset: `${model.marginPercent}%`,
+              inset: `${isShowcase ? model.showcaseMarginPercent : model.marginPercent}%`,
             }}
           >
             <NextImage
@@ -552,12 +616,19 @@ function PdfLivePreview({ image, margin, model }: PdfLivePreviewProps) {
               alt=""
               fill
               sizes="520px"
-              className="transition-[object-fit,transform] duration-200 ease-out"
+              className={cn(
+                "transition-[object-fit,transform] ease-out",
+                isShowcase ? "duration-[180ms]" : "duration-200",
+              )}
               unoptimized
               style={{
                 objectFit: model.fitMode === "fill" ? "cover" : "contain",
                 transform:
-                  model.fitMode === "fill" ? "scale(1.025)" : "scale(1)",
+                  model.fitMode === "fill"
+                    ? isShowcase
+                      ? "scale(1.06)"
+                      : "scale(1.025)"
+                    : "scale(1)",
               }}
             />
           </div>
@@ -573,6 +644,7 @@ type PreviewModel = {
   marginPercent: number;
   pageHeight: number;
   pageWidth: number;
+  showcaseMarginPercent: number;
 };
 
 function createPreviewModel({
@@ -599,13 +671,21 @@ function createPreviewModel({
     pageSize,
   });
   const shortestSide = Math.min(pageBox.width, pageBox.height);
+  const marginPercent = Math.min(22, (marginSize / shortestSide) * 100);
+  const showcaseMarginPercent =
+    margin === "none"
+      ? 0.8
+      : margin === "large"
+        ? Math.min(28, marginPercent * 1.45)
+        : Math.min(18, marginPercent * 1.15);
 
   return {
     fitMode,
     isLandscape: pageBox.width > pageBox.height,
-    marginPercent: Math.min(22, (marginSize / shortestSide) * 100),
+    marginPercent,
     pageHeight: pageBox.height,
     pageWidth: pageBox.width,
+    showcaseMarginPercent,
   };
 }
 

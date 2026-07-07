@@ -15,7 +15,10 @@ type ImageToPdfPageProps = {
   currentHref: string;
   acceptedImageTypes?: string[];
   addMoreAriaLabel?: string;
+  compactHero?: boolean;
+  compactRelatedTools?: boolean;
   invalidFileMessage?: string;
+  presentation?: "standard" | "showcase";
   uploadButtonLabel?: string;
   uploadDescription?: string;
   uploadTitle?: string;
@@ -30,7 +33,10 @@ export function ImageToPdfPage({
   currentHref,
   acceptedImageTypes,
   addMoreAriaLabel,
+  compactHero,
+  compactRelatedTools,
   invalidFileMessage,
+  presentation,
   uploadButtonLabel,
   uploadDescription,
   uploadTitle,
@@ -43,12 +49,15 @@ export function ImageToPdfPage({
       seoText={seoText}
       faq={faq}
       currentHref={currentHref}
+      compactHero={compactHero}
+      compactRelatedTools={compactRelatedTools}
     >
       <ImageToPdfTool
         acceptedImageTypes={acceptedImageTypes}
         addMoreAriaLabel={addMoreAriaLabel}
         downloadFileName={downloadFileName}
         invalidFileMessage={invalidFileMessage}
+        presentation={presentation}
         uploadButtonLabel={uploadButtonLabel}
         uploadDescription={uploadDescription}
         uploadTitle={uploadTitle}

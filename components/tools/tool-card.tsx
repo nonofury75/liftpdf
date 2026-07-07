@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 
 type ToolCardProps = {
   tool: ToolCardType;
+  compact?: boolean;
 };
 
 const iconMap: Record<ToolIcon, LucideIcon> = {
@@ -53,12 +54,19 @@ const trustBadges = [
   { label: "Browser", icon: FileText },
 ];
 
-export function ToolCard({ tool }: ToolCardProps) {
+export function ToolCard({ tool, compact = false }: ToolCardProps) {
   const Icon = iconMap[tool.icon];
 
   const card = (
-    <Card className="group flex h-full min-h-64 flex-col transition-colors hover:border-primary/60 hover:bg-background">
-      <CardHeader className="flex h-full flex-col gap-5">
+    <Card
+      className={cn(
+        "group flex h-full flex-col transition-colors hover:border-primary/60 hover:bg-background",
+        compact ? "min-h-56" : "min-h-64",
+      )}
+    >
+      <CardHeader
+        className={cn("flex h-full flex-col", compact ? "gap-4 p-5" : "gap-5")}
+      >
         <div className="flex items-center justify-between gap-4">
           <span className="grid size-11 place-items-center rounded-md bg-primary/10 text-primary">
             <Icon className="size-5" aria-hidden="true" />
@@ -90,7 +98,10 @@ export function ToolCard({ tool }: ToolCardProps) {
               return (
                 <span
                   key={badge.label}
-                  className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground"
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-md bg-muted text-xs font-semibold text-muted-foreground",
+                    compact ? "px-1.5 py-0.5" : "px-2 py-1",
+                  )}
                 >
                   <BadgeIcon className="size-3.5 text-primary" aria-hidden="true" />
                   {badge.label}

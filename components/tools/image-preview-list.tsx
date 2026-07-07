@@ -17,6 +17,7 @@ type ImagePreviewListProps = {
   onRemove: (id: string) => void;
   onMove: (id: string, direction: "up" | "down") => void;
   onAddMore?: () => void;
+  presentation?: "standard" | "showcase";
 };
 
 export function ImagePreviewList({
@@ -24,6 +25,7 @@ export function ImagePreviewList({
   onRemove,
   onMove,
   onAddMore,
+  presentation = "standard",
 }: ImagePreviewListProps) {
   if (!images.length) {
     return null;
@@ -46,10 +48,13 @@ export function ImagePreviewList({
               type="button"
               variant="outline"
               size="sm"
-              className="border-primary/25 bg-background text-primary transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-sm"
+              className="border-primary/25 bg-background text-primary transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
               onClick={onAddMore}
             >
-              <Plus className="size-4" aria-hidden="true" />
+              <Plus
+                className={presentation === "showcase" ? "size-[18px]" : "size-4"}
+                aria-hidden="true"
+              />
               Add more images
             </Button>
           ) : null}
@@ -61,24 +66,34 @@ export function ImagePreviewList({
         {images.map((image, index) => (
           <li
             key={image.id}
-            className="grid gap-4 rounded-xl border border-border bg-background p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md sm:grid-cols-[136px_1fr_auto]"
+            className={
+              presentation === "showcase"
+                ? "grid gap-5 rounded-xl border border-border bg-background p-5 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md sm:grid-cols-[150px_1fr_auto]"
+                : "grid gap-4 rounded-xl border border-border bg-background p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md sm:grid-cols-[136px_1fr_auto]"
+            }
           >
-            <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-border bg-muted shadow-inner sm:size-[136px]">
+            <div
+              className={
+                presentation === "showcase"
+                  ? "relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-border bg-muted shadow-inner sm:size-[150px]"
+                  : "relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-border bg-muted shadow-inner sm:size-[136px]"
+              }
+            >
               <Image
                 src={image.previewUrl}
                 alt=""
                 fill
-                sizes="136px"
+                sizes={presentation === "showcase" ? "150px" : "136px"}
                 className="object-cover"
                 unoptimized
               />
             </div>
 
-            <div className="min-w-0 self-center">
+            <div className="min-w-0 self-center sm:pr-2">
               <p className="truncate text-sm font-semibold text-foreground">
                 {image.file.name}
               </p>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1.5 text-sm text-muted-foreground">
                 {formatFileSize(image.file.size)} - {image.width} x{" "}
                 {image.height}px
               </p>

@@ -31,6 +31,9 @@ export default function ImagesToPdfPage() {
       seoText="The LiftPDF images to PDF converter creates a PDF from common image formats on your device. Add images, remove files you do not need, reorder pages and download the final PDF."
       downloadFileName="images.pdf"
       currentHref="/images-to-pdf"
+      compactHero
+      compactRelatedTools
+      presentation="showcase"
       faq={[
         {
           question: "Which image formats are supported?",
