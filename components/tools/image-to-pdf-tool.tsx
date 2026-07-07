@@ -9,6 +9,7 @@ import {
   UploadedImage,
 } from "@/components/tools/image-preview-list";
 import { ImageUploadZone } from "@/components/tools/image-upload-zone";
+import { createClientId } from "@/lib/create-client-id";
 import { cn } from "@/lib/utils";
 
 type ImageToPdfToolProps = {
@@ -424,7 +425,7 @@ async function createUploadedImage(file: File): Promise<UploadedImage> {
     const dimensions = await readImageDimensions(previewUrl);
 
     return {
-      id: crypto.randomUUID(),
+      id: createClientId("image"),
       file,
       previewUrl,
       width: dimensions.width,

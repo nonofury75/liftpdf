@@ -6,6 +6,7 @@ import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
 import { PdfFileList, UploadedPdf } from "@/components/tools/pdf-file-list";
 import { PdfUploadZone } from "@/components/tools/pdf-upload-zone";
+import { createClientId } from "@/lib/create-client-id";
 
 const mergedFileName = "merged.pdf";
 
@@ -52,7 +53,7 @@ export function MergePdfTool() {
     setFiles((currentFiles) => [
       ...currentFiles,
       ...validFiles.map((file) => ({
-        id: crypto.randomUUID(),
+        id: createClientId("pdf"),
         file,
       })),
     ]);
