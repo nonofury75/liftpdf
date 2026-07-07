@@ -284,8 +284,20 @@ test.describe("critical PDF workflows", () => {
     expect((await PDFDocument.load(jpgPdf)).getPageCount()).toBe(1);
 
     await page.goto("/png-to-pdf");
+    await expect(page.getByText("Drop your PNG images here.")).toBeVisible();
+    await uploadFirstFile(page, fixtures.jpg);
+    await expect(page.getByText(/Only PNG files are supported/i)).toBeVisible();
     await uploadFirstFile(page, fixtures.png);
     await expect(page.getByText(/sample.png/i)).toBeVisible();
+    const pngLivePreview = page.getByLabel("Live PDF page preview");
+    await expect(pngLivePreview).toBeVisible();
+    await page.getByRole("button", { name: /^Landscape$/ }).click();
+    await expect(pngLivePreview).toHaveAttribute(
+      "data-preview-orientation",
+      "landscape",
+    );
+    await page.getByRole("button", { name: /^Large$/ }).click();
+    await expect(pngLivePreview).toHaveAttribute("data-preview-margin", "large");
     const pngPdf = await generateThenDownloadBytes(
       page,
       /^Convert to PDF$/,
@@ -293,6 +305,17 @@ test.describe("critical PDF workflows", () => {
       "png-to-pdf.pdf",
     );
     expect((await PDFDocument.load(pngPdf)).getPageCount()).toBe(1);
+
+    await page.goto("/png-to-pdf");
+    await uploadFirstFile(page, fixtures.transparentPng);
+    await expect(page.getByText("transparent.png")).toBeVisible();
+    const transparentPngPdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "png-to-pdf.pdf",
+    );
+    expect((await PDFDocument.load(transparentPngPdf)).getPageCount()).toBe(1);
 
     await page.goto("/images-to-pdf");
     await uploadFirstFile(page, [fixtures.jpg, fixtures.png]);

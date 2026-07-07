@@ -13,15 +13,19 @@ import { cn } from "@/lib/utils";
 
 type ImageUploadZoneProps = {
   onFilesSelected: (files: File[]) => void;
+  accept?: string;
   buttonLabel?: string;
+  description?: string;
+  title?: string;
   compact?: boolean;
 };
 
-const acceptedImageTypes = "image/jpeg,image/png,image/webp";
-
 export function ImageUploadZone({
   onFilesSelected,
+  accept = "image/jpeg,image/png,image/webp",
   buttonLabel = "Choose files",
+  description = "Drop files here or choose files. Upload JPG, JPEG, PNG or WEBP files. Each image will become one PDF page.",
+  title = "Drop your images here",
   compact = false,
 }: ImageUploadZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -74,7 +78,7 @@ export function ImageUploadZone({
       <input
         ref={inputRef}
         type="file"
-        accept={acceptedImageTypes}
+        accept={accept}
         multiple
         aria-label={buttonLabel}
         className="hidden"
@@ -96,7 +100,7 @@ export function ImageUploadZone({
           compact && "mt-3 text-base",
         )}
       >
-        Drop your images here
+        {title}
       </h2>
       <p
         className={cn(
@@ -104,8 +108,7 @@ export function ImageUploadZone({
           compact && "max-w-sm",
         )}
       >
-        Drop files here or choose files. Upload JPG, JPEG, PNG or WEBP files.
-        Each image will become one PDF page.
+        {description}
       </p>
 
       <Button type="button" className="mt-6" onClick={openFilePicker}>

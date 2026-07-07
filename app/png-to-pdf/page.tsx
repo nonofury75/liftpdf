@@ -27,15 +27,21 @@ export default function PngToPdfPage() {
   return (
     <ImageToPdfPage
       title="PNG to PDF Converter"
-      intro="Convert PNG images into a clean PDF file with drag and drop, previews and simple ordering controls."
-      seoText="Use LiftPDF to create a PDF from PNG images without installing software. The conversion happens locally in your browser and preserves the image ratio on A4 pages."
+      intro="Convert PNG images into a clean PDF directly in your browser."
+      seoText="Use LiftPDF to create a PDF from PNG images without installing software. The conversion happens locally in your browser, centers each PNG on the page and uses a white PDF page background for transparent images."
       downloadFileName="png-to-pdf.pdf"
       currentHref="/png-to-pdf"
+      acceptedImageTypes={["image/png"]}
+      addMoreAriaLabel="Add more PNG images"
+      invalidFileMessage="Only PNG files are supported."
+      uploadButtonLabel="Choose PNG files"
+      uploadTitle="Drop your PNG images here."
+      uploadDescription="Drop your PNG images here or choose PNG files. Each PNG will become one PDF page."
       faq={[
         {
           question: "Can transparent PNG images be converted?",
           answer:
-            "Yes. PNG files can be added and converted into PDF pages directly in the browser.",
+            "Yes. Transparent PNG files can be converted directly in the browser. The PDF page uses a white background.",
         },
         {
           question: "Can I change the order before converting?",

@@ -13,6 +13,12 @@ type ImageToPdfPageProps = {
   downloadFileName: string;
   faq: FaqItem[];
   currentHref: string;
+  acceptedImageTypes?: string[];
+  addMoreAriaLabel?: string;
+  invalidFileMessage?: string;
+  uploadButtonLabel?: string;
+  uploadDescription?: string;
+  uploadTitle?: string;
 };
 
 export function ImageToPdfPage({
@@ -22,6 +28,12 @@ export function ImageToPdfPage({
   downloadFileName,
   faq,
   currentHref,
+  acceptedImageTypes,
+  addMoreAriaLabel,
+  invalidFileMessage,
+  uploadButtonLabel,
+  uploadDescription,
+  uploadTitle,
 }: ImageToPdfPageProps) {
   return (
     <ToolPageShell
@@ -32,7 +44,15 @@ export function ImageToPdfPage({
       faq={faq}
       currentHref={currentHref}
     >
-      <ImageToPdfTool downloadFileName={downloadFileName} />
+      <ImageToPdfTool
+        acceptedImageTypes={acceptedImageTypes}
+        addMoreAriaLabel={addMoreAriaLabel}
+        downloadFileName={downloadFileName}
+        invalidFileMessage={invalidFileMessage}
+        uploadButtonLabel={uploadButtonLabel}
+        uploadDescription={uploadDescription}
+        uploadTitle={uploadTitle}
+      />
     </ToolPageShell>
   );
 }

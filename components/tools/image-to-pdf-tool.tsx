@@ -21,6 +21,12 @@ import { cn } from "@/lib/utils";
 
 type ImageToPdfToolProps = {
   downloadFileName: string;
+  acceptedImageTypes?: string[];
+  addMoreAriaLabel?: string;
+  invalidFileMessage?: string;
+  uploadButtonLabel?: string;
+  uploadDescription?: string;
+  uploadTitle?: string;
 };
 
 type ImagePdfPageSize = "auto" | "a4" | "letter";
@@ -28,8 +34,7 @@ type ImagePdfOrientation = "auto" | "portrait" | "landscape";
 type ImagePdfMargin = "none" | "small" | "large";
 type ImageFitMode = "fit" | "fill";
 
-const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const acceptedImageTypes = "image/jpeg,image/png,image/webp";
+const defaultAcceptedImageTypes = ["image/jpeg", "image/png", "image/webp"];
 const pageSizeOptions: Array<{
   label: string;
   value: ImagePdfPageSize;
@@ -66,7 +71,15 @@ const marginSizes: Record<ImagePdfMargin, number> = {
   large: 72,
 };
 
-export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
+export function ImageToPdfTool({
+  downloadFileName,
+  acceptedImageTypes = defaultAcceptedImageTypes,
+  addMoreAriaLabel = "Add more images",
+  invalidFileMessage = "Only JPG, JPEG, PNG and WEBP files are supported.",
+  uploadButtonLabel = "Choose files",
+  uploadDescription,
+  uploadTitle,
+}: ImageToPdfToolProps) {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [pageSize, setPageSize] = useState<ImagePdfPageSize>("a4");
   const [orientation, setOrientation] = useState<ImagePdfOrientation>("auto");
@@ -78,6 +91,11 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
   const imagesRef = useRef<UploadedImage[]>([]);
   const pdfUrlRef = useRef<string | null>(null);
   const addMoreInputRef = useRef<HTMLInputElement>(null);
+  const acceptedImageTypeSet = useMemo(
+    () => new Set(acceptedImageTypes),
+    [acceptedImageTypes],
+  );
+  const acceptedImageTypeList = acceptedImageTypes.join(",");
 
   const totalSize = useMemo(
     () => images.reduce((sum, image) => sum + image.file.size, 0),
@@ -116,11 +134,13 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
   }, []);
 
   async function handleFilesSelected(files: File[]) {
-    const validFiles = files.filter((file) => allowedImageTypes.has(file.type));
+    const validFiles = files.filter((file) =>
+      acceptedImageTypeSet.has(file.type),
+    );
     const invalidCount = files.length - validFiles.length;
 
     if (invalidCount > 0) {
-      setError("Only JPG, JPEG, PNG and WEBP files are supported.");
+      setError(invalidFileMessage);
     } else {
       setError(null);
     }
@@ -274,7 +294,13 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_390px]">
       <div className="order-1 space-y-6 xl:col-start-1 xl:row-start-1">
         {!images.length ? (
-          <ImageUploadZone onFilesSelected={handleFilesSelected} />
+          <ImageUploadZone
+            accept={acceptedImageTypeList}
+            buttonLabel={uploadButtonLabel}
+            description={uploadDescription}
+            title={uploadTitle}
+            onFilesSelected={handleFilesSelected}
+          />
         ) : null}
 
         {error ? (
@@ -293,9 +319,9 @@ export function ImageToPdfTool({ downloadFileName }: ImageToPdfToolProps) {
             <input
               ref={addMoreInputRef}
               type="file"
-              accept={acceptedImageTypes}
+              accept={acceptedImageTypeList}
               multiple
-              aria-label="Add more images"
+              aria-label={addMoreAriaLabel}
               className="hidden"
               onChange={handleAddMoreChange}
             />

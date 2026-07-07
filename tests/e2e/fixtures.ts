@@ -11,6 +11,8 @@ export const fixturesDir = path.join(
 
 const onePixelPng =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
+const transparentPng =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
 const onePixelJpg =
   "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAH/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAEFAqf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/ASP/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/ASP/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAY/Aqf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/IV//2gAMAwEAAgADAAAAEP/EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQMBAT8QH//EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQIBAT8QH//EABQQAQAAAAAAAAAAAAAAAAAAABD/2gAIAQEAAT8QH//Z";
 const onePixelWebp =
@@ -26,6 +28,7 @@ export type FixturePaths = {
   emptyPdf: string;
   jpg: string;
   png: string;
+  transparentPng: string;
   webp: string;
 };
 
@@ -42,6 +45,7 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     emptyPdf: path.join(fixturesDir, "empty.pdf"),
     jpg: path.join(fixturesDir, "sample.jpg"),
     png: path.join(fixturesDir, "sample.png"),
+    transparentPng: path.join(fixturesDir, "transparent.png"),
     webp: path.join(fixturesDir, "sample.webp"),
   };
 
@@ -54,6 +58,7 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     writeFileAtomic(paths.invalidPdf, Buffer.from("not a pdf")),
     writeFileAtomic(paths.emptyPdf, Buffer.from("")),
     writeFileAtomic(paths.png, Buffer.from(onePixelPng, "base64")),
+    writeFileAtomic(paths.transparentPng, Buffer.from(transparentPng, "base64")),
     writeFileAtomic(paths.jpg, Buffer.from(onePixelJpg, "base64")),
     writeFileAtomic(paths.webp, Buffer.from(onePixelWebp, "base64")),
   ]);
