@@ -109,13 +109,27 @@ test.describe("critical PDF workflows", () => {
     await page.goto("/merge-pdf");
     await uploadFirstFile(page, [fixtures.text1, fixtures.text10]);
     await expect(page.getByText(/2 PDFs/i)).toBeVisible();
-    const mergedBytes = await generateThenDownloadBytes(
-      page,
-      /^Merge PDF$/,
-      /^Download PDF$/,
-      "merged.pdf",
+    await expect(page.getByText(/^11$/)).toBeVisible();
+    await page
+      .getByText("text-10.pdf")
+      .dragTo(page.getByText("text-1.pdf"));
+    await expect(page.locator("li").filter({ hasText: "text-10.pdf" })).toContainText(
+      "Position 1 in the merged PDF",
     );
-    expect((await PDFDocument.load(mergedBytes)).getPageCount()).toBe(11);
+    const mergeDownloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: /^Merge PDF$/ }).click();
+    const mergeDownload = await mergeDownloadPromise;
+    expect(mergeDownload.suggestedFilename()).toBe("merged.pdf");
+    const mergedFilePath = await mergeDownload.path();
+
+    if (!mergedFilePath) {
+      throw new Error("Downloaded merged PDF path is not available.");
+    }
+
+    const mergedBytes = fs.readFileSync(mergedFilePath);
+    await expect(page.getByRole("link", { name: /^Download PDF$/ })).toBeVisible();
+    const mergedPdf = await PDFDocument.load(mergedBytes);
+    expect(mergedPdf.getPageCount()).toBe(11);
     await page.getByRole("button", { name: /^Start over$|^Reset$/i }).click();
     await expect(page.getByText("text-1.pdf")).toHaveCount(0);
 

@@ -1,11 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, FileCheck2, Loader2, RotateCcw } from "lucide-react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  CheckCircle2,
+  Download,
+  FileCheck2,
+  Loader2,
+  RotateCcw,
+} from "lucide-react";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
 import { PdfFileList, UploadedPdf } from "@/components/tools/pdf-file-list";
 import { PdfUploadZone } from "@/components/tools/pdf-upload-zone";
+import {
+  loadPdfDocument,
+  renderPdfPageThumbnail,
+} from "@/components/tools/pdf/pdfjs-client";
 import { createClientId } from "@/lib/create-client-id";
 
 const mergedFileName = "merged.pdf";
@@ -15,19 +25,41 @@ export function MergePdfTool() {
   const [error, setError] = useState<string | null>(null);
   const [isMerging, setIsMerging] = useState(false);
   const [mergedPdfUrl, setMergedPdfUrl] = useState<string | null>(null);
+  const addMoreInputRef = useRef<HTMLInputElement>(null);
+  const filesRef = useRef<UploadedPdf[]>([]);
   const mergedPdfUrlRef = useRef<string | null>(null);
 
   const totalSize = useMemo(
     () => files.reduce((sum, pdf) => sum + pdf.file.size, 0),
     [files],
   );
+  const totalPages = useMemo(
+    () =>
+      files.reduce(
+        (sum, pdf) => sum + (pdf.pageCount === null ? 0 : pdf.pageCount),
+        0,
+      ),
+    [files],
+  );
+  const isReadingFiles = files.some((file) => file.status === "loading");
+  const hasUnreadableFiles = files.some((file) => file.status === "error");
 
   useEffect(() => {
     mergedPdfUrlRef.current = mergedPdfUrl;
   }, [mergedPdfUrl]);
 
   useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+
+  useEffect(() => {
     return () => {
+      filesRef.current.forEach((file) => {
+        if (file.previewUrl) {
+          URL.revokeObjectURL(file.previewUrl);
+        }
+      });
+
       if (mergedPdfUrlRef.current) {
         URL.revokeObjectURL(mergedPdfUrlRef.current);
       }
@@ -50,18 +82,47 @@ export function MergePdfTool() {
 
     clearMergedPdfUrl();
 
+    const pendingFiles = validFiles.map((file) => ({
+      id: createClientId("pdf"),
+      file,
+      pageCount: null,
+      previewHeight: null,
+      previewUrl: null,
+      previewWidth: null,
+      status: "loading" as const,
+    }));
+
     setFiles((currentFiles) => [
       ...currentFiles,
-      ...validFiles.map((file) => ({
-        id: createClientId("pdf"),
-        file,
-      })),
+      ...pendingFiles,
     ]);
+
+    pendingFiles.forEach((pdf) => {
+      void hydratePdfMetadata(pdf.id, pdf.file);
+    });
+  }
+
+  function handleAddMoreChange(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFiles = event.target.files;
+
+    if (selectedFiles?.length) {
+      handleFilesSelected(Array.from(selectedFiles));
+    }
+
+    event.target.value = "";
   }
 
   function handleRemove(id: string) {
     clearMergedPdfUrl();
-    setFiles((currentFiles) => currentFiles.filter((file) => file.id !== id));
+    setFiles((currentFiles) => {
+      const fileToRemove = currentFiles.find((file) => file.id === id);
+
+      if (fileToRemove?.previewUrl) {
+        URL.revokeObjectURL(fileToRemove.previewUrl);
+      }
+
+      return currentFiles.filter((file) => file.id !== id);
+    });
   }
 
   function handleMove(id: string, direction: "up" | "down") {
@@ -87,9 +148,37 @@ export function MergePdfTool() {
     });
   }
 
+  function handleReorder(draggedId: string, targetId: string) {
+    clearMergedPdfUrl();
+    setFiles((currentFiles) => {
+      const draggedIndex = currentFiles.findIndex((file) => file.id === draggedId);
+      const targetIndex = currentFiles.findIndex((file) => file.id === targetId);
+
+      if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) {
+        return currentFiles;
+      }
+
+      const nextFiles = [...currentFiles];
+      const [draggedFile] = nextFiles.splice(draggedIndex, 1);
+      nextFiles.splice(targetIndex, 0, draggedFile);
+
+      return nextFiles;
+    });
+  }
+
   async function handleMerge() {
     if (!files.length) {
       setError("Please choose at least one PDF file before merging.");
+      return;
+    }
+
+    if (isReadingFiles) {
+      setError("Please wait until the selected PDFs are ready.");
+      return;
+    }
+
+    if (hasUnreadableFiles) {
+      setError("One of the selected PDFs could not be read. Remove it and try another file.");
       return;
     }
 
@@ -115,10 +204,17 @@ export function MergePdfTool() {
       new Uint8Array(mergedBuffer).set(mergedBytes);
 
       const blob = new Blob([mergedBuffer], { type: "application/pdf" });
-      setMergedPdfUrl(URL.createObjectURL(blob));
-    } catch {
+      const url = URL.createObjectURL(blob);
+      setMergedPdfUrl(url);
+      triggerDownload(url, mergedFileName);
+    } catch (mergeError) {
+      const message =
+        mergeError instanceof Error &&
+        /encrypted|password|protected/i.test(mergeError.message)
+          ? "One of the selected PDFs is password protected. Unlock it first, then try merging again."
+          : "The selected PDFs could not be merged. Please try different PDF files.";
       setError(
-        "The selected PDFs could not be merged. Please try different PDF files.",
+        message,
       );
     } finally {
       setIsMerging(false);
@@ -126,6 +222,11 @@ export function MergePdfTool() {
   }
 
   function handleReset() {
+    files.forEach((file) => {
+      if (file.previewUrl) {
+        URL.revokeObjectURL(file.previewUrl);
+      }
+    });
     setFiles([]);
     setError(null);
     clearMergedPdfUrl();
@@ -141,10 +242,77 @@ export function MergePdfTool() {
     });
   }
 
+  async function hydratePdfMetadata(id: string, file: File) {
+    let previewUrl: string | null = null;
+    let pdf: Awaited<ReturnType<typeof loadPdfDocument>> | null = null;
+
+    try {
+      pdf = await loadPdfDocument(file);
+      const thumbnail = await renderPdfPageThumbnail(pdf, 1);
+      previewUrl = thumbnail.previewUrl;
+      const pageCount = pdf.numPages;
+
+      if (!filesRef.current.some((currentFile) => currentFile.id === id)) {
+        URL.revokeObjectURL(previewUrl);
+        await pdf.destroy();
+        return;
+      }
+
+      setFiles((currentFiles) =>
+        currentFiles.map((currentFile) =>
+          currentFile.id === id
+            ? {
+                ...currentFile,
+                pageCount,
+                previewHeight: thumbnail.height,
+                previewUrl,
+                previewWidth: thumbnail.width,
+                status: "ready",
+              }
+            : currentFile,
+        ),
+      );
+      await pdf.destroy();
+    } catch {
+      if (pdf) {
+        await pdf.destroy();
+      }
+
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+
+      setFiles((currentFiles) =>
+        currentFiles.map((currentFile) =>
+          currentFile.id === id
+            ? {
+                ...currentFile,
+                pageCount: null,
+                previewHeight: null,
+                previewUrl: null,
+                previewWidth: null,
+                status: "error",
+              }
+            : currentFile,
+        ),
+      );
+      setError("One of the selected PDFs could not be read. Remove it and try another file.");
+    }
+  }
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
         <PdfUploadZone onFilesSelected={handleFilesSelected} />
+        <input
+          ref={addMoreInputRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          multiple
+          aria-label="Add more PDF files"
+          className="hidden"
+          onChange={handleAddMoreChange}
+        />
 
         {error ? (
           <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -156,34 +324,68 @@ export function MergePdfTool() {
           files={files}
           onRemove={handleRemove}
           onMove={handleMove}
+          onReorder={handleReorder}
+          onAddMore={() => addMoreInputRef.current?.click()}
         />
       </div>
 
-      <aside className="h-fit rounded-lg border border-border bg-card p-5">
-        <h2 className="text-lg font-semibold text-foreground">Merge summary</h2>
-        <div className="mt-5 space-y-3 text-sm">
-          <SummaryRow label="PDF files" value={String(files.length)} />
+      <aside className="h-fit rounded-2xl border border-border bg-card p-6 shadow-md xl:sticky xl:top-24">
+        <h2 className="text-xl font-semibold text-foreground">Merge summary</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Files are merged from top to bottom in the order shown.
+        </p>
+
+        <div className="mt-5 space-y-3 rounded-xl border border-border bg-muted/25 p-4 text-sm">
+          <SummaryRow label="Files" value={String(files.length)} />
+          <SummaryRow
+            label="Pages"
+            value={
+              isReadingFiles
+                ? "Reading..."
+                : totalPages > 0
+                  ? String(totalPages)
+                  : "-"
+            }
+          />
           <SummaryRow label="Total size" value={formatFileSize(totalSize)} />
-          <SummaryRow label="Output" value={mergedFileName} />
+          <SummaryRow label="Output filename" value={mergedFileName} />
         </div>
 
-        <div className="mt-6 grid gap-3">
-          <Button type="button" onClick={handleMerge} disabled={isMerging}>
+        <div className="mt-7 grid gap-3">
+          <Button
+            type="button"
+            onClick={handleMerge}
+            disabled={isMerging}
+            className="h-12 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+          >
             {isMerging ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
               <FileCheck2 className="size-4" aria-hidden="true" />
             )}
-            Merge PDF
+            {isMerging ? "Merging..." : "Merge PDF"}
           </Button>
 
           {mergedPdfUrl ? (
-            <Button asChild variant="outline">
-              <a href={mergedPdfUrl} download={mergedFileName}>
-                <Download className="size-4" aria-hidden="true" />
-                Download PDF
-              </a>
-            </Button>
+            <>
+              <p
+                className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-700 shadow-sm"
+                aria-live="polite"
+              >
+                <CheckCircle2 className="mr-2 inline size-4" aria-hidden="true" />
+                Merged PDF created successfully
+              </p>
+              <Button
+                asChild
+                variant="outline"
+                className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
+              >
+                <a href={mergedPdfUrl} download={mergedFileName}>
+                  <Download className="size-4" aria-hidden="true" />
+                  Download PDF
+                </a>
+              </Button>
+            </>
           ) : (
             <Button
               type="button"
@@ -200,12 +402,6 @@ export function MergePdfTool() {
             Start over
           </Button>
         </div>
-
-        {mergedPdfUrl ? (
-          <p className="mt-4 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
-            Your merged PDF is ready to download.
-          </p>
-        ) : null}
       </aside>
     </div>
   );
@@ -231,6 +427,16 @@ function isPdfFile(file: File) {
   return (
     file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
   );
+}
+
+function triggerDownload(url: string, fileName: string) {
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.rel = "noopener";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
 }
 
 function formatFileSize(bytes: number) {

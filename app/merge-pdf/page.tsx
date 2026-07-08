@@ -46,6 +46,31 @@ export default function MergePdfPage() {
           answer:
             "No. The merge runs client-side in your browser with pdf-lib.",
         },
+        {
+          question: "Can I see how many pages each PDF has?",
+          answer:
+            "Yes. After upload, LiftPDF reads each PDF in your browser and shows the page count, file size and a first-page preview before you merge.",
+        },
+        {
+          question: "Can I drag and drop PDFs to change the order?",
+          answer:
+            "Yes. On desktop, you can drag PDF cards into the order you want. You can also use the move up and move down buttons, which work well on mobile and with a keyboard.",
+        },
+        {
+          question: "Will the quality change after merging?",
+          answer:
+            "No. LiftPDF copies the original PDF pages into a new document and preserves the page content, dimensions and quality.",
+        },
+        {
+          question: "Can I merge password-protected PDFs?",
+          answer:
+            "Password-protected PDFs must be unlocked first. If a selected PDF is encrypted, LiftPDF will show an error instead of creating a broken merged file.",
+        },
+        {
+          question: "Does Merge PDF work on mobile?",
+          answer:
+            "Yes. The tool works in modern mobile browsers. On smaller screens, use the move buttons to adjust file order before merging.",
+        },
       ]}
     >
       <MergePdfTool />
