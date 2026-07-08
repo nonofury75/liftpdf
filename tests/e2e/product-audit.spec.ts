@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import JSZip from "jszip";
 import { PDFDocument } from "pdf-lib";
 import { ensureFixtures, fixturesDir } from "./fixtures";
 
@@ -136,15 +137,41 @@ test.describe("critical PDF workflows", () => {
     await page.goto("/split-pdf");
     await uploadFirstFile(page, fixtures.text10);
     await expect(page.getByText(/10 pages/i).first()).toBeVisible();
-    await page.getByRole("button", { name: /Extract pages/i }).click();
+    await expect(page.getByRole("button", { name: "Page 10" })).toBeVisible();
+    await page.getByRole("button", { name: /Extract page ranges/i }).click();
+    await page.getByRole("textbox").fill("1,3,5-8");
+    await expect(page.getByText("1, 3, 5-8")).toBeVisible();
     await page.getByRole("textbox").fill("2,5,8");
-    const splitBytes = await generateThenDownloadBytes(
-      page,
-      /^Split PDF$/,
-      /^Download$/,
-      "split.pdf",
-    );
+    const splitDownloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: /^Split PDF$/ }).click();
+    const splitDownload = await splitDownloadPromise;
+    expect(splitDownload.suggestedFilename()).toBe("split.pdf");
+    const splitFilePath = await splitDownload.path();
+
+    if (!splitFilePath) {
+      throw new Error("Downloaded split PDF path is not available.");
+    }
+
+    const splitBytes = fs.readFileSync(splitFilePath);
+    await expect(page.getByRole("link", { name: /^Download PDF$/ })).toBeVisible();
     expect((await PDFDocument.load(splitBytes)).getPageCount()).toBe(3);
+    await page.getByRole("textbox").fill("99");
+    await page.getByRole("button", { name: /^Split PDF$/ }).click();
+    await expect(page.getByText(/Page 99 does not exist/i)).toBeVisible();
+
+    await page.getByRole("button", { name: /Split every page/i }).click();
+    const splitZipDownloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: /^Split PDF$/ }).click();
+    const splitZipDownload = await splitZipDownloadPromise;
+    expect(splitZipDownload.suggestedFilename()).toBe("split-pages.zip");
+    const splitZipPath = await splitZipDownload.path();
+
+    if (!splitZipPath) {
+      throw new Error("Downloaded split ZIP path is not available.");
+    }
+
+    const splitZip = await JSZip.loadAsync(fs.readFileSync(splitZipPath));
+    expect(Object.keys(splitZip.files).filter((name) => name.endsWith(".pdf"))).toHaveLength(10);
 
     await page.goto("/delete-pages");
     await uploadFirstFile(page, fixtures.text10);

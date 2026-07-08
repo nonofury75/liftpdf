@@ -46,6 +46,36 @@ export default function SplitPdfPage() {
           answer:
             "No. The split runs client-side in your browser with pdf-lib and JSZip.",
         },
+        {
+          question: "Can I preview pages before splitting?",
+          answer:
+            "Yes. After upload, LiftPDF renders page thumbnails in your browser so you can see the page numbers and dimensions before choosing ranges.",
+        },
+        {
+          question: "Can I click pages instead of typing ranges?",
+          answer:
+            "Yes. In Extract page ranges mode, you can click page thumbnails to select or unselect pages. The range field updates automatically.",
+        },
+        {
+          question: "What happens if I select duplicate pages?",
+          answer:
+            "Duplicate page numbers are cleaned up automatically while preserving the final page order from the original PDF.",
+        },
+        {
+          question: "Will splitting change PDF quality?",
+          answer:
+            "No. LiftPDF copies the original PDF pages into a new file, so the content, dimensions and quality are preserved.",
+        },
+        {
+          question: "Can I split password-protected PDFs?",
+          answer:
+            "Password-protected PDFs must be unlocked first. If the file cannot be read, LiftPDF shows a clear error instead of creating a broken output.",
+        },
+        {
+          question: "Does Split PDF work on mobile?",
+          answer:
+            "Yes. The tool works in modern mobile browsers. You can type ranges or tap page thumbnails to choose pages.",
+        },
       ]}
     >
       <SplitPdfTool />
