@@ -338,7 +338,7 @@ Automated tests updated:
 - split every page downloads `split-pages.zip`;
 - ZIP contains 10 PDFs.
 
-Manual production tests required after deployment:
+Manual production tests completed after deployment:
 
 - Chromium desktop;
 - Firefox desktop;
@@ -348,6 +348,17 @@ Manual production tests required after deployment:
 - 100-page PDF;
 - invalid PDF;
 - protected PDF.
+
+Production result:
+
+- `/split-pdf` returned HTTP 200;
+- thumbnails rendered;
+- range `1-3` exported `split.pdf`;
+- range `1,3,5-8` on a 100-page PDF exported `split.pdf`;
+- Split every page exported `split-pages.zip`;
+- invalid PDFs showed a clean read error;
+- password-protected PDFs showed a clean unlock-first/read error;
+- no critical console errors were observed.
 
 ## 9. Final Score After Upgrade
 
