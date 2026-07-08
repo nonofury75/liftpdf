@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { RelatedTools } from "@/components/tools/related-tools";
+import { PrivacyTrustSection } from "@/components/trust/privacy-trust-section";
 import {
   PremiumToolContent,
   type PremiumToolContentData,
@@ -128,6 +129,8 @@ export function ToolPageShell({
       <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         {children}
       </section>
+
+      <PrivacyTrustSection />
 
       {premiumContent ? (
         <section className="border-t border-border bg-background">

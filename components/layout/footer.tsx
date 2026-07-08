@@ -25,6 +25,9 @@ const footerLinks = [
     title: "Company",
     links: [
       { label: "Privacy", href: "/privacy" },
+      { label: "Security", href: "/security" },
+      { label: "About", href: "/about" },
+      { label: "Why LiftPDF", href: "/why-liftpdf" },
       { label: "Terms", href: "/terms" },
       { label: "Contact", href: "/contact" },
     ],

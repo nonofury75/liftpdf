@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, FileText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SecurityBadges } from "@/components/trust/security-badges";
 
 export function Hero() {
   return (
@@ -18,6 +19,7 @@ export function Hero() {
             Convert, merge, split, compress, rotate and edit PDFs online for
             free.
           </p>
+          <SecurityBadges className="mt-6" />
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button asChild size="lg">
               <Link href="/jpg-to-pdf">

@@ -1,5 +1,5 @@
-import { BadgeCheck, LockKeyhole, MonitorCheck } from "lucide-react";
 import Image from "next/image";
+import { SecurityBadges } from "@/components/trust/security-badges";
 
 type ToolHeroImage = {
   src: string;
@@ -14,21 +14,6 @@ type ToolHeroProps = {
   compact?: boolean;
   image?: ToolHeroImage;
 };
-
-const trustBadges = [
-  {
-    label: "Free",
-    icon: BadgeCheck,
-  },
-  {
-    label: "Secure",
-    icon: LockKeyhole,
-  },
-  {
-    label: "Works in your browser",
-    icon: MonitorCheck,
-  },
-];
 
 export function ToolHero({
   title,
@@ -51,21 +36,7 @@ export function ToolHero({
           <p className={`${compact ? "mt-3" : "mt-4"} max-w-3xl text-lg leading-8 text-muted-foreground`}>
             {description}
           </p>
-          <div className={`${compact ? "mt-4" : "mt-6"} flex flex-wrap gap-2`}>
-            {trustBadges.map((badge) => {
-              const Icon = badge.icon;
-
-              return (
-                <span
-                  key={badge.label}
-                  className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-muted-foreground shadow-sm"
-                >
-                  <Icon className="size-4 text-primary" aria-hidden="true" />
-                  {badge.label}
-                </span>
-              );
-            })}
-          </div>
+          <SecurityBadges className={compact ? "mt-4" : "mt-6"} />
         </div>
         {image ? (
           <div className="hidden overflow-hidden rounded-3xl border border-border bg-background p-3 shadow-sm lg:block">

@@ -11,6 +11,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/pdf-security", priority: 0.8 },
     { path: "/pdf-image-tools", priority: 0.85 },
     { path: "/organize-pdf", priority: 0.85 },
+    { path: "/privacy", priority: 0.75 },
+    { path: "/security", priority: 0.75 },
+    { path: "/about", priority: 0.65 },
+    { path: "/why-liftpdf", priority: 0.75 },
   ];
 
   const toolRoutes = tools
