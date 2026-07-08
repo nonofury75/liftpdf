@@ -37,11 +37,15 @@ export default function JpgToPdfPage() {
   return (
     <ImageToPdfPage
       title="JPG to PDF Converter"
-      intro="Upload JPG, JPEG, PNG or WEBP images, arrange them in the right order and convert them into a single PDF."
+      intro="Upload JPG or JPEG images, arrange them in the right order and convert them into a single PDF."
       seoText="LiftPDF lets you turn JPG images into a PDF directly in your browser. Choose the page size, orientation, margins and image fit, then download a clean document without sending your files to a server."
       downloadFileName="jpg-to-pdf.pdf"
       currentHref="/jpg-to-pdf"
+      acceptedImageTypes={["image/jpeg"]}
+      invalidFileMessage="Only JPG and JPEG files are supported here. Use Images to PDF for PNG, WEBP or mixed image formats."
       premiumContent={premiumToolContent.jpgToPdf}
+      uploadDescription="Drop files here or choose files. Upload JPG or JPEG images. Each image will become one PDF page."
+      uploadTitle="Drop your JPG images here"
       faq={[
         {
           question: "Can I convert multiple JPG files at once?",

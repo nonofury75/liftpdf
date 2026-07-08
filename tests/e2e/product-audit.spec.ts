@@ -296,6 +296,10 @@ test.describe("critical PDF workflows", () => {
     );
     expect((await PDFDocument.load(jpgPdf)).getPageCount()).toBe(1);
 
+    await page.goto("/jpg-to-pdf");
+    await uploadFirstFile(page, fixtures.png);
+    await expect(page.getByText(/Only JPG and JPEG files are supported/i)).toBeVisible();
+
     await page.goto("/png-to-pdf");
     await expect(page.getByText("Drop your PNG images here.")).toBeVisible();
     await uploadFirstFile(page, fixtures.jpg);
