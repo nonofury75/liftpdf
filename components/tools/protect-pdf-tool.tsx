@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import {
   Download,
   FileCheck2,
+  FileLock2,
   Loader2,
   LockKeyhole,
   RotateCcw,
@@ -18,7 +20,10 @@ import {
 import { PasswordField } from "@/components/tools/pdf/password-field";
 import { PdfSummaryRow } from "@/components/tools/pdf/pdf-summary-row";
 import { loadPdfDocument } from "@/components/tools/pdf/pdfjs-client";
-import { encryptPdfWithPassword } from "@/components/tools/pdf/qpdf-client";
+import {
+  encryptPdfWithPassword,
+  hasPdfEncryptionDictionary,
+} from "@/components/tools/pdf/qpdf-client";
 import { cn } from "@/lib/utils";
 
 type SelectedPdf = {
@@ -43,6 +48,7 @@ export function ProtectPdfTool() {
   const [error, setError] = useState<string | null>(null);
   const [isReadingPdf, setIsReadingPdf] = useState(false);
   const [isProtecting, setIsProtecting] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
   const [generatedFile, setGeneratedFile] = useState<GeneratedFile | null>(null);
 
   const generatedFileRef = useRef<GeneratedFile | null>(null);
@@ -99,9 +105,17 @@ export function ProtectPdfTool() {
     clearGeneratedFile();
     setSelectedPdf(null);
     setError(null);
+    setProgress(null);
     setIsReadingPdf(true);
 
     try {
+      const fileBytes = new Uint8Array(await file.arrayBuffer());
+
+      if (hasPdfEncryptionDictionary(fileBytes)) {
+        setError("This PDF is already protected. Please choose an unlocked PDF.");
+        return;
+      }
+
       const pdf = await loadPdfDocument(file);
       setSelectedPdf({
         file,
@@ -142,14 +156,22 @@ export function ProtectPdfTool() {
 
     setError(null);
     setIsProtecting(true);
+    setProgress("Preparing PDF...");
     clearGeneratedFile();
 
     try {
       const fileBuffer = await selectedPdf.file.arrayBuffer();
+      setProgress("Encrypting PDF...");
       const encryptedBytes = await encryptPdfWithPassword(
         new Uint8Array(fileBuffer),
         password,
       );
+
+      if (!hasPdfEncryptionDictionary(encryptedBytes)) {
+        throw new Error("The exported PDF was not encrypted.");
+      }
+
+      setProgress("Generating encrypted PDF...");
       const buffer = new ArrayBuffer(encryptedBytes.byteLength);
       new Uint8Array(buffer).set(encryptedBytes);
       const blob = new Blob([buffer], { type: "application/pdf" });
@@ -159,9 +181,11 @@ export function ProtectPdfTool() {
       };
 
       setGeneratedFile(nextFile);
+      setProgress("PDF protected successfully.");
       triggerDownload(nextFile.url, nextFile.fileName);
     } catch {
       setError("The PDF could not be encrypted. Please try another file.");
+      setProgress(null);
     } finally {
       setIsProtecting(false);
     }
@@ -175,11 +199,12 @@ export function ProtectPdfTool() {
     setError(null);
     setIsReadingPdf(false);
     setIsProtecting(false);
+    setProgress(null);
     clearGeneratedFile();
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
         <PdfUploadZone
           multiple={false}
@@ -190,19 +215,13 @@ export function ProtectPdfTool() {
         />
 
         {error ? (
-          <p
-            id="protect-pdf-error"
-            className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-            role="alert"
-          >
+          <StatusNotice id="protect-pdf-error" tone="error">
             {error}
-          </p>
+          </StatusNotice>
         ) : null}
 
         {isReadingPdf ? (
-          <p className="rounded-md bg-muted px-4 py-3 text-sm font-medium text-muted-foreground">
-            Reading PDF...
-          </p>
+          <StatusNotice>Reading PDF...</StatusNotice>
         ) : null}
 
         {selectedPdf ? (
@@ -213,9 +232,9 @@ export function ProtectPdfTool() {
           />
         ) : null}
 
-        <section className="rounded-lg border border-border bg-card p-5">
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
           <div className="flex items-start gap-3">
-            <span className="grid size-10 place-items-center rounded-md bg-primary/10 text-primary">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
               <ShieldCheck className="size-5" aria-hidden="true" />
             </span>
             <div>
@@ -223,10 +242,10 @@ export function ProtectPdfTool() {
                 Password protection
               </h2>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                Your PDF is encrypted locally in your browser. Your password and
-                file are never uploaded.
+                Your PDF is encrypted locally in your browser with QPDF WASM.
+                Your password and file are never uploaded.
               </p>
-              <span className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+              <span className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
                 <LockKeyhole className="size-3.5 text-primary" aria-hidden="true" />
                 Private by Design
               </span>
@@ -303,13 +322,39 @@ export function ProtectPdfTool() {
         </section>
       </div>
 
-      <aside className="h-fit rounded-lg border border-border bg-card p-5">
-        <h2 className="text-lg font-semibold text-foreground">
-          Protection summary
-        </h2>
+      <aside className="h-fit rounded-2xl border border-border bg-card p-5 shadow-sm lg:sticky lg:top-24">
+        <div className="flex items-start gap-3">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <FileLock2 className="size-5" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Protect settings
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Add an open password to the selected PDF.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-primary/15 bg-primary/5 p-4">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Private by design
+              </p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Encryption runs locally. The PDF and password are not sent to a
+                LiftPDF server.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="mt-5 space-y-3 text-sm">
           <PdfSummaryRow
-            label="PDF file"
+            label="File"
             value={selectedPdf ? selectedPdf.file.name : "None"}
           />
           <PdfSummaryRow
@@ -321,21 +366,37 @@ export function ProtectPdfTool() {
             value={selectedPdf ? formatFileSize(selectedPdf.file.size) : "-"}
           />
           <PdfSummaryRow label="Encryption" value="AES 256-bit" />
+          <PdfSummaryRow label="Password strength" value={passwordStrength} />
           <PdfSummaryRow label="Output" value={outputFileName} />
         </div>
+
+        {progress ? (
+          <p
+            className={cn(
+              "mt-5 rounded-xl px-3 py-2 text-sm font-medium",
+              generatedFile
+                ? "bg-green-50 text-green-700"
+                : "bg-muted text-muted-foreground",
+            )}
+            aria-live="polite"
+          >
+            {progress}
+          </p>
+        ) : null}
 
         <div className="mt-6 grid gap-3">
           <Button
             type="button"
             onClick={handleProtectPdf}
-            disabled={isProtecting}
+            disabled={!selectedPdf || isReadingPdf || isProtecting}
+            className="shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
           >
             {isProtecting ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
               <FileCheck2 className="size-4" aria-hidden="true" />
             )}
-            Protect PDF
+            {isProtecting ? "Protecting PDF..." : "Protect PDF"}
           </Button>
 
           {generatedFile ? (
@@ -345,31 +406,28 @@ export function ProtectPdfTool() {
                 Download PDF
               </a>
             </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setError("Protect your PDF before downloading.")}
-            >
-              <Download className="size-4" aria-hidden="true" />
-              Download PDF
-            </Button>
-          )}
+          ) : null}
 
           <Button type="button" variant="ghost" onClick={handleReset}>
             <RotateCcw className="size-4" aria-hidden="true" />
-            Reset
+            {generatedFile ? "Protect another PDF" : "Reset"}
           </Button>
         </div>
 
         {generatedFile ? (
-          <p
-            className="mt-4 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
+          <div
+            className="mt-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700"
             aria-live="polite"
           >
-            Your PDF is encrypted and ready. The download has started
-            automatically.
-          </p>
+            <p className="flex items-center gap-2 font-semibold">
+              <FileCheck2 className="size-4" aria-hidden="true" />
+              PDF protected successfully
+            </p>
+            <p className="mt-1 leading-6">
+              The encrypted PDF was generated and the download started
+              automatically.
+            </p>
+          </div>
         ) : null}
       </aside>
     </div>
@@ -427,4 +485,30 @@ function triggerDownload(url: string, fileName: string) {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
+}
+
+function StatusNotice({
+  id,
+  tone = "neutral",
+  children,
+}: {
+  id?: string;
+  tone?: "neutral" | "error";
+  children: ReactNode;
+}) {
+  return (
+    <p
+      id={id}
+      className={cn(
+        "rounded-xl border px-4 py-3 text-sm font-medium",
+        tone === "error"
+          ? "border-red-200 bg-red-50 text-red-700"
+          : "border-border bg-muted text-muted-foreground",
+      )}
+      role={tone === "error" ? "alert" : undefined}
+      aria-live={tone === "error" ? "assertive" : "polite"}
+    >
+      {children}
+    </p>
+  );
 }
