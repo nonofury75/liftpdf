@@ -323,6 +323,27 @@ Completed:
 - `npm run build`
 - `npm run test:e2e` (`45 passed`, `5 skipped`)
 
+## Production Validation
+
+Deployment:
+
+- Product commit: `d8bf935 Upgrade Reorder Pages experience`
+- Vercel deployment: `https://liftpdf-r1c41m1cd-rachator75010-5712s-projects.vercel.app`
+- Production route: `https://liftpdf.com/reorder-pages`
+- Status: `Ready`
+
+Production smoke test:
+
+| Case | Browser | Result |
+|---|---|---|
+| 4-page PDF, move original page 4 left, export | Chromium | `pages-reordered.pdf`, 4 pages, no console errors, no page errors, no failed requests |
+
+Artifacts:
+
+- `artifacts/reorder-pages-audit/liftpdf-production-results.json`
+- `artifacts/reorder-pages-audit/final-prod-smoke-ready.png`
+- `artifacts/reorder-pages-audit/final-prod-smoke-success.png`
+
 ## Known Limits
 
 - No rotation.
