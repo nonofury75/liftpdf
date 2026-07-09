@@ -284,6 +284,30 @@ Local screenshots/results:
 - `artifacts/rotate-pdf-audit/liftpdf-local-mobile.png`
 - `artifacts/rotate-pdf-audit/liftpdf-local-production-results.json`
 
+## Production Validation
+
+Deployment:
+
+- Commit: `6398d72`
+- Vercel deployment: `https://liftpdf-gjnod0ekg-rachator75010-5712s-projects.vercel.app`
+- Production alias: `https://liftpdf.com`
+- Vercel status: Ready
+
+Tested on `https://liftpdf.com/rotate-pdf`:
+
+| Browser / viewport | Result |
+|---|---|
+| Chromium desktop | Upload, rotate page 1 right, export `rotated.pdf`, final page rotation 90 degrees |
+| Firefox desktop | Upload, rotate page 1 right, export `rotated.pdf`, final page rotation 90 degrees |
+| Mobile Chromium | Upload, rotate page 1 right, export `rotated.pdf`, final page rotation 90 degrees |
+
+Production screenshots/results:
+
+- `artifacts/rotate-pdf-audit/liftpdf-production-chromium.png`
+- `artifacts/rotate-pdf-audit/liftpdf-production-firefox.png`
+- `artifacts/rotate-pdf-audit/liftpdf-production-mobile.png`
+- `artifacts/rotate-pdf-audit/liftpdf-production-results.json`
+
 ## Validation Commands
 
 Completed locally:
