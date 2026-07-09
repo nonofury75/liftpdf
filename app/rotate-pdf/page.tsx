@@ -42,6 +42,26 @@ export default function RotatePdfPage() {
             "Yes. Use Rotate All Left or Rotate All Right to apply a 90 degree rotation to every page.",
         },
         {
+          question: "Can I rotate a page by 180 degrees?",
+          answer:
+            "Yes. Click the same page rotation button twice, or rotate all pages twice, to reach 180 degrees.",
+        },
+        {
+          question: "Will rotating pages reduce PDF quality?",
+          answer:
+            "No. LiftPDF updates the page rotation setting and keeps the original page content, text, images and dimensions intact.",
+        },
+        {
+          question: "Can I reset rotations before downloading?",
+          answer:
+            "Yes. Use Reset rotations to return every preview page to its original orientation before exporting.",
+        },
+        {
+          question: "Can I rotate password-protected PDFs?",
+          answer:
+            "Password-protected PDFs must be unlocked first with Unlock PDF before rotation.",
+        },
+        {
           question: "Are my PDFs uploaded to a server?",
           answer:
             "No. Preview and rotation run client-side with PDF.js and pdf-lib.",
