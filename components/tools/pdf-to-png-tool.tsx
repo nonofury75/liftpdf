@@ -6,7 +6,7 @@ export function PdfToPngTool() {
   return (
     <PdfToImageTool
       format="png"
-      title="Conversion summary"
+      title="PDF to PNG options"
       description="Upload one PDF file and convert every page into a high-quality PNG image."
       actionLabel="Convert to PNG"
       singlePageFileName="page-1.png"

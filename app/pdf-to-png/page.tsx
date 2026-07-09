@@ -36,9 +36,34 @@ export default function PdfToPngPage() {
           answer: "Yes. LiftPDF converts every page into a separate PNG image.",
         },
         {
+          question: "Can I convert only one PDF page?",
+          answer:
+            "Yes. Choose Single page and enter the page number you want to export as PNG.",
+        },
+        {
+          question: "Can I export a page range?",
+          answer:
+            "Yes. Use Page range for selections such as 1-3 or 1,3,5-8.",
+        },
+        {
           question: "What happens with multi-page PDFs?",
           answer:
             "Multi-page PDFs are downloaded as a ZIP file containing page-1.png, page-2.png and the remaining pages.",
+        },
+        {
+          question: "Does PNG keep transparent backgrounds?",
+          answer:
+            "When possible, you can keep transparent PDF areas transparent with the transparent background option. Most regular PDFs render on a white page background.",
+        },
+        {
+          question: "Why is there no DPI option?",
+          answer:
+            "LiftPDF uses simple Standard and High render quality settings instead of promising a print DPI value that may not match every PDF.",
+        },
+        {
+          question: "Can I convert password-protected PDFs?",
+          answer:
+            "Password-protected PDFs must be unlocked first with Unlock PDF before conversion.",
         },
         {
           question: "Are my PDF files uploaded?",
