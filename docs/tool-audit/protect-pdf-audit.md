@@ -247,6 +247,28 @@ Validated:
 - The unlocked PDF no longer contained `/Encrypt`.
 - Protect PDF now checks the encrypted output and does not show success if `/Encrypt` is missing.
 
+## Production Validation
+
+Deployment:
+
+- Product commit: `e1293ef Upgrade Protect PDF experience`
+- Vercel deployment: `https://liftpdf-64ef123kr-rachator75010-5712s-projects.vercel.app`
+- Production route: `https://liftpdf.com/protect-pdf`
+- Status: `Ready`
+
+Production smoke test:
+
+| Case | Browser | Result |
+|---|---|---|
+| 1-page PDF, strong password, export | Chromium | `protected.pdf`, `/Encrypt` present, no unexpected console/page errors, no failed requests |
+| Protected PDF + wrong password in Unlock PDF | Chromium | Unlock rejected |
+| Protected PDF + correct password in Unlock PDF | Chromium | Unlocked output generated and `/Encrypt` removed |
+
+Artifacts:
+
+- `artifacts/protect-pdf-audit/liftpdf-production-results.json`
+- `artifacts/protect-pdf-audit/final-prod-protect-success.png`
+
 ## Known Limits
 
 - LiftPDF currently applies an open password with AES 256-bit encryption.
