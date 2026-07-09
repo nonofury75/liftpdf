@@ -39,7 +39,27 @@ export default function AddPageNumbersPage() {
         {
           question: "Can I customize the page number style?",
           answer:
-            "Yes. Choose Helvetica, Times or Courier, adjust the size, select a color and pick a format such as Page 1 or 1 / 10.",
+            "Yes. Choose Helvetica, Times or Courier, use Small, Medium or Large size, select a color and pick a format such as Page 1 or 1 / 10.",
+        },
+        {
+          question: "Can I start numbering from a different number?",
+          answer:
+            "Yes. Set the start number to 1, 5, 10 or any positive number before generating the numbered PDF.",
+        },
+        {
+          question: "Can I preview the numbers before downloading?",
+          answer:
+            "Yes. LiftPDF shows every page as a preview and updates the number position, format, font, size and color instantly.",
+        },
+        {
+          question: "Will adding page numbers change the PDF quality?",
+          answer:
+            "No. LiftPDF keeps the original PDF pages and draws the page numbers on top while preserving dimensions and existing content.",
+        },
+        {
+          question: "Can I number a password-protected PDF?",
+          answer:
+            "Password-protected PDFs must be unlocked first with Unlock PDF before page numbers can be added.",
         },
         {
           question: "Are my PDFs uploaded to a server?",

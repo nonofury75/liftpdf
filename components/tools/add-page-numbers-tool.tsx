@@ -2,7 +2,16 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, FileCheck2, Hash, Loader2, RotateCcw } from "lucide-react";
+import {
+  CheckCircle2,
+  Download,
+  FileCheck2,
+  Hash,
+  Info,
+  Loader2,
+  RotateCcw,
+  ShieldCheck,
+} from "lucide-react";
 import { PDFDocument, rgb, StandardFonts, type RGB } from "pdf-lib";
 import { Button } from "@/components/ui/button";
 import { PdfUploadZone } from "@/components/tools/pdf-upload-zone";
@@ -23,10 +32,10 @@ type NumberPosition =
   | "bottom-right";
 
 type FontChoice = "helvetica" | "times" | "courier";
+type SizeChoice = "small" | "medium" | "large";
 type NumberFormat =
   | "number"
   | "page-number"
-  | "dash-number"
   | "number-total"
   | "page-number-total";
 
@@ -48,7 +57,7 @@ type GeneratedFile = {
 type PageNumberOptions = {
   position: NumberPosition;
   font: FontChoice;
-  size: number;
+  size: SizeChoice;
   color: string;
   startNumber: number;
   format: NumberFormat;
@@ -71,13 +80,26 @@ const fontOptions: Array<{ label: string; value: FontChoice }> = [
   { label: "Courier", value: "courier" },
 ];
 
+const sizeOptions: Array<{ label: string; value: SizeChoice; points: number }> =
+  [
+    { label: "Small", value: "small", points: 10 },
+    { label: "Medium", value: "medium", points: 14 },
+    { label: "Large", value: "large", points: 20 },
+  ];
+
 const formatOptions: Array<{ label: string; value: NumberFormat }> = [
   { label: "1", value: "number" },
   { label: "Page 1", value: "page-number" },
-  { label: "- 1 -", value: "dash-number" },
   { label: "1 / 10", value: "number-total" },
   { label: "Page 1 of 10", value: "page-number-total" },
 ];
+
+const colorOptions = [
+  { label: "Black", value: "#111827" },
+  { label: "Gray", value: "#4b5563" },
+  { label: "Red", value: "#dc2626" },
+  { label: "Blue", value: "#2563eb" },
+] as const;
 
 export function AddPageNumbersTool() {
   const [selectedPdf, setSelectedPdf] = useState<SelectedPdf | null>(null);
@@ -85,7 +107,7 @@ export function AddPageNumbersTool() {
   const [options, setOptions] = useState<PageNumberOptions>({
     position: "bottom-center",
     font: "helvetica",
-    size: 14,
+    size: "medium",
     color: "#111827",
     startNumber: 1,
     format: "number",
@@ -93,6 +115,7 @@ export function AddPageNumbersTool() {
   const [error, setError] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
   const [generatedFile, setGeneratedFile] = useState<GeneratedFile | null>(
     null,
   );
@@ -145,6 +168,7 @@ export function AddPageNumbersTool() {
     clearGeneratedFile();
     clearPagePreviews();
     setSelectedPdf(null);
+    setProgress(null);
     setError(null);
     setIsLoadingPreview(true);
 
@@ -168,7 +192,9 @@ export function AddPageNumbersTool() {
     } catch {
       clearPagePreviews();
       setSelectedPdf(null);
-      setError("This PDF could not be read. Please choose another file.");
+      setError(
+        "This PDF could not be read. If it is password protected, unlock it first and try again.",
+      );
     } finally {
       setIsLoadingPreview(false);
     }
@@ -187,6 +213,7 @@ export function AddPageNumbersTool() {
 
     setError(null);
     setIsGenerating(true);
+    setProgress("Preparing PDF...");
     clearGeneratedFile();
 
     try {
@@ -194,7 +221,9 @@ export function AddPageNumbersTool() {
       const font = await embedSelectedFont(pdf, options.font);
       const color = hexToRgb(options.color);
       const totalNumber = options.startNumber + pdf.getPageCount() - 1;
+      const fontSize = sizeToPoints(options.size);
 
+      setProgress("Adding page numbers...");
       pdf.getPages().forEach((page, index) => {
         const pageNumber = options.startNumber + index;
         const text = formatPageNumberText(
@@ -202,25 +231,26 @@ export function AddPageNumbersTool() {
           totalNumber,
           options.format,
         );
-        const textWidth = font.widthOfTextAtSize(text, options.size);
+        const textWidth = font.widthOfTextAtSize(text, fontSize);
         const { width, height } = page.getSize();
         const coordinates = getTextCoordinates({
           position: options.position,
           pageWidth: width,
           pageHeight: height,
           textWidth,
-          fontSize: options.size,
+          fontSize,
         });
 
         page.drawText(text, {
           x: coordinates.x,
           y: coordinates.y,
-          size: options.size,
+          size: fontSize,
           font,
           color,
         });
       });
 
+      setProgress("Generating numbered PDF...");
       const numberedBytes = await pdf.save({
         useObjectStreams: true,
         addDefaultPage: false,
@@ -233,8 +263,12 @@ export function AddPageNumbersTool() {
         url: URL.createObjectURL(blob),
         fileName: numberedFileName,
       });
+      setProgress("Numbered PDF created successfully.");
     } catch {
-      setError("Page numbers could not be added. Please try another PDF file.");
+      setError(
+        "Page numbers could not be added. If the PDF is password protected, unlock it first and try again.",
+      );
+      setProgress(null);
     } finally {
       setIsGenerating(false);
     }
@@ -242,6 +276,7 @@ export function AddPageNumbersTool() {
 
   function updateOptions(nextOptions: Partial<PageNumberOptions>) {
     clearGeneratedFile();
+    setProgress(null);
     setOptions((currentOptions) => ({
       ...currentOptions,
       ...nextOptions,
@@ -253,12 +288,13 @@ export function AddPageNumbersTool() {
     setOptions({
       position: "bottom-center",
       font: "helvetica",
-      size: 14,
+      size: "medium",
       color: "#111827",
       startNumber: 1,
       format: "number",
     });
     setError(null);
+    setProgress(null);
     clearGeneratedFile();
     clearPagePreviews();
   }
@@ -281,7 +317,7 @@ export function AddPageNumbersTool() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
         <PdfUploadZone
           multiple={false}
@@ -291,11 +327,23 @@ export function AddPageNumbersTool() {
           onFilesSelected={handleFilesSelected}
         />
 
-        {error ? (
-          <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-            {error}
-          </p>
-        ) : null}
+        <div aria-live="polite" className="space-y-3">
+          {error ? (
+            <StatusNotice
+              tone="error"
+              icon={<Info className="size-4" />}
+              message={error}
+            />
+          ) : null}
+
+          {isLoadingPreview ? (
+            <StatusNotice
+              tone="neutral"
+              icon={<Loader2 className="size-4 animate-spin" />}
+              message="Rendering PDF pages..."
+            />
+          ) : null}
+        </div>
 
         {selectedPdf ? (
           <PdfFileSummary
@@ -305,7 +353,7 @@ export function AddPageNumbersTool() {
           />
         ) : null}
 
-        <div className="rounded-lg border border-border bg-card p-5">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center gap-2">
             <Hash className="size-5 text-primary" aria-hidden="true" />
             <h2 className="text-lg font-semibold text-foreground">
@@ -340,37 +388,32 @@ export function AddPageNumbersTool() {
               </div>
             </FieldGroup>
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <label className="block">
-                <span className="text-sm font-semibold text-foreground">
-                  Size: {options.size}px
-                </span>
-                <input
-                  type="range"
-                  min={8}
-                  max={48}
-                  value={options.size}
-                  onChange={(event) =>
-                    updateOptions({ size: Number(event.target.value) })
-                  }
-                  className="mt-3 w-full accent-primary"
-                />
-              </label>
+            <FieldGroup label="Size">
+              <div className="grid gap-2 sm:grid-cols-3">
+                {sizeOptions.map((size) => (
+                  <OptionButton
+                    key={size.value}
+                    isActive={options.size === size.value}
+                    label={size.label}
+                    onClick={() => updateOptions({ size: size.value })}
+                  />
+                ))}
+              </div>
+            </FieldGroup>
 
-              <label className="block">
-                <span className="text-sm font-semibold text-foreground">
-                  Color
-                </span>
-                <input
-                  type="color"
-                  value={options.color}
-                  onChange={(event) =>
-                    updateOptions({ color: event.target.value })
-                  }
-                  className="mt-2 h-11 w-full rounded-md border border-input bg-background p-1"
-                />
-              </label>
-            </div>
+            <FieldGroup label="Color">
+              <div className="grid gap-2 sm:grid-cols-4">
+                {colorOptions.map((color) => (
+                  <ColorButton
+                    key={color.value}
+                    isActive={options.color === color.value}
+                    label={color.label}
+                    value={color.value}
+                    onClick={() => updateOptions({ color: color.value })}
+                  />
+                ))}
+              </div>
+            </FieldGroup>
 
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="block">
@@ -406,14 +449,8 @@ export function AddPageNumbersTool() {
           </div>
         </div>
 
-        {isLoadingPreview ? (
-          <p className="rounded-md bg-muted px-4 py-3 text-sm font-medium text-muted-foreground">
-            Loading PDF preview...
-          </p>
-        ) : null}
-
         {pages.length ? (
-          <div className="rounded-lg border border-border bg-card p-5">
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div>
               <h2 className="text-lg font-semibold text-foreground">
                 Live preview
@@ -423,7 +460,7 @@ export function AddPageNumbersTool() {
               </p>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-5 grid max-h-[760px] gap-4 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
               {pages.map((page) => {
                 const pageNumber = options.startNumber + page.pageNumber - 1;
                 const text = formatPageNumberText(
@@ -435,26 +472,26 @@ export function AddPageNumbersTool() {
                 return (
                   <article
                     key={page.pageNumber}
-                    className="rounded-lg border border-border bg-background p-3 transition-transform duration-150 hover:-translate-y-0.5"
+                    className="rounded-2xl border border-border bg-background p-3 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md"
                   >
-                    <div className="relative flex min-h-52 items-center justify-center overflow-hidden rounded-md bg-muted p-3">
+                    <div className="relative flex min-h-60 items-center justify-center overflow-hidden rounded-xl bg-slate-100 p-4 shadow-inner">
                       <Image
                         src={page.previewUrl}
                         alt={`Page ${page.pageNumber}`}
-                        width={170}
-                        height={230}
-                        className="h-auto max-h-56 w-auto rounded-sm bg-white shadow-sm"
+                        width={190}
+                        height={260}
+                        className="h-auto max-h-64 w-auto rounded-sm bg-white shadow-lg ring-1 ring-black/10"
                         unoptimized
                       />
                       <span
                         className={cn(
-                          "absolute rounded-sm bg-white/80 px-1 font-semibold shadow-sm",
+                          "absolute rounded-sm bg-white/85 px-1.5 py-0.5 font-semibold shadow-sm",
                           previewPositionClassName(options.position),
                         )}
                         style={{
                           color: options.color,
                           fontFamily: previewFontFamily(options.font),
-                          fontSize: `${Math.max(10, options.size * 0.72)}px`,
+                          fontSize: `${previewFontSize(options.size)}px`,
                         }}
                       >
                         {text}
@@ -471,10 +508,32 @@ export function AddPageNumbersTool() {
         ) : null}
       </div>
 
-      <aside className="h-fit rounded-lg border border-border bg-card p-5">
-        <h2 className="text-lg font-semibold text-foreground">
-          Numbering summary
-        </h2>
+      <aside className="h-fit rounded-2xl border border-border bg-card p-5 shadow-md xl:sticky xl:top-24">
+        <div className="flex items-center gap-3">
+          <div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
+            <Hash className="size-5" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Add Page Numbers
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Preview before download
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-border bg-muted/30 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <ShieldCheck className="size-4 text-primary" aria-hidden="true" />
+            Private by design
+          </div>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Page numbers are added locally in this browser. Your PDF is never
+            uploaded to a server.
+          </p>
+        </div>
+
         <div className="mt-5 space-y-3 text-sm">
           <PdfSummaryRow
             label="PDF file"
@@ -488,51 +547,72 @@ export function AddPageNumbersTool() {
             label="Position"
             value={labelForPosition(options.position)}
           />
+          <PdfSummaryRow
+            label="Format"
+            value={formatLabelFor(options.format)}
+          />
+          <PdfSummaryRow label="Font" value={labelForFont(options.font)} />
+          <PdfSummaryRow
+            label="Size"
+            value={labelForSize(options.size)}
+          />
+          <PdfSummaryRow
+            label="Start number"
+            value={String(options.startNumber)}
+          />
           <PdfSummaryRow label="Output" value={numberedFileName} />
         </div>
+
+        {progress ? (
+          <p
+            aria-live="polite"
+            className="mt-5 rounded-xl bg-muted px-3 py-2 text-sm font-medium text-muted-foreground"
+          >
+            {progress}
+          </p>
+        ) : null}
 
         <div className="mt-6 grid gap-3">
           <Button
             type="button"
             onClick={handleAddPageNumbers}
-            disabled={isGenerating}
+            disabled={!selectedPdf || isGenerating}
+            className="h-12 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-md"
           >
             {isGenerating ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
               <FileCheck2 className="size-4" aria-hidden="true" />
             )}
-            Add page numbers
+            {isGenerating ? "Adding page numbers..." : "Add page numbers"}
           </Button>
 
           {generatedFile ? (
             <Button asChild variant="outline">
-              <a href={generatedFile.url} download={generatedFile.fileName}>
+              <a
+                href={generatedFile.url}
+                download={generatedFile.fileName}
+                aria-label="Download numbered PDF"
+              >
                 <Download className="size-4" aria-hidden="true" />
-                Download numbered PDF
+                Download PDF
               </a>
             </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setError("Add page numbers before downloading.")}
-            >
-              <Download className="size-4" aria-hidden="true" />
-              Download numbered PDF
-            </Button>
-          )}
+          ) : null}
 
           <Button type="button" variant="ghost" onClick={handleReset}>
             <RotateCcw className="size-4" aria-hidden="true" />
-            Reset
+            {generatedFile ? "Number another PDF" : "Start over"}
           </Button>
         </div>
 
         {generatedFile ? (
-          <p className="mt-4 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
-            Your numbered PDF is ready to download.
-          </p>
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-medium text-emerald-800">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="size-4" aria-hidden="true" />
+              Numbered PDF created successfully
+            </span>
+          </div>
         ) : null}
       </aside>
     </div>
@@ -565,8 +645,9 @@ function OptionButton({ isActive, label, onClick }: OptionButtonProps) {
   return (
     <button
       type="button"
+      aria-pressed={isActive}
       className={cn(
-        "rounded-md border border-border px-3 py-2 text-left text-sm font-medium transition-colors",
+        "rounded-xl border border-border px-3 py-2.5 text-left text-sm font-semibold transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm",
         isActive
           ? "border-primary bg-primary/10 text-primary"
           : "bg-background text-foreground hover:bg-muted",
@@ -578,6 +659,59 @@ function OptionButton({ isActive, label, onClick }: OptionButtonProps) {
   );
 }
 
+type ColorButtonProps = {
+  isActive: boolean;
+  label: string;
+  value: string;
+  onClick: () => void;
+};
+
+function ColorButton({ isActive, label, value, onClick }: ColorButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-pressed={isActive}
+      aria-label={`Use ${label} page numbers`}
+      className={cn(
+        "flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm",
+        isActive
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border bg-background text-foreground hover:bg-muted",
+      )}
+      onClick={onClick}
+    >
+      <span
+        className="size-4 rounded-full border border-black/10"
+        style={{ backgroundColor: value }}
+        aria-hidden="true"
+      />
+      {label}
+    </button>
+  );
+}
+
+type StatusNoticeProps = {
+  tone: "neutral" | "error";
+  icon: React.ReactNode;
+  message: string;
+};
+
+function StatusNotice({ tone, icon, message }: StatusNoticeProps) {
+  const toneClass =
+    tone === "error"
+      ? "border-red-200 bg-red-50 text-red-700"
+      : "border-border bg-muted text-muted-foreground";
+
+  return (
+    <p
+      className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium ${toneClass}`}
+    >
+      {icon}
+      {message}
+    </p>
+  );
+}
+
 async function embedSelectedFont(pdf: PDFDocument, font: FontChoice) {
   const fontMap: Record<FontChoice, StandardFonts> = {
     helvetica: StandardFonts.Helvetica,
@@ -586,6 +720,10 @@ async function embedSelectedFont(pdf: PDFDocument, font: FontChoice) {
   };
 
   return pdf.embedFont(fontMap[font]);
+}
+
+function sizeToPoints(size: SizeChoice) {
+  return sizeOptions.find((option) => option.value === size)?.points ?? 14;
 }
 
 function getTextCoordinates({
@@ -629,10 +767,6 @@ function formatPageNumberText(
     return `Page ${pageNumber}`;
   }
 
-  if (format === "dash-number") {
-    return `- ${pageNumber} -`;
-  }
-
   if (format === "number-total") {
     return `${pageNumber} / ${totalNumber}`;
   }
@@ -644,6 +778,10 @@ function formatPageNumberText(
   return String(pageNumber);
 }
 
+function formatLabelFor(format: NumberFormat) {
+  return formatOptions.find((option) => option.value === format)?.label ?? "1";
+}
+
 function hexToRgb(hex: string): RGB {
   const normalizedHex = hex.replace("#", "");
   const red = Number.parseInt(normalizedHex.slice(0, 2), 16) / 255;
@@ -651,6 +789,16 @@ function hexToRgb(hex: string): RGB {
   const blue = Number.parseInt(normalizedHex.slice(4, 6), 16) / 255;
 
   return rgb(red, green, blue);
+}
+
+function previewFontSize(size: SizeChoice) {
+  const previewSizes: Record<SizeChoice, number> = {
+    small: 11,
+    medium: 14,
+    large: 18,
+  };
+
+  return previewSizes[size];
 }
 
 function previewPositionClassName(position: NumberPosition) {
@@ -674,6 +822,14 @@ function previewFontFamily(font: FontChoice) {
   };
 
   return fontFamilies[font];
+}
+
+function labelForFont(font: FontChoice) {
+  return fontOptions.find((option) => option.value === font)?.label ?? "Helvetica";
+}
+
+function labelForSize(size: SizeChoice) {
+  return sizeOptions.find((option) => option.value === size)?.label ?? "Medium";
 }
 
 function labelForPosition(position: NumberPosition) {
