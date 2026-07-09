@@ -1,20 +1,33 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import Image from "next/image";
 import {
+  CheckCircle2,
   Download,
   FileCheck2,
   FileText,
+  Info,
   Loader2,
   RotateCcw,
+  ShieldCheck,
 } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
 import { PdfUploadZone } from "@/components/tools/pdf-upload-zone";
+import {
+  loadPdfDocument,
+  renderPdfPageThumbnail,
+} from "@/components/tools/pdf/pdfjs-client";
+import { formatFileSize } from "@/components/tools/pdf/pdf-file-summary";
 
 type SelectedPdf = {
   file: File;
   pageCount: number;
+  previewUrl: string | null;
+  previewWidth: number | null;
+  previewHeight: number | null;
 };
 
 type CompressionResult = {
@@ -29,9 +42,12 @@ const compressedFileName = "compressed.pdf";
 export function CompressPdfTool() {
   const [selectedPdf, setSelectedPdf] = useState<SelectedPdf | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isReadingPdf, setIsReadingPdf] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionStep, setCompressionStep] = useState<string | null>(null);
   const [result, setResult] = useState<CompressionResult | null>(null);
   const resultRef = useRef<CompressionResult | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     resultRef.current = result;
@@ -41,6 +57,10 @@ export function CompressPdfTool() {
     return () => {
       if (resultRef.current) {
         URL.revokeObjectURL(resultRef.current.url);
+      }
+
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
       }
     };
   }, []);
@@ -63,17 +83,31 @@ export function CompressPdfTool() {
     }
 
     clearResult();
+    clearPreview();
+    setSelectedPdf(null);
     setError(null);
+    setIsReadingPdf(true);
 
     try {
-      const pdf = await PDFDocument.load(await file.arrayBuffer());
+      const pdf = await loadPdfDocument(file);
+      const firstPage = await renderPdfPageThumbnail(pdf, 1);
+
+      previewUrlRef.current = firstPage.previewUrl;
       setSelectedPdf({
         file,
-        pageCount: pdf.getPageCount(),
+        pageCount: pdf.numPages,
+        previewUrl: firstPage.previewUrl,
+        previewWidth: firstPage.width,
+        previewHeight: firstPage.height,
       });
+      await pdf.destroy();
     } catch {
       setSelectedPdf(null);
-      setError("This PDF could not be read. Please choose another file.");
+      setError(
+        "This PDF could not be read. If it is password protected, unlock it first and try again.",
+      );
+    } finally {
+      setIsReadingPdf(false);
     }
   }
 
@@ -85,6 +119,7 @@ export function CompressPdfTool() {
 
     setError(null);
     setIsCompressing(true);
+    setCompressionStep("Preparing PDF...");
     clearResult();
 
     try {
@@ -94,6 +129,8 @@ export function CompressPdfTool() {
           updateMetadata: false,
         },
       );
+
+      setCompressionStep("Rebuilding pages safely...");
       const compressedPdf = await PDFDocument.create();
       const copiedPages = await compressedPdf.copyPages(
         sourcePdf,
@@ -103,6 +140,7 @@ export function CompressPdfTool() {
       copiedPages.forEach((page) => compressedPdf.addPage(page));
       applyMinimalMetadata(compressedPdf);
 
+      setCompressionStep("Generating compressed PDF...");
       const compressedBytes = await compressedPdf.save({
         useObjectStreams: true,
         addDefaultPage: false,
@@ -117,8 +155,12 @@ export function CompressPdfTool() {
         originalSize: selectedPdf.file.size,
         finalSize: blob.size,
       });
+      setCompressionStep("Compressed PDF created successfully.");
     } catch {
-      setError("The PDF could not be compressed. Please try another file.");
+      setError(
+        "The PDF could not be compressed. If it is password protected, unlock it first and try again.",
+      );
+      setCompressionStep(null);
     } finally {
       setIsCompressing(false);
     }
@@ -127,7 +169,9 @@ export function CompressPdfTool() {
   function handleReset() {
     setSelectedPdf(null);
     setError(null);
+    setCompressionStep(null);
     clearResult();
+    clearPreview();
   }
 
   function clearResult() {
@@ -140,6 +184,13 @@ export function CompressPdfTool() {
     });
   }
 
+  function clearPreview() {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    }
+  }
+
   const reduction = result
     ? Math.max(
         0,
@@ -150,9 +201,10 @@ export function CompressPdfTool() {
       )
     : 0;
   const isSmaller = result ? result.finalSize < result.originalSize : false;
+  const isBusy = isReadingPdf || isCompressing;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
         <PdfUploadZone
           multiple={false}
@@ -162,52 +214,87 @@ export function CompressPdfTool() {
           onFilesSelected={handleFilesSelected}
         />
 
-        {error ? (
-          <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-            {error}
-          </p>
-        ) : null}
+        <div aria-live="polite" className="space-y-3">
+          {isReadingPdf ? (
+            <StatusNotice
+              tone="neutral"
+              icon={<Loader2 className="size-4 animate-spin" />}
+              message="Reading PDF and preparing preview..."
+            />
+          ) : null}
 
-        {selectedPdf ? (
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="grid gap-4 sm:grid-cols-[48px_1fr]">
-              <div className="grid size-12 place-items-center rounded-md border border-border bg-muted text-primary">
-                <FileText className="size-5" aria-hidden="true" />
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-foreground">
-                  {selectedPdf.file.name}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {formatFileSize(selectedPdf.file.size)} ·{" "}
-                  {selectedPdf.pageCount}{" "}
-                  {selectedPdf.pageCount === 1 ? "page" : "pages"}
-                </p>
-              </div>
+          {error ? (
+            <StatusNotice tone="error" icon={<Info className="size-4" />} message={error} />
+          ) : null}
+        </div>
+
+        {selectedPdf ? <PdfPreviewPanel selectedPdf={selectedPdf} /> : null}
+
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">
+                Compression mode
+              </h2>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                LiftPDF uses one safe browser compression mode. It rebuilds the
+                PDF, keeps every page and avoids destructive image quality loss.
+              </p>
             </div>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              Basic
+            </span>
           </div>
-        ) : null}
 
-        <div className="rounded-lg border border-border bg-card p-5">
-          <h2 className="text-lg font-semibold text-foreground">
-            Compression options
-          </h2>
-          <div className="mt-5 rounded-lg border border-primary bg-primary/5 p-4">
-            <p className="text-sm font-semibold text-foreground">
-              Basic compression
-            </p>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Rebuilds the PDF safely, copies all pages and minimizes document
-              metadata where possible.
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <CompressionFact
+              title="Preserves pages"
+              text="All pages are copied into a clean PDF."
+            />
+            <CompressionFact
+              title="Private"
+              text="Your PDF stays in this browser."
+            />
+            <CompressionFact
+              title="No fake levels"
+              text="No low, balanced or max labels unless the engine truly changes output."
+            />
+          </div>
+
+          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+            This first version does not downsample images or recompress scanned
+            PDFs. Image-heavy files may need a future advanced compression
+            engine for larger reductions.
+          </div>
+        </section>
+      </div>
+
+      <aside className="h-fit rounded-2xl border border-border bg-card p-5 shadow-md xl:sticky xl:top-24">
+        <div className="flex items-center gap-3">
+          <div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
+            <FileCheck2 className="size-5" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Compress PDF
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Safe browser optimization
             </p>
           </div>
         </div>
-      </div>
 
-      <aside className="h-fit rounded-lg border border-border bg-card p-5">
-        <h2 className="text-lg font-semibold text-foreground">
-          Compression summary
-        </h2>
+        <div className="mt-5 rounded-xl border border-border bg-muted/30 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <ShieldCheck className="size-4 text-primary" aria-hidden="true" />
+            Private by design
+          </div>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Your PDF is compressed locally in your browser. No upload, no
+            account and no server storage.
+          </p>
+        </div>
+
         <div className="mt-5 space-y-3 text-sm">
           <SummaryRow
             label="PDF file"
@@ -219,27 +306,38 @@ export function CompressPdfTool() {
           />
           <SummaryRow
             label="Original size"
-            value={result ? formatFileSize(result.originalSize) : "-"}
+            value={selectedPdf ? formatFileSize(selectedPdf.file.size) : "-"}
           />
           <SummaryRow
             label="Final size"
             value={result ? formatFileSize(result.finalSize) : "-"}
           />
           <SummaryRow label="Reduced" value={result ? `${reduction}%` : "-"} />
+          <SummaryRow label="Output" value={compressedFileName} />
         </div>
+
+        {compressionStep ? (
+          <p
+            aria-live="polite"
+            className="mt-5 rounded-xl bg-muted px-3 py-2 text-sm font-medium text-muted-foreground"
+          >
+            {compressionStep}
+          </p>
+        ) : null}
 
         <div className="mt-6 grid gap-3">
           <Button
             type="button"
             onClick={handleCompress}
-            disabled={isCompressing}
+            disabled={isBusy}
+            className="shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
             {isCompressing ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
               <FileCheck2 className="size-4" aria-hidden="true" />
             )}
-            Compress PDF
+            {isCompressing ? "Compressing..." : "Compress PDF"}
           </Button>
 
           {result ? (
@@ -249,30 +347,24 @@ export function CompressPdfTool() {
                 Download compressed PDF
               </a>
             </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setError("Compress your PDF before downloading.")}
-            >
-              <Download className="size-4" aria-hidden="true" />
-              Download compressed PDF
-            </Button>
-          )}
+          ) : null}
 
           <Button type="button" variant="ghost" onClick={handleReset}>
             <RotateCcw className="size-4" aria-hidden="true" />
-            Start over
+            {result ? "Compress another PDF" : "Start over"}
           </Button>
         </div>
 
         {result ? (
           <div className="mt-4 space-y-3">
-            <p className="rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
-              Your compressed PDF is ready to download.
-            </p>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-medium text-emerald-800">
+              <span className="flex items-center gap-2">
+                <CheckCircle2 className="size-4" aria-hidden="true" />
+                Compressed PDF created successfully
+              </span>
+            </div>
             {!isSmaller ? (
-              <p className="rounded-md bg-muted px-3 py-2 text-sm font-medium text-muted-foreground">
+              <p className="rounded-xl bg-muted px-3 py-3 text-sm font-medium text-muted-foreground">
                 This PDF is already optimized. We rebuilt it with safe
                 compression.
               </p>
@@ -281,6 +373,122 @@ export function CompressPdfTool() {
         ) : null}
       </aside>
     </div>
+  );
+}
+
+type PdfPreviewPanelProps = {
+  selectedPdf: SelectedPdf;
+};
+
+function PdfPreviewPanel({ selectedPdf }: PdfPreviewPanelProps) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">
+            PDF preview
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            First page preview, file details and current document size.
+          </p>
+        </div>
+        <span className="w-fit rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
+          {selectedPdf.pageCount} {selectedPdf.pageCount === 1 ? "page" : "pages"}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(220px,360px)_1fr]">
+        <div className="grid min-h-72 place-items-center rounded-2xl border border-border bg-slate-100 p-5">
+          {selectedPdf.previewUrl ? (
+            <Image
+              src={selectedPdf.previewUrl}
+              alt={`First page preview for ${selectedPdf.file.name}`}
+              width={selectedPdf.previewWidth ?? 320}
+              height={selectedPdf.previewHeight ?? 420}
+              unoptimized
+              className="max-h-[420px] w-auto rounded-md bg-white object-contain shadow-xl ring-1 ring-black/10"
+            />
+          ) : (
+            <div className="grid size-28 place-items-center rounded-xl border border-border bg-card text-primary">
+              <FileText className="size-10" aria-hidden="true" />
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-0 rounded-2xl border border-border bg-muted/30 p-4">
+          <p className="truncate text-base font-semibold text-foreground">
+            {selectedPdf.file.name}
+          </p>
+          <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            <InfoTile label="File size" value={formatFileSize(selectedPdf.file.size)} />
+            <InfoTile label="Pages" value={String(selectedPdf.pageCount)} />
+            <InfoTile
+              label="First page"
+              value={
+                selectedPdf.previewWidth && selectedPdf.previewHeight
+                  ? `${selectedPdf.previewWidth} x ${selectedPdf.previewHeight} pt`
+                  : "Preview ready"
+              }
+            />
+            <InfoTile label="Output" value={compressedFileName} />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+type InfoTileProps = {
+  label: string;
+  value: string;
+};
+
+function InfoTile({ label, value }: InfoTileProps) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-sm font-semibold text-foreground">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+type CompressionFactProps = {
+  title: string;
+  text: string;
+};
+
+function CompressionFact({ title, text }: CompressionFactProps) {
+  return (
+    <div className="rounded-xl border border-border bg-muted/30 p-4">
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <p className="mt-1 text-sm leading-6 text-muted-foreground">{text}</p>
+    </div>
+  );
+}
+
+type StatusNoticeProps = {
+  tone: "neutral" | "error";
+  icon: ReactNode;
+  message: string;
+};
+
+function StatusNotice({ tone, icon, message }: StatusNoticeProps) {
+  const toneClass =
+    tone === "error"
+      ? "border-red-200 bg-red-50 text-red-700"
+      : "border-border bg-muted text-muted-foreground";
+
+  return (
+    <p
+      className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium ${toneClass}`}
+    >
+      {icon}
+      {message}
+    </p>
   );
 }
 
@@ -293,7 +501,7 @@ function SummaryRow({ label, value }: SummaryRowProps) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-border pb-3 last:border-b-0 last:pb-0">
       <span className="text-muted-foreground">{label}</span>
-      <span className="max-w-40 truncate font-semibold text-foreground">
+      <span className="max-w-44 truncate text-right font-semibold text-foreground">
         {value}
       </span>
     </div>
@@ -315,18 +523,4 @@ function isPdfFile(file: File) {
   return (
     file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
   );
-}
-
-function formatFileSize(bytes: number) {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-
-  const kilobytes = bytes / 1024;
-
-  if (kilobytes < 1024) {
-    return `${kilobytes.toFixed(1)} KB`;
-  }
-
-  return `${(kilobytes / 1024).toFixed(1)} MB`;
 }

@@ -37,14 +37,29 @@ export default function CompressPdfPage() {
             "No. This is safe client-side compression that rebuilds the PDF and minimizes metadata. It does not aggressively recompress images.",
         },
         {
+          question: "Why are there no Low, Balanced or Maximum levels?",
+          answer:
+            "LiftPDF only shows options that change the output honestly. The current browser compression engine uses one safe mode, so fake compression levels are not displayed.",
+        },
+        {
           question: "Will every PDF become smaller?",
           answer:
             "Not always. Some PDFs are already optimized, and LiftPDF will show a clear message when the rebuilt file is not smaller.",
         },
         {
+          question: "Does Compress PDF reduce image quality?",
+          answer:
+            "No. This version preserves page content and does not downsample images. That keeps quality stable, but image-heavy PDFs may not shrink as much as they would with server-side image recompression.",
+        },
+        {
           question: "Are my PDFs uploaded to a server?",
           answer:
             "No. Compression runs client-side in your browser with pdf-lib.",
+        },
+        {
+          question: "Can I compress a password-protected PDF?",
+          answer:
+            "Password-protected PDFs must be unlocked first. Use Unlock PDF, then compress the unlocked copy.",
         },
       ]}
     >
