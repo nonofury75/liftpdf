@@ -321,6 +321,41 @@ Completed:
 - `npm run build`
 - `npm run test:e2e` (`45 passed`, `5 skipped`)
 
+## Vercel Production Validation
+
+Deployment:
+
+- Commit: `caf05e1`
+- Deployment: `https://liftpdf-jnypxbly7-rachator75010-5712s-projects.vercel.app`
+- Aliases: `https://liftpdf.com`, `https://www.liftpdf.com`
+- Status: `Ready`
+
+Production URL tested:
+
+- `https://liftpdf.com/watermark-pdf`
+
+Results:
+
+- `artifacts/watermark-pdf-audit/liftpdf-production-results.json`
+
+| Case | Browser | Result |
+|---|---|---|
+| 1-page PDF + text watermark + bottom-right + opacity + rotation | Chromium | `watermarked.pdf`, 1 page, no console/page errors |
+| 1-page PDF + text watermark + bottom-right + opacity + rotation | Firefox | `watermarked.pdf`, 1 page, no console/page errors |
+| 10-page PDF + text watermark + tile/repeat | Chromium | `watermarked.pdf`, 10 pages, no console/page errors |
+| 100-page PDF + image watermark + opacity + rotation | Chromium | `watermarked.pdf`, 100 pages, no console/page errors |
+| Invalid PDF upload | Chromium | Clear error: `This PDF could not be read.` |
+| Mobile upload and preview | Chromium mobile emulation | Usable layout, no console/page errors |
+
+Production screenshots:
+
+- `artifacts/watermark-pdf-audit/prod-chromium-1-success.png`
+- `artifacts/watermark-pdf-audit/prod-firefox-1-success.png`
+- `artifacts/watermark-pdf-audit/prod-chromium-10-success.png`
+- `artifacts/watermark-pdf-audit/prod-chromium-image-100-success.png`
+- `artifacts/watermark-pdf-audit/prod-chromium-invalid-error.png`
+- `artifacts/watermark-pdf-audit/prod-chromium-mobile-upload.png`
+
 ## Known Limits
 
 - Watermark applies to all pages.
