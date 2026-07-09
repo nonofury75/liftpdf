@@ -202,7 +202,7 @@ test.describe("critical PDF workflows", () => {
       page,
       /^Extract Selected$/,
       /^Download PDF$/,
-      "extracted-pages.pdf",
+      "pages-extracted.pdf",
     );
     expect((await PDFDocument.load(extractedBytes)).getPageCount()).toBe(2);
 

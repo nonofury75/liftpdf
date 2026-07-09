@@ -47,9 +47,24 @@ export default function ExtractPagesPage() {
             "Yes. Select one page, several pages, or all pages before exporting the new PDF.",
         },
         {
+          question: "Can I preview pages before extracting them?",
+          answer:
+            "Yes. LiftPDF shows page thumbnails so you can choose exactly which pages should be saved.",
+        },
+        {
+          question: "What happens if I do not select any page?",
+          answer:
+            "LiftPDF blocks the export and asks you to select at least one page before creating the new PDF.",
+        },
+        {
           question: "Will the page quality change?",
           answer:
             "No. LiftPDF copies the selected PDF pages into a new document with pdf-lib, preserving their content and quality.",
+        },
+        {
+          question: "Can I extract pages from a password-protected PDF?",
+          answer:
+            "Password-protected PDFs must be unlocked first with Unlock PDF before selected pages can be extracted.",
         },
         {
           question: "Can I extract one page only?",
