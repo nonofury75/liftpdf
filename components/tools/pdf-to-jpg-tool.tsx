@@ -6,7 +6,7 @@ export function PdfToJpgTool() {
   return (
     <PdfToImageTool
       format="jpg"
-      title="Conversion summary"
+      title="PDF to JPG options"
       description="Upload one PDF file and convert every page into a high-quality JPG image."
       actionLabel="Convert to JPG"
       singlePageFileName="page-1.jpg"

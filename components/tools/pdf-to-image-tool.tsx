@@ -8,6 +8,7 @@ import {
   FileImage,
   Loader2,
   RotateCcw,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PdfUploadZone } from "@/components/tools/pdf-upload-zone";
@@ -208,6 +209,7 @@ export function PdfToImageTool({
     setError(null);
     setIsConverting(true);
     clearGeneratedFile();
+    setProgress("Preparing PDF...");
 
     try {
       const selectedPages = parseSelectedPages({
@@ -228,7 +230,9 @@ export function PdfToImageTool({
           pageNumbers: selectedPages,
           transparentBackground,
           onProgress: (currentPage, pageCount) => {
-            setProgress(`Converting page ${currentPage} of ${pageCount}`);
+            setProgress(
+              `Generating ${format.toUpperCase()} ${currentPage} of ${pageCount}`,
+            );
           },
         },
       });
@@ -307,7 +311,7 @@ export function PdfToImageTool({
 
         {isLoadingPreview ? (
           <p className="rounded-md bg-muted px-4 py-3 text-sm font-medium text-muted-foreground">
-            Loading PDF preview...
+            Rendering PDF pages...
           </p>
         ) : null}
 
@@ -422,6 +426,19 @@ export function PdfToImageTool({
             value={generatedFile?.fileName ?? expectedOutputName}
           />
         </div>
+
+        {selectedPdf ? (
+          <div className="mt-5 rounded-xl border border-border bg-muted/30 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <ShieldCheck className="size-4 text-primary" aria-hidden="true" />
+              Private by design
+            </div>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Your PDF pages are rendered in this browser. Files are not
+              uploaded to a server.
+            </p>
+          </div>
+        ) : null}
 
         <div className="mt-7 space-y-6">
           {isJpg ? (
@@ -601,13 +618,13 @@ export function PdfToImageTool({
             onClick={handleReset}
           >
             <RotateCcw className="size-4" aria-hidden="true" />
-            Start over
+            {generatedFile ? "Convert another PDF" : "Start over"}
           </Button>
         </div>
 
         {progress ? (
           <p className="mt-4 rounded-md bg-muted px-3 py-2 text-sm font-medium text-muted-foreground">
-            Converting pages... {progress}
+            {progress}
           </p>
         ) : null}
 
