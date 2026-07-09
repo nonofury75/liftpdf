@@ -245,6 +245,31 @@ Screenshots:
 - `artifacts/compress-pdf-audit/liftpdf-local-firefox.png`
 - `artifacts/compress-pdf-audit/liftpdf-local-mobile-chromium.png`
 
+## Production Validation
+
+Deployment:
+
+- Commit: `48bf2f6`
+- Vercel deployment: `https://liftpdf-pvukj93eg-rachator75010-5712s-projects.vercel.app`
+- Production alias: `https://liftpdf.com`
+- Vercel status: Ready
+
+Tested on `https://liftpdf.com/compress-pdf`:
+
+| Browser / viewport | Result |
+|---|---|
+| Chromium desktop | Upload, preview, compress, manual download OK; `compressed.pdf` generated |
+| Firefox desktop | Upload, preview, compress, manual download OK; `compressed.pdf` generated |
+| Mobile Chromium | Upload and preview usable; no page errors |
+| Invalid PDF | Clean error |
+
+Production screenshots/results:
+
+- `artifacts/compress-pdf-audit/liftpdf-production-chromium.png`
+- `artifacts/compress-pdf-audit/liftpdf-production-firefox.png`
+- `artifacts/compress-pdf-audit/liftpdf-production-mobile.png`
+- `artifacts/compress-pdf-audit/liftpdf-production-results.json`
+
 ## Rejected Improvements
 
 ### Low / Balanced / Maximum Compression
