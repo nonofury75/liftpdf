@@ -37,9 +37,29 @@ export default function WatermarkPdfPage() {
             "Yes. Upload PNG, JPG, JPEG or WEBP images and LiftPDF will place the image watermark on each page.",
         },
         {
+          question: "Can I add a text watermark?",
+          answer:
+            "Yes. You can enter custom text, choose a standard font, adjust size, color, opacity, rotation and position.",
+        },
+        {
           question: "Can I repeat the watermark across the page?",
           answer:
             "Yes. Use Tile / Repeat to place the watermark multiple times across every PDF page.",
+        },
+        {
+          question: "Can I control opacity and rotation?",
+          answer:
+            "Yes. Text and image watermarks both support opacity and rotation controls with a live preview.",
+        },
+        {
+          question: "Will the PDF quality change?",
+          answer:
+            "LiftPDF keeps the original PDF pages and adds the watermark on top. Page dimensions and existing content are preserved.",
+        },
+        {
+          question: "Can I watermark a password-protected PDF?",
+          answer:
+            "Password-protected PDFs must be unlocked first with Unlock PDF before adding a watermark.",
         },
         {
           question: "Are my PDFs uploaded to a server?",

@@ -2,7 +2,16 @@
 
 import Image from "next/image";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Download, FileCheck2, Loader2, RotateCcw, Stamp } from "lucide-react";
+import {
+  CheckCircle2,
+  Download,
+  FileCheck2,
+  Info,
+  Loader2,
+  RotateCcw,
+  ShieldCheck,
+  Stamp,
+} from "lucide-react";
 import {
   degrees,
   PDFDocument,
@@ -99,6 +108,7 @@ export function WatermarkPdfTool() {
   const [error, setError] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
   const [generatedFile, setGeneratedFile] = useState<GeneratedFile | null>(
     null,
   );
@@ -186,6 +196,7 @@ export function WatermarkPdfTool() {
     clearGeneratedFile();
     clearPagePreviews();
     setSelectedPdf(null);
+    setProgress(null);
     setError(null);
     setIsLoadingPreview(true);
 
@@ -209,7 +220,9 @@ export function WatermarkPdfTool() {
     } catch {
       clearPagePreviews();
       setSelectedPdf(null);
-      setError("This PDF could not be read. Please choose another file.");
+      setError(
+        "This PDF could not be read. If it is password protected, unlock it first and try again.",
+      );
     } finally {
       setIsLoadingPreview(false);
     }
@@ -272,12 +285,14 @@ export function WatermarkPdfTool() {
 
     setError(null);
     setIsGenerating(true);
+    setProgress("Preparing PDF...");
     clearGeneratedFile();
 
     try {
       const pdf = await PDFDocument.load(await selectedPdf.file.arrayBuffer());
       const pdfPages = pdf.getPages();
 
+      setProgress("Applying watermark...");
       if (mode === "text") {
         const embeddedFont = await embedSelectedFont(pdf, font);
         const color = hexToRgb(textColor);
@@ -315,6 +330,7 @@ export function WatermarkPdfTool() {
         });
       }
 
+      setProgress("Generating watermarked PDF...");
       const bytes = await pdf.save({
         useObjectStreams: true,
         addDefaultPage: false,
@@ -327,10 +343,12 @@ export function WatermarkPdfTool() {
         url: URL.createObjectURL(blob),
         fileName: watermarkedFileName,
       });
+      setProgress("Watermarked PDF created successfully.");
     } catch {
       setError(
-        "The watermark could not be added. Please try another PDF file.",
+        "The watermark could not be added. If the PDF is password protected, unlock it first and try again.",
       );
+      setProgress(null);
     } finally {
       setIsGenerating(false);
     }
@@ -355,6 +373,7 @@ export function WatermarkPdfTool() {
 
   function updateWatermark(nextUpdate: () => void) {
     clearGeneratedFile();
+    setProgress(null);
     nextUpdate();
   }
 
@@ -383,11 +402,12 @@ export function WatermarkPdfTool() {
       return null;
     });
     setError(null);
+    setProgress(null);
     clearGeneratedFile();
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
         <PdfUploadZone
           multiple={false}
@@ -397,11 +417,19 @@ export function WatermarkPdfTool() {
           onFilesSelected={handlePdfSelected}
         />
 
-        {error ? (
-          <p className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-            {error}
-          </p>
-        ) : null}
+        <div aria-live="polite" className="space-y-3">
+          {error ? (
+            <StatusNotice tone="error" icon={<Info className="size-4" />} message={error} />
+          ) : null}
+
+          {isLoadingPreview ? (
+            <StatusNotice
+              tone="neutral"
+              icon={<Loader2 className="size-4 animate-spin" />}
+              message="Rendering PDF pages..."
+            />
+          ) : null}
+        </div>
 
         {selectedPdf ? (
           <PdfFileSummary
@@ -411,7 +439,7 @@ export function WatermarkPdfTool() {
           />
         ) : null}
 
-        <div className="rounded-lg border border-border bg-card p-5">
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center gap-2">
             <Stamp className="size-5 text-primary" aria-hidden="true" />
             <h2 className="text-lg font-semibold text-foreground">
@@ -606,14 +634,8 @@ export function WatermarkPdfTool() {
           </div>
         </div>
 
-        {isLoadingPreview ? (
-          <p className="rounded-md bg-muted px-4 py-3 text-sm font-medium text-muted-foreground">
-            Loading PDF preview...
-          </p>
-        ) : null}
-
         {pages.length ? (
-          <div className="rounded-lg border border-border bg-card p-5">
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div>
               <h2 className="text-lg font-semibold text-foreground">
                 Live preview
@@ -623,19 +645,19 @@ export function WatermarkPdfTool() {
               </p>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-5 grid max-h-[760px] gap-4 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
               {pages.map((page) => (
                 <article
                   key={page.pageNumber}
-                  className="rounded-lg border border-border bg-background p-3 transition-transform duration-150 hover:-translate-y-0.5"
+                  className="rounded-2xl border border-border bg-background p-3 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md"
                 >
-                  <div className="relative flex min-h-52 items-center justify-center overflow-hidden rounded-md bg-muted p-3">
+                  <div className="relative flex min-h-60 items-center justify-center overflow-hidden rounded-xl bg-slate-100 p-4 shadow-inner">
                     <Image
                       src={page.previewUrl}
                       alt={`Page ${page.pageNumber}`}
-                      width={170}
-                      height={230}
-                      className="h-auto max-h-56 w-auto rounded-sm bg-white shadow-sm"
+                      width={190}
+                      height={260}
+                      className="h-auto max-h-64 w-auto rounded-sm bg-white shadow-lg ring-1 ring-black/10"
                       unoptimized
                     />
                     <WatermarkPreviewOverlay watermark={previewWatermark} />
@@ -650,10 +672,32 @@ export function WatermarkPdfTool() {
         ) : null}
       </div>
 
-      <aside className="h-fit rounded-lg border border-border bg-card p-5">
-        <h2 className="text-lg font-semibold text-foreground">
-          Watermark summary
-        </h2>
+      <aside className="h-fit rounded-2xl border border-border bg-card p-5 shadow-md xl:sticky xl:top-24">
+        <div className="flex items-center gap-3">
+          <div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
+            <Stamp className="size-5" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Watermark PDF
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Text or image watermark
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-border bg-muted/30 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <ShieldCheck className="size-4 text-primary" aria-hidden="true" />
+            Private by design
+          </div>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Your PDF and watermark are processed locally in this browser. No
+            upload to a server.
+          </p>
+        </div>
+
         <div className="mt-5 space-y-3 text-sm">
           <PdfSummaryRow
             label="PDF file"
@@ -673,48 +717,56 @@ export function WatermarkPdfTool() {
           <PdfSummaryRow label="Output" value={watermarkedFileName} />
         </div>
 
+        {progress ? (
+          <p
+            aria-live="polite"
+            className="mt-5 rounded-xl bg-muted px-3 py-2 text-sm font-medium text-muted-foreground"
+          >
+            {progress}
+          </p>
+        ) : null}
+
         <div className="mt-6 grid gap-3">
           <Button
             type="button"
             onClick={handleAddWatermark}
-            disabled={isGenerating}
+            disabled={!selectedPdf || isGenerating}
+            className="h-12 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-md"
           >
             {isGenerating ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
               <FileCheck2 className="size-4" aria-hidden="true" />
             )}
-            Add watermark
+            {isGenerating ? "Applying watermark..." : "Add watermark"}
           </Button>
 
           {generatedFile ? (
             <Button asChild variant="outline">
-              <a href={generatedFile.url} download={generatedFile.fileName}>
+              <a
+                href={generatedFile.url}
+                download={generatedFile.fileName}
+                aria-label="Download watermarked PDF"
+              >
                 <Download className="size-4" aria-hidden="true" />
-                Download watermarked PDF
+                Download PDF
               </a>
             </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setError("Add a watermark before downloading.")}
-            >
-              <Download className="size-4" aria-hidden="true" />
-              Download watermarked PDF
-            </Button>
-          )}
+          ) : null}
 
           <Button type="button" variant="ghost" onClick={handleReset}>
             <RotateCcw className="size-4" aria-hidden="true" />
-            Start over
+            {generatedFile ? "Watermark another PDF" : "Start over"}
           </Button>
         </div>
 
         {generatedFile ? (
-          <p className="mt-4 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
-            Your watermarked PDF is ready to download.
-          </p>
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-medium text-emerald-800">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="size-4" aria-hidden="true" />
+              Watermarked PDF created successfully
+            </span>
+          </div>
         ) : null}
       </aside>
     </div>
@@ -747,8 +799,9 @@ function OptionButton({ isActive, label, onClick }: OptionButtonProps) {
   return (
     <button
       type="button"
+      aria-pressed={isActive}
       className={cn(
-        "rounded-md border border-border px-3 py-2 text-left text-sm font-medium transition-colors",
+        "rounded-xl border border-border px-3 py-2.5 text-left text-sm font-semibold transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm",
         isActive
           ? "border-primary bg-primary/10 text-primary"
           : "bg-background text-foreground hover:bg-muted",
@@ -757,6 +810,28 @@ function OptionButton({ isActive, label, onClick }: OptionButtonProps) {
     >
       {label}
     </button>
+  );
+}
+
+type StatusNoticeProps = {
+  tone: "neutral" | "error";
+  icon: React.ReactNode;
+  message: string;
+};
+
+function StatusNotice({ tone, icon, message }: StatusNoticeProps) {
+  const toneClass =
+    tone === "error"
+      ? "border-red-200 bg-red-50 text-red-700"
+      : "border-border bg-muted text-muted-foreground";
+
+  return (
+    <p
+      className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium ${toneClass}`}
+    >
+      {icon}
+      {message}
+    </p>
   );
 }
 
