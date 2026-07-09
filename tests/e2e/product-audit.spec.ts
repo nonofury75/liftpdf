@@ -187,7 +187,7 @@ test.describe("critical PDF workflows", () => {
       page,
       /^Delete Pages$/,
       /^Download PDF$/,
-      "deleted-pages.pdf",
+      "pages-deleted.pdf",
     );
     expect((await PDFDocument.load(deletedBytes)).getPageCount()).toBe(9);
 

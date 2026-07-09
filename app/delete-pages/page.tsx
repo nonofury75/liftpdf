@@ -47,9 +47,24 @@ export default function DeletePagesPage() {
             "Yes. Select one page, multiple pages, all pages except one, or invert your selection before deleting.",
         },
         {
+          question: "Can I preview pages before deleting them?",
+          answer:
+            "Yes. LiftPDF renders page thumbnails so you can select exactly which pages should be removed before exporting.",
+        },
+        {
+          question: "Can I delete every page?",
+          answer:
+            "No. A PDF must contain at least one page, so LiftPDF blocks exports that would remove the entire document.",
+        },
+        {
           question: "Does it work offline?",
           answer:
             "After the page and required assets are loaded, the PDF processing itself happens in your browser without uploading files.",
+        },
+        {
+          question: "Can I delete pages from a password-protected PDF?",
+          answer:
+            "Password-protected PDFs must be unlocked first with Unlock PDF before pages can be removed.",
         },
         {
           question: "Is the quality preserved?",
