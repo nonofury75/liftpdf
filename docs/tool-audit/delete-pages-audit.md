@@ -336,6 +336,33 @@ Completed:
 - `npm run build`
 - `npm run test:e2e` (`45 passed`, `5 skipped`)
 
+## Vercel Production Validation
+
+Deployment:
+
+- Commit: `e0c1ab9`
+- Deployment: `https://liftpdf-eik97pm56-rachator75010-5712s-projects.vercel.app`
+- Aliases: `https://liftpdf.com`, `https://www.liftpdf.com`
+- Status: `Ready`
+
+Production URL tested:
+
+- `https://liftpdf.com/delete-pages`
+
+Results:
+
+- `artifacts/delete-pages-audit/liftpdf-production-results.json`
+
+Validated production smoke test:
+
+| Case | Browser | Result |
+|---|---|---|
+| 4-page PDF, delete page 2 | Chromium | `pages-deleted.pdf`, 3 pages, no console/page errors |
+
+Production screenshot:
+
+- `artifacts/delete-pages-audit/final-prod-smoke-success.png`
+
 ## Known Limits
 
 - No text range input.
