@@ -216,7 +216,7 @@ test.describe("critical PDF workflows", () => {
       page,
       /^Reorder PDF$/,
       /^Download PDF$/,
-      "reordered.pdf",
+      "pages-reordered.pdf",
     );
     expect((await PDFDocument.load(reorderedBytes)).getPageCount()).toBe(10);
 

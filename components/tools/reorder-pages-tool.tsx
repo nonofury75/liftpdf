@@ -4,15 +4,19 @@ import Image from "next/image";
 import {
   ArrowLeft,
   ArrowRight,
+  CheckCircle2,
   Download,
   FileCheck2,
   GripVertical,
+  Info,
   Loader2,
   RotateCcw,
+  ShieldCheck,
 } from "lucide-react";
 import {
   type DragEvent,
   memo,
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -43,7 +47,7 @@ type GeneratedFile = {
   fileName: string;
 };
 
-const outputFileName = "reordered.pdf";
+const outputFileName = "pages-reordered.pdf";
 
 export function ReorderPagesTool() {
   const [selectedPdf, setSelectedPdf] = useState<SelectedPdf | null>(null);
@@ -51,6 +55,7 @@ export function ReorderPagesTool() {
   const [draggedPageNumber, setDraggedPageNumber] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [progress, setProgress] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [generatedFile, setGeneratedFile] = useState<GeneratedFile | null>(null);
@@ -126,6 +131,7 @@ export function ReorderPagesTool() {
     setDraggedPageNumber(null);
     setError(null);
     setStatus(null);
+    setProgress(null);
     setIsLoadingPreview(true);
 
     try {
@@ -145,7 +151,9 @@ export function ReorderPagesTool() {
     } catch {
       clearPagePreviews();
       setSelectedPdf(null);
-      setError("This PDF could not be read. Please choose another file.");
+      setError(
+        "This PDF could not be read. If it is password protected, unlock it first and try again.",
+      );
     } finally {
       setIsLoadingPreview(false);
     }
@@ -156,6 +164,7 @@ export function ReorderPagesTool() {
       clearGeneratedFile();
       setError(null);
       setStatus(null);
+      setProgress(null);
       setPages((currentPages) => {
         const currentIndex = currentPages.findIndex(
           (page) => page.pageNumber === pageNumber,
@@ -197,6 +206,7 @@ export function ReorderPagesTool() {
       clearGeneratedFile();
       setError(null);
       setStatus(null);
+      setProgress(null);
       setPages((currentPages) => {
         const fromIndex = currentPages.findIndex(
           (page) => page.pageNumber === draggedPageNumber,
@@ -220,6 +230,7 @@ export function ReorderPagesTool() {
     clearGeneratedFile();
     setError(null);
     setStatus(null);
+    setProgress(null);
     setDraggedPageNumber(null);
     setPages((currentPages) =>
       currentPages.slice().sort((a, b) => a.pageNumber - b.pageNumber),
@@ -239,6 +250,7 @@ export function ReorderPagesTool() {
         : "The PDF keeps the current page order because no pages were moved.",
     );
     setIsExporting(true);
+    setProgress("Preparing PDF...");
     clearGeneratedFile();
 
     try {
@@ -246,10 +258,12 @@ export function ReorderPagesTool() {
       const sourcePdf = await PDFDocument.load(await selectedPdf.file.arrayBuffer());
       const outputPdf = await PDFDocument.create();
       const pageIndexes = pages.map((page) => page.pageNumber - 1);
+      setProgress("Reordering pages...");
       const copiedPages = await outputPdf.copyPages(sourcePdf, pageIndexes);
 
       copiedPages.forEach((page) => outputPdf.addPage(page));
 
+      setProgress("Generating PDF...");
       const pdfBytes = await outputPdf.save({
         useObjectStreams: true,
         addDefaultPage: false,
@@ -263,9 +277,13 @@ export function ReorderPagesTool() {
       };
 
       setGeneratedFile(nextFile);
+      setProgress("Pages reordered successfully.");
       triggerDownload(nextFile.url, nextFile.fileName);
     } catch {
-      setError("The PDF could not be reordered. Please try another file.");
+      setError(
+        "The PDF could not be reordered. If it is password protected, unlock it first and try again.",
+      );
+      setProgress(null);
     } finally {
       setIsExporting(false);
     }
@@ -275,6 +293,7 @@ export function ReorderPagesTool() {
     setSelectedPdf(null);
     setError(null);
     setStatus(null);
+    setProgress(null);
     setDraggedPageNumber(null);
     setIsLoadingPreview(false);
     setIsExporting(false);
@@ -283,7 +302,7 @@ export function ReorderPagesTool() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
         <PdfUploadZone
           multiple={false}
@@ -293,23 +312,31 @@ export function ReorderPagesTool() {
           onFilesSelected={handleFilesSelected}
         />
 
-        {error ? (
-          <p
-            className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-            role="alert"
-          >
-            {error}
-          </p>
-        ) : null}
+        <div aria-live="polite" className="space-y-3">
+          {error ? (
+            <StatusNotice
+              tone="error"
+              icon={<Info className="size-4" />}
+              message={error}
+            />
+          ) : null}
 
-        {status ? (
-          <p
-            className="rounded-md bg-muted px-4 py-3 text-sm font-medium text-muted-foreground"
-            aria-live="polite"
-          >
-            {status}
-          </p>
-        ) : null}
+          {status ? (
+            <StatusNotice
+              tone="neutral"
+              icon={<Info className="size-4" />}
+              message={status}
+            />
+          ) : null}
+
+          {isLoadingPreview ? (
+            <StatusNotice
+              tone="neutral"
+              icon={<Loader2 className="size-4 animate-spin" />}
+              message="Rendering PDF pages..."
+            />
+          ) : null}
+        </div>
 
         {selectedPdf ? (
           <PdfFileSummary
@@ -319,14 +346,8 @@ export function ReorderPagesTool() {
           />
         ) : null}
 
-        {isLoadingPreview ? (
-          <p className="rounded-md bg-muted px-4 py-3 text-sm font-medium text-muted-foreground">
-            Loading PDF preview...
-          </p>
-        ) : null}
-
         {pages.length ? (
-          <div className="rounded-lg border border-border bg-card p-5">
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
             <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">
@@ -348,7 +369,7 @@ export function ReorderPagesTool() {
               </Button>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid max-h-[780px] gap-4 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
               {pages.map((page, index) => (
                 <ReorderPageCard
                   key={page.pageNumber}
@@ -369,10 +390,32 @@ export function ReorderPagesTool() {
         ) : null}
       </div>
 
-      <aside className="h-fit rounded-lg border border-border bg-card p-5">
-        <h2 className="text-lg font-semibold text-foreground">
-          Reorder summary
-        </h2>
+      <aside className="h-fit rounded-2xl border border-border bg-card p-5 shadow-md xl:sticky xl:top-24">
+        <div className="flex items-center gap-3">
+          <div className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
+            <GripVertical className="size-5" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Reorder Pages
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Arrange page order
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-border bg-muted/30 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <ShieldCheck className="size-4 text-primary" aria-hidden="true" />
+            Private by design
+          </div>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            Page reordering happens locally in this browser. Your PDF is never
+            uploaded to a server.
+          </p>
+        </div>
+
         <div className="mt-5 space-y-3 text-sm">
           <PdfSummaryRow
             label="PDF file"
@@ -383,8 +426,8 @@ export function ReorderPagesTool() {
             value={selectedPdf ? String(selectedPdf.pageCount) : "0"}
           />
           <PdfSummaryRow
-            label="Order changed"
-            value={hasOrderChanged ? "Yes" : "No"}
+            label="Current order"
+            value={hasOrderChanged ? "Changed" : "Original"}
           />
           <PdfSummaryRow
             label="File size"
@@ -393,47 +436,56 @@ export function ReorderPagesTool() {
           <PdfSummaryRow label="Output" value={outputFileName} />
         </div>
 
+        {progress ? (
+          <p
+            aria-live="polite"
+            className="mt-5 rounded-xl bg-muted px-3 py-2 text-sm font-medium text-muted-foreground"
+          >
+            {progress}
+          </p>
+        ) : null}
+
         <div className="mt-6 grid gap-3">
-          <Button type="button" onClick={handleExportPdf} disabled={isExporting}>
+          <Button
+            type="button"
+            onClick={handleExportPdf}
+            disabled={!selectedPdf || isExporting}
+            className="h-12 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-md"
+          >
             {isExporting ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
               <FileCheck2 className="size-4" aria-hidden="true" />
             )}
-            Reorder PDF
+            {isExporting ? "Generating PDF..." : "Reorder PDF"}
           </Button>
 
           {generatedFile ? (
             <Button asChild variant="outline">
-              <a href={generatedFile.url} download={generatedFile.fileName}>
+              <a
+                href={generatedFile.url}
+                download={generatedFile.fileName}
+                aria-label="Download PDF"
+              >
                 <Download className="size-4" aria-hidden="true" />
                 Download PDF
               </a>
             </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setError("Reorder or export your PDF first.")}
-            >
-              <Download className="size-4" aria-hidden="true" />
-              Download PDF
-            </Button>
-          )}
+          ) : null}
 
           <Button type="button" variant="ghost" onClick={handleReset}>
             <RotateCcw className="size-4" aria-hidden="true" />
-            Reset
+            {generatedFile ? "Reorder another PDF" : "Start over"}
           </Button>
         </div>
 
         {generatedFile ? (
-          <p
-            className="mt-4 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
-            aria-live="polite"
-          >
-            Your reordered PDF is ready. The download has started automatically.
-          </p>
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-medium text-emerald-800">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="size-4" aria-hidden="true" />
+              Pages reordered successfully
+            </span>
+          </div>
         ) : null}
       </aside>
     </div>
@@ -473,28 +525,28 @@ const ReorderPageCard = memo(function ReorderPageCard({
       onDrop={onDrop}
       onDragEnd={onDragEnd}
       className={cn(
-        "rounded-lg border border-border bg-background p-3 transition-colors",
-        isDragging && "border-primary opacity-70 ring-2 ring-primary/20",
+        "rounded-2xl border border-border bg-background p-3 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md",
+        isDragging && "border-primary opacity-75 ring-2 ring-primary/20",
       )}
       aria-label={`Original page ${page.pageNumber}, position ${position}`}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
           <GripVertical className="size-3.5 text-primary" aria-hidden="true" />
           Drag
         </span>
-        <span className="rounded-md bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+        <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
           Position {position}
         </span>
       </div>
 
-      <div className="flex min-h-48 items-center justify-center overflow-hidden rounded-md bg-muted p-3">
+      <div className="flex min-h-60 items-center justify-center overflow-hidden rounded-xl bg-slate-100 p-4 shadow-inner">
         <Image
           src={page.previewUrl}
           alt={`Preview of original page ${page.pageNumber}`}
-          width={160}
-          height={220}
-          className="h-auto max-h-52 w-auto rounded-sm bg-white shadow-sm"
+          width={190}
+          height={260}
+          className="h-auto max-h-64 w-auto rounded-sm bg-white shadow-lg ring-1 ring-black/10"
           unoptimized
         />
       </div>
@@ -548,6 +600,29 @@ function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
 
   nextItems.splice(toIndex, 0, item);
   return nextItems;
+}
+
+type StatusNoticeProps = {
+  tone: "neutral" | "error";
+  icon: ReactNode;
+  message: string;
+};
+
+function StatusNotice({ tone, icon, message }: StatusNoticeProps) {
+  const toneClass =
+    tone === "error"
+      ? "border-red-200 bg-red-50 text-red-700"
+      : "border-border bg-muted text-muted-foreground";
+
+  return (
+    <p
+      className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium ${toneClass}`}
+      role={tone === "error" ? "alert" : undefined}
+    >
+      {icon}
+      {message}
+    </p>
+  );
 }
 
 function isPdfFile(file: File) {

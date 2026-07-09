@@ -47,9 +47,24 @@ export default function ReorderPagesPage() {
             "Yes. On desktop, drag pages into a new order. You can also use move buttons for keyboard and mobile control.",
         },
         {
+          question: "Can I reorder pages without drag and drop?",
+          answer:
+            "Yes. Every page has move buttons, so the tool remains usable on mobile and with keyboard navigation.",
+        },
+        {
+          question: "Can I reset the original order?",
+          answer:
+            "Yes. Use Reset order to restore the original page sequence before exporting.",
+        },
+        {
           question: "Does it work on mobile?",
           answer:
             "Yes. Mobile users can reorder pages with the left and right move buttons.",
+        },
+        {
+          question: "Can I reorder a password-protected PDF?",
+          answer:
+            "Password-protected PDFs must be unlocked first with Unlock PDF before pages can be rearranged.",
         },
         {
           question: "Will the quality change?",
