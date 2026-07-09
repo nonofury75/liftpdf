@@ -275,6 +275,30 @@ Local screenshots/results:
 - `artifacts/pdf-to-jpg-audit/liftpdf-local-mobile.png`
 - `artifacts/pdf-to-jpg-audit/liftpdf-local-production-results.json`
 
+## Production Validation
+
+Deployment:
+
+- Commit: `236a22d`
+- Vercel deployment: `https://liftpdf-hg05x26vg-rachator75010-5712s-projects.vercel.app`
+- Production alias: `https://liftpdf.com`
+- Vercel status: Ready
+
+Tested on `https://liftpdf.com/pdf-to-jpg`:
+
+| Browser / viewport | Result |
+|---|---|
+| Chromium desktop | 1-page PDF -> `page-1.jpg`; 10-page PDF -> `pdf-to-jpg.zip`; range `1` -> `page-1.jpg`; invalid PDF error OK |
+| Firefox desktop | 1-page PDF -> `page-1.jpg`; 10-page PDF -> `pdf-to-jpg.zip`; range `1` -> `page-1.jpg`; invalid PDF error OK |
+| Mobile Chromium | Upload and preview usable; no page errors |
+
+Production screenshots/results:
+
+- `artifacts/pdf-to-jpg-audit/liftpdf-production-chromium.png`
+- `artifacts/pdf-to-jpg-audit/liftpdf-production-firefox.png`
+- `artifacts/pdf-to-jpg-audit/liftpdf-production-mobile.png`
+- `artifacts/pdf-to-jpg-audit/liftpdf-production-results.json`
+
 ## Validation Commands
 
 Completed locally:
