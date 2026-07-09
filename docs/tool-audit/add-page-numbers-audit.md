@@ -369,6 +369,33 @@ Completed:
 - `npm run build`
 - `npm run test:e2e` (`45 passed`, `5 skipped`)
 
+## Vercel Production Validation
+
+Deployment:
+
+- Commit: `8c0a621`
+- Deployment: `https://liftpdf-4vu37qj6h-rachator75010-5712s-projects.vercel.app`
+- Aliases: `https://liftpdf.com`, `https://www.liftpdf.com`
+- Status: `Ready`
+
+Production URL tested:
+
+- `https://liftpdf.com/add-page-numbers`
+
+Results:
+
+- `artifacts/add-page-numbers-audit/liftpdf-production-results.json`
+
+Validated production smoke test:
+
+| Case | Browser | Result |
+|---|---|---|
+| 3-page PDF + Page 1 of 10 format + Large + start number 5 | Chromium | `numbered.pdf`, 3 pages, no console/page errors |
+
+Production screenshot:
+
+- `artifacts/add-page-numbers-audit/final-prod-smoke-success.png`
+
 ## Known Limits
 
 - Page numbers apply to all pages.
