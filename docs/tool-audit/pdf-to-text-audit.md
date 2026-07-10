@@ -302,6 +302,27 @@ Screenshots:
 - `artifacts/pdf-to-text-audit/chromium-mobile-one-page-success.png`
 - `artifacts/pdf-to-text-audit/chromium-mobile-error-states.png`
 
+## Production Validation
+
+Deployment:
+
+- Product commit: `e33e807 Upgrade PDF to Text experience`
+- Vercel deployment: `https://liftpdf-b5vz5qcmq-rachator75010-5712s-projects.vercel.app`
+- Production route: `https://liftpdf.com/pdf-to-text`
+- Status: `Ready`
+
+Production smoke test:
+
+| Case | Browser | Result |
+|---|---|---|
+| 1-page text PDF, extract, copy, download | Chromium | `extracted-text.txt`, page separator present, expected text extracted, no console/page errors |
+| Image-only PDF | Chromium | Clear no-selectable-text / OCR-required message |
+
+Artifacts:
+
+- `artifacts/pdf-to-text-audit/liftpdf-production-results.json`
+- `artifacts/pdf-to-text-audit/final-prod-pdf-to-text-success.png`
+
 ## Known Limits
 
 - No OCR.
