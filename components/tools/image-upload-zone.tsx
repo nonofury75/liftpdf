@@ -24,8 +24,8 @@ export function ImageUploadZone({
   onFilesSelected,
   accept = "image/jpeg,image/png,image/webp",
   buttonLabel = "Choose files",
-  description = "Drop files here or choose files. Upload JPG, JPEG, PNG or WEBP files. Each image will become one PDF page.",
-  title = "Drop your images here",
+  description = "Choose images from your device. Each image will become one PDF page.",
+  title = "Drop your file here.",
   compact = false,
 }: ImageUploadZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);

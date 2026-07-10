@@ -130,8 +130,6 @@ export function ToolPageShell({
         {children}
       </section>
 
-      <PrivacyTrustSection />
-
       {premiumContent ? (
         <section className="border-t border-border bg-background">
           <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
@@ -142,18 +140,20 @@ export function ToolPageShell({
 
       <section className="border-t border-border bg-muted/40">
         <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:px-8">
+          <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+            <ToolSeoBlock title={seoTitle} text={seoText} />
+            <ToolFaq items={faq} />
+          </div>
           {currentHref ? (
             <RelatedTools
               currentHref={currentHref}
               compact={compactRelatedTools}
             />
           ) : null}
-          <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
-            <ToolSeoBlock title={seoTitle} text={seoText} />
-            <ToolFaq items={faq} />
-          </div>
         </div>
       </section>
+
+      <PrivacyTrustSection />
     </div>
   );
 }

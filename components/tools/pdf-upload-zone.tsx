@@ -22,8 +22,8 @@ type PdfUploadZoneProps = {
 export function PdfUploadZone({
   onFilesSelected,
   multiple = true,
-  title = "Drop your PDF files here",
-  description = "Upload multiple PDF files, arrange the order and merge them into one document.",
+  title = "Drop your file here.",
+  description = "Choose a PDF file from your device. Processing happens in your browser.",
   buttonLabel = "Choose PDF files",
 }: PdfUploadZoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -84,7 +84,7 @@ export function PdfUploadZone({
 
       <h2 className="mt-5 text-xl font-semibold text-foreground">{title}</h2>
       <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-        Drop files here or choose files. {description}
+        Drop your file here or choose files. {description}
       </p>
 
       <Button
