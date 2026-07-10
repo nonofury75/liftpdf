@@ -236,6 +236,27 @@ Validated:
 - Unlocked output did not contain `/Encrypt`.
 - Unlocked output could be parsed as a normal PDF.
 
+## Production Validation
+
+Deployment:
+
+- Product commit: `cec6e92 Upgrade Unlock PDF experience`
+- Vercel deployment: `https://liftpdf-fj8yxgmim-rachator75010-5712s-projects.vercel.app`
+- Production route: `https://liftpdf.com/unlock-pdf`
+- Status: `Ready`
+
+Production smoke test:
+
+| Case | Browser | Result |
+|---|---|---|
+| Protected PDF from production Protect PDF + wrong password | Chromium | Unlock rejected |
+| Protected PDF from production Protect PDF + correct password | Chromium | `unlocked.pdf`, `/Encrypt` removed, parsed as a normal PDF |
+
+Artifacts:
+
+- `artifacts/unlock-pdf-audit/liftpdf-production-results.json`
+- `artifacts/unlock-pdf-audit/final-prod-unlock-success.png`
+
 ## Known Limits
 
 - Unlock PDF does not recover lost passwords.
