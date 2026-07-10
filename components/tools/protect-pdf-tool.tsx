@@ -24,6 +24,10 @@ import {
   encryptPdfWithPassword,
   hasPdfEncryptionDictionary,
 } from "@/components/tools/pdf/qpdf-client";
+import {
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 import { cn } from "@/lib/utils";
 
 type SelectedPdf = {
@@ -52,6 +56,10 @@ export function ProtectPdfTool() {
   const [generatedFile, setGeneratedFile] = useState<GeneratedFile | null>(null);
 
   const generatedFileRef = useRef<GeneratedFile | null>(null);
+  const analytics = useToolAnalytics({
+    tool: "Protect PDF",
+    route: "/protect-pdf",
+  });
 
   useEffect(() => {
     generatedFileRef.current = generatedFile;
@@ -81,6 +89,7 @@ export function ProtectPdfTool() {
   }
 
   async function handleFilesSelected(files: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(files));
     const [file] = files;
 
     if (!file) {
@@ -89,16 +98,19 @@ export function ProtectPdfTool() {
 
     if (files.length > 1) {
       setError("Please choose only one PDF file.");
+      analytics.trackError({ errorCode: "too_many_files" });
       return;
     }
 
     if (!isPdfFile(file)) {
       setError("Only PDF files are supported.");
+      analytics.trackError({ errorCode: "invalid_file_type" });
       return;
     }
 
     if (file.size === 0) {
       setError("This PDF is empty. Please choose another file.");
+      analytics.trackError({ errorCode: "empty_file" });
       return;
     }
 
@@ -113,6 +125,7 @@ export function ProtectPdfTool() {
 
       if (hasPdfEncryptionDictionary(fileBytes)) {
         setError("This PDF is already protected. Please choose an unlocked PDF.");
+        analytics.trackError({ errorCode: "already_protected" });
         return;
       }
 
@@ -120,6 +133,11 @@ export function ProtectPdfTool() {
       setSelectedPdf({
         file,
         pageCount: pdf.numPages,
+      });
+      analytics.trackUploadCompleted({
+        ...summarizeFilesForAnalytics([file]),
+        pageCount: pdf.numPages,
+        outputFormat: "pdf",
       });
       await pdf.destroy();
     } catch (caughtError) {
@@ -129,6 +147,7 @@ export function ProtectPdfTool() {
           ? "This PDF is already protected. Please choose an unlocked PDF."
           : "This PDF could not be read. Please choose another file.",
       );
+      analytics.trackError({ errorCode: "pdf_read_failed" });
     } finally {
       setIsReadingPdf(false);
     }
@@ -137,6 +156,7 @@ export function ProtectPdfTool() {
   async function handleProtectPdf() {
     if (!selectedPdf) {
       setError("Please choose a PDF file before protecting it.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
@@ -144,6 +164,7 @@ export function ProtectPdfTool() {
 
     if (validationError) {
       setError(validationError);
+      analytics.trackError({ errorCode: "password_validation_failed" });
       return;
     }
 
@@ -151,6 +172,7 @@ export function ProtectPdfTool() {
       setError(
         "This browser session cannot run the PDF encryption engine. Please reload the page and try again.",
       );
+      analytics.trackError({ errorCode: "browser_not_isolated" });
       return;
     }
 
@@ -158,6 +180,11 @@ export function ProtectPdfTool() {
     setIsProtecting(true);
     setProgress("Preparing PDF...");
     clearGeneratedFile();
+    analytics.trackConversionStarted({
+      mode: "encrypt",
+      outputFormat: "pdf",
+      pageCount: selectedPdf.pageCount,
+    });
 
     try {
       const fileBuffer = await selectedPdf.file.arrayBuffer();
@@ -182,9 +209,18 @@ export function ProtectPdfTool() {
 
       setGeneratedFile(nextFile);
       setProgress("PDF protected successfully.");
+      analytics.trackConversionCompleted({
+        mode: "encrypt",
+        outputFormat: "pdf",
+        pageCount: selectedPdf.pageCount,
+        status: "success",
+      });
+      analytics.trackDownloadStarted({ outputFormat: "pdf" });
       triggerDownload(nextFile.url, nextFile.fileName);
+      analytics.trackDownloadCompleted({ outputFormat: "pdf" });
     } catch {
       setError("The PDF could not be encrypted. Please try another file.");
+      analytics.trackError({ errorCode: "encryption_failed" });
       setProgress(null);
     } finally {
       setIsProtecting(false);
@@ -401,7 +437,14 @@ export function ProtectPdfTool() {
 
           {generatedFile ? (
             <Button asChild variant="outline">
-              <a href={generatedFile.url} download={generatedFile.fileName}>
+              <a
+                href={generatedFile.url}
+                download={generatedFile.fileName}
+                onClick={() => {
+                  analytics.trackDownloadStarted({ outputFormat: "pdf" });
+                  analytics.trackDownloadCompleted({ outputFormat: "pdf" });
+                }}
+              >
                 <Download className="size-4" aria-hidden="true" />
                 Download PDF
               </a>

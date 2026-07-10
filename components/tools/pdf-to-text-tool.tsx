@@ -20,6 +20,10 @@ import {
 import { PdfSummaryRow } from "@/components/tools/pdf/pdf-summary-row";
 import { extractPdfText, loadPdfDocument } from "@/components/tools/pdf/pdfjs-client";
 import { hasPdfEncryptionDictionary } from "@/components/tools/pdf/qpdf-client";
+import {
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 import { cn } from "@/lib/utils";
 
 type SelectedPdf = {
@@ -47,6 +51,10 @@ export function PdfToTextTool() {
   const [generatedFile, setGeneratedFile] = useState<GeneratedFile | null>(null);
 
   const generatedFileRef = useRef<GeneratedFile | null>(null);
+  const analytics = useToolAnalytics({
+    tool: "PDF to Text",
+    route: "/pdf-to-text",
+  });
 
   useEffect(() => {
     generatedFileRef.current = generatedFile;
@@ -80,6 +88,7 @@ export function PdfToTextTool() {
   }
 
   async function handleFilesSelected(files: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(files));
     const [file] = files;
 
     if (!file) {
@@ -88,16 +97,19 @@ export function PdfToTextTool() {
 
     if (files.length > 1) {
       setError("Please choose only one PDF file.");
+      analytics.trackError({ errorCode: "too_many_files" });
       return;
     }
 
     if (!isPdfFile(file)) {
       setError("Only PDF files are supported.");
+      analytics.trackError({ errorCode: "invalid_file_type" });
       return;
     }
 
     if (file.size === 0) {
       setError("This PDF is empty. Please choose another file.");
+      analytics.trackError({ errorCode: "empty_file" });
       return;
     }
 
@@ -116,14 +128,21 @@ export function PdfToTextTool() {
         setError(
           "This PDF is password protected. Please unlock it first using Unlock PDF.",
         );
+        analytics.trackError({ errorCode: "password_protected" });
         return;
       }
 
       const pdf = await loadPdfDocument(file);
       setSelectedPdf({ file, pageCount: pdf.numPages });
+      analytics.trackUploadCompleted({
+        ...summarizeFilesForAnalytics([file]),
+        pageCount: pdf.numPages,
+        outputFormat: "txt",
+      });
       await pdf.destroy();
     } catch {
       setError("This PDF could not be read. Please choose another file.");
+      analytics.trackError({ errorCode: "pdf_read_failed" });
     } finally {
       setIsReadingPdf(false);
     }
@@ -132,6 +151,7 @@ export function PdfToTextTool() {
   async function handleExtractText() {
     if (!selectedPdf) {
       setError("Please choose a PDF file before extracting text.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
@@ -141,6 +161,11 @@ export function PdfToTextTool() {
     setError(null);
     setStatusMessage("Preparing PDF...");
     setIsExtracting(true);
+    analytics.trackConversionStarted({
+      mode: "extract_text",
+      outputFormat: "txt",
+      pageCount: selectedPdf.pageCount,
+    });
 
     let pdfDocument: Awaited<ReturnType<typeof loadPdfDocument>> | null = null;
 
@@ -160,6 +185,7 @@ export function PdfToTextTool() {
       if (!hasSelectableText) {
         setError(noTextMessage);
         setExtractedText("");
+        analytics.trackError({ errorCode: "no_selectable_text" });
         return;
       }
 
@@ -168,10 +194,19 @@ export function PdfToTextTool() {
 
       const nextFile = createTextDownload(text);
       setGeneratedFile(nextFile);
+      analytics.trackConversionCompleted({
+        mode: "extract_text",
+        outputFormat: "txt",
+        pageCount: selectedPdf.pageCount,
+        status: "success",
+      });
+      analytics.trackDownloadStarted({ outputFormat: "txt" });
       triggerDownload(nextFile.url, nextFile.fileName);
+      analytics.trackDownloadCompleted({ outputFormat: "txt" });
       setStatusMessage("Text extracted successfully.");
     } catch {
       setError("The text could not be extracted. Please try another PDF file.");
+      analytics.trackError({ errorCode: "text_extraction_failed" });
     } finally {
       await pdfDocument?.destroy();
       setIsExtracting(false);
@@ -371,7 +406,14 @@ export function PdfToTextTool() {
 
           {generatedFile ? (
             <Button asChild variant="outline">
-              <a href={generatedFile.url} download={generatedFile.fileName}>
+              <a
+                href={generatedFile.url}
+                download={generatedFile.fileName}
+                onClick={() => {
+                  analytics.trackDownloadStarted({ outputFormat: "txt" });
+                  analytics.trackDownloadCompleted({ outputFormat: "txt" });
+                }}
+              >
                 <Download className="size-4" aria-hidden="true" />
                 Download TXT
               </a>

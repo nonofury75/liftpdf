@@ -25,6 +25,10 @@ import {
   renderPdfPagePreview,
 } from "@/components/tools/pdf/pdfjs-client";
 import { PdfSummaryRow } from "@/components/tools/pdf/pdf-summary-row";
+import {
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 
 type SelectedPdf = {
   file: File;
@@ -56,6 +60,10 @@ export function RotatePdfTool() {
   );
   const generatedFileRef = useRef<GeneratedFile | null>(null);
   const pagesRef = useRef<PagePreview[]>([]);
+  const analytics = useToolAnalytics({
+    tool: "Rotate PDF",
+    route: "/rotate-pdf",
+  });
 
   const rotatedPagesCount = useMemo(
     () => pages.filter((page) => page.rotation !== 0).length,
@@ -96,6 +104,7 @@ export function RotatePdfTool() {
   }, []);
 
   async function handleFilesSelected(files: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(files));
     const [file] = files;
 
     if (!file) {
@@ -104,11 +113,13 @@ export function RotatePdfTool() {
 
     if (files.length > 1) {
       setError("Please choose only one PDF file.");
+      analytics.trackError({ errorCode: "too_many_files" });
       return;
     }
 
     if (!isPdfFile(file)) {
       setError("Only PDF files are supported.");
+      analytics.trackError({ errorCode: "invalid_file_type" });
       return;
     }
 
@@ -136,6 +147,11 @@ export function RotatePdfTool() {
         pageCount: pdf.numPages,
       });
       setPages(previews);
+      analytics.trackUploadCompleted({
+        ...summarizeFilesForAnalytics([file]),
+        pageCount: pdf.numPages,
+        outputFormat: "pdf",
+      });
       await pdf.destroy();
     } catch {
       clearPagePreviews();
@@ -143,6 +159,7 @@ export function RotatePdfTool() {
       setError(
         "This PDF could not be read. If it is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "pdf_read_failed" });
     } finally {
       setIsLoadingPreview(false);
     }
@@ -188,6 +205,7 @@ export function RotatePdfTool() {
   async function handleRotatePdf() {
     if (!selectedPdf) {
       setError("Please choose one PDF file before rotating.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
@@ -195,6 +213,11 @@ export function RotatePdfTool() {
     setIsRotating(true);
     setProgress("Preparing PDF...");
     clearGeneratedFile();
+    analytics.trackConversionStarted({
+      mode: "rotate_pages",
+      pageCount: selectedPdf.pageCount,
+      outputFormat: "pdf",
+    });
 
     try {
       const pdf = await PDFDocument.load(await selectedPdf.file.arrayBuffer());
@@ -228,10 +251,17 @@ export function RotatePdfTool() {
         fileName: rotatedFileName,
       });
       setProgress("Rotated PDF created successfully.");
+      analytics.trackConversionCompleted({
+        mode: "rotate_pages",
+        pageCount: selectedPdf.pageCount,
+        outputFormat: "pdf",
+        status: "success",
+      });
     } catch {
       setError(
         "The PDF could not be rotated. If it is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "rotate_failed" });
       setProgress(null);
     } finally {
       setIsRotating(false);
@@ -474,6 +504,10 @@ export function RotatePdfTool() {
                 href={generatedFile.url}
                 download={generatedFile.fileName}
                 aria-label="Download rotated PDF"
+                onClick={() => {
+                  analytics.trackDownloadStarted({ outputFormat: "pdf" });
+                  analytics.trackDownloadCompleted({ outputFormat: "pdf" });
+                }}
               >
                 <Download className="size-4" aria-hidden="true" />
                 Download PDF

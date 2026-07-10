@@ -35,6 +35,10 @@ import {
   loadPdfDocument,
   renderPdfPageThumbnail,
 } from "@/components/tools/pdf/pdfjs-client";
+import {
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 import { cn } from "@/lib/utils";
 
 type SelectedPdf = {
@@ -62,6 +66,10 @@ export function ReorderPagesTool() {
 
   const generatedFileRef = useRef<GeneratedFile | null>(null);
   const pagesRef = useRef<PdfPageThumbnail[]>([]);
+  const analytics = useToolAnalytics({
+    tool: "Reorder Pages",
+    route: "/reorder-pages",
+  });
 
   useEffect(() => {
     generatedFileRef.current = generatedFile;
@@ -104,6 +112,7 @@ export function ReorderPagesTool() {
   }, []);
 
   async function handleFilesSelected(files: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(files));
     const [file] = files;
 
     if (!file) {
@@ -112,16 +121,19 @@ export function ReorderPagesTool() {
 
     if (files.length > 1) {
       setError("Please choose only one PDF file.");
+      analytics.trackError({ errorCode: "too_many_files" });
       return;
     }
 
     if (!isPdfFile(file)) {
       setError("Only PDF files are supported.");
+      analytics.trackError({ errorCode: "invalid_file_type" });
       return;
     }
 
     if (file.size === 0) {
       setError("This PDF is empty. Please choose another file.");
+      analytics.trackError({ errorCode: "empty_file" });
       return;
     }
 
@@ -147,6 +159,11 @@ export function ReorderPagesTool() {
         pageCount: pdf.numPages,
       });
       setPages(thumbnails);
+      analytics.trackUploadCompleted({
+        ...summarizeFilesForAnalytics([file]),
+        pageCount: pdf.numPages,
+        outputFormat: "pdf",
+      });
       await pdf.destroy();
     } catch {
       clearPagePreviews();
@@ -154,6 +171,7 @@ export function ReorderPagesTool() {
       setError(
         "This PDF could not be read. If it is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "pdf_read_failed" });
     } finally {
       setIsLoadingPreview(false);
     }
@@ -240,6 +258,7 @@ export function ReorderPagesTool() {
   async function handleExportPdf() {
     if (!selectedPdf) {
       setError("Please choose a PDF file before reordering pages.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
@@ -252,6 +271,11 @@ export function ReorderPagesTool() {
     setIsExporting(true);
     setProgress("Preparing PDF...");
     clearGeneratedFile();
+    analytics.trackConversionStarted({
+      mode: hasOrderChanged ? "reorder_pages" : "same_order",
+      pageCount: selectedPdf.pageCount,
+      outputFormat: "pdf",
+    });
 
     try {
       const { PDFDocument } = await import("pdf-lib");
@@ -278,11 +302,20 @@ export function ReorderPagesTool() {
 
       setGeneratedFile(nextFile);
       setProgress("Pages reordered successfully.");
+      analytics.trackConversionCompleted({
+        mode: hasOrderChanged ? "reorder_pages" : "same_order",
+        pageCount: selectedPdf.pageCount,
+        outputFormat: "pdf",
+        status: "success",
+      });
+      analytics.trackDownloadStarted({ outputFormat: "pdf" });
       triggerDownload(nextFile.url, nextFile.fileName);
+      analytics.trackDownloadCompleted({ outputFormat: "pdf" });
     } catch {
       setError(
         "The PDF could not be reordered. If it is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "reorder_failed" });
       setProgress(null);
     } finally {
       setIsExporting(false);
@@ -466,6 +499,10 @@ export function ReorderPagesTool() {
                 href={generatedFile.url}
                 download={generatedFile.fileName}
                 aria-label="Download PDF"
+                onClick={() => {
+                  analytics.trackDownloadStarted({ outputFormat: "pdf" });
+                  analytics.trackDownloadCompleted({ outputFormat: "pdf" });
+                }}
               >
                 <Download className="size-4" aria-hidden="true" />
                 Download PDF

@@ -25,6 +25,10 @@ import {
   QpdfPasswordError,
   unlockPdfWithPassword,
 } from "@/components/tools/pdf/qpdf-client";
+import {
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 import { cn } from "@/lib/utils";
 
 type SelectedPdf = {
@@ -51,6 +55,10 @@ export function UnlockPdfTool() {
   const [generatedFile, setGeneratedFile] = useState<GeneratedFile | null>(null);
 
   const generatedFileRef = useRef<GeneratedFile | null>(null);
+  const analytics = useToolAnalytics({
+    tool: "Unlock PDF",
+    route: "/unlock-pdf",
+  });
 
   useEffect(() => {
     generatedFileRef.current = generatedFile;
@@ -75,6 +83,7 @@ export function UnlockPdfTool() {
   }
 
   async function handleFilesSelected(files: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(files));
     const [file] = files;
 
     if (!file) {
@@ -83,16 +92,19 @@ export function UnlockPdfTool() {
 
     if (files.length > 1) {
       setError("Please choose only one PDF file.");
+      analytics.trackError({ errorCode: "too_many_files" });
       return;
     }
 
     if (!isPdfFile(file)) {
       setError("Only PDF files are supported.");
+      analytics.trackError({ errorCode: "invalid_file_type" });
       return;
     }
 
     if (file.size === 0) {
       setError("This PDF is empty. Please choose another file.");
+      analytics.trackError({ errorCode: "empty_file" });
       return;
     }
 
@@ -115,6 +127,13 @@ export function UnlockPdfTool() {
         });
         await pdf.destroy();
         setError("This PDF does not appear to be password protected.");
+        analytics.trackUploadCompleted({
+          ...summarizeFilesForAnalytics([file]),
+          pageCount: pdf.numPages,
+          outputFormat: "pdf",
+          status: "not_protected",
+        });
+        analytics.trackError({ errorCode: "not_protected" });
         return;
       }
 
@@ -123,9 +142,15 @@ export function UnlockPdfTool() {
         pageCount: null,
         isProtected: true,
       });
+      analytics.trackUploadCompleted({
+        ...summarizeFilesForAnalytics([file]),
+        outputFormat: "pdf",
+        status: "protected",
+      });
     } catch {
       setSelectedPdf(null);
       setError("This PDF could not be read. Please choose another file.");
+      analytics.trackError({ errorCode: "pdf_read_failed" });
     } finally {
       setIsReadingPdf(false);
     }
@@ -134,16 +159,19 @@ export function UnlockPdfTool() {
   async function handleUnlockPdf() {
     if (!selectedPdf) {
       setError("Please choose a PDF file before unlocking it.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
     if (!selectedPdf.isProtected) {
       setError("This PDF does not appear to be password protected.");
+      analytics.trackError({ errorCode: "not_protected" });
       return;
     }
 
     if (!password) {
       setError("Please enter the PDF password.");
+      analytics.trackError({ errorCode: "missing_password" });
       return;
     }
 
@@ -151,6 +179,7 @@ export function UnlockPdfTool() {
       setError(
         "This browser session cannot run the PDF unlock engine. Please reload the page and try again.",
       );
+      analytics.trackError({ errorCode: "browser_not_isolated" });
       return;
     }
 
@@ -158,6 +187,10 @@ export function UnlockPdfTool() {
     setIsUnlocking(true);
     setProgress("Preparing PDF...");
     clearGeneratedFile();
+    analytics.trackConversionStarted({
+      mode: "decrypt",
+      outputFormat: "pdf",
+    });
 
     try {
       const fileBuffer = await selectedPdf.file.arrayBuffer();
@@ -177,13 +210,26 @@ export function UnlockPdfTool() {
 
       setGeneratedFile(nextFile);
       setProgress("PDF unlocked successfully.");
+      analytics.trackConversionCompleted({
+        mode: "decrypt",
+        outputFormat: "pdf",
+        status: "success",
+      });
+      analytics.trackDownloadStarted({ outputFormat: "pdf" });
       triggerDownload(nextFile.url, nextFile.fileName);
+      analytics.trackDownloadCompleted({ outputFormat: "pdf" });
     } catch (caughtError) {
       setError(
         caughtError instanceof QpdfPasswordError
           ? "The password is incorrect or the PDF could not be unlocked."
           : "The PDF could not be unlocked. Please try another file.",
       );
+      analytics.trackError({
+        errorCode:
+          caughtError instanceof QpdfPasswordError
+            ? "incorrect_password"
+            : "unlock_failed",
+      });
       setProgress(null);
     } finally {
       setIsUnlocking(false);
@@ -357,7 +403,14 @@ export function UnlockPdfTool() {
 
           {generatedFile ? (
             <Button asChild variant="outline">
-              <a href={generatedFile.url} download={generatedFile.fileName}>
+              <a
+                href={generatedFile.url}
+                download={generatedFile.fileName}
+                onClick={() => {
+                  analytics.trackDownloadStarted({ outputFormat: "pdf" });
+                  analytics.trackDownloadCompleted({ outputFormat: "pdf" });
+                }}
+              >
                 <Download className="size-4" aria-hidden="true" />
                 Download PDF
               </a>

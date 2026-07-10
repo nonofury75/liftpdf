@@ -20,6 +20,10 @@ import {
   loadPdfDocument,
   renderPdfPageThumbnail,
 } from "@/components/tools/pdf/pdfjs-client";
+import {
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 import { formatFileSize } from "@/components/tools/pdf/pdf-file-summary";
 
 type SelectedPdf = {
@@ -48,6 +52,10 @@ export function CompressPdfTool() {
   const [result, setResult] = useState<CompressionResult | null>(null);
   const resultRef = useRef<CompressionResult | null>(null);
   const previewUrlRef = useRef<string | null>(null);
+  const analytics = useToolAnalytics({
+    tool: "Compress PDF",
+    route: "/compress-pdf",
+  });
 
   useEffect(() => {
     resultRef.current = result;
@@ -66,6 +74,7 @@ export function CompressPdfTool() {
   }, []);
 
   async function handleFilesSelected(files: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(files));
     const [file] = files;
 
     if (!file) {
@@ -74,11 +83,13 @@ export function CompressPdfTool() {
 
     if (files.length > 1) {
       setError("Please choose only one PDF file.");
+      analytics.trackError({ errorCode: "too_many_files" });
       return;
     }
 
     if (!isPdfFile(file)) {
       setError("Only PDF files are supported.");
+      analytics.trackError({ errorCode: "invalid_file_type" });
       return;
     }
 
@@ -100,12 +111,18 @@ export function CompressPdfTool() {
         previewWidth: firstPage.width,
         previewHeight: firstPage.height,
       });
+      analytics.trackUploadCompleted({
+        ...summarizeFilesForAnalytics([file]),
+        pageCount: pdf.numPages,
+        outputFormat: "pdf",
+      });
       await pdf.destroy();
     } catch {
       setSelectedPdf(null);
       setError(
         "This PDF could not be read. If it is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "pdf_read_failed" });
     } finally {
       setIsReadingPdf(false);
     }
@@ -114,6 +131,7 @@ export function CompressPdfTool() {
   async function handleCompress() {
     if (!selectedPdf) {
       setError("Please choose one PDF file before compressing.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
@@ -121,6 +139,11 @@ export function CompressPdfTool() {
     setIsCompressing(true);
     setCompressionStep("Preparing PDF...");
     clearResult();
+    analytics.trackConversionStarted({
+      mode: "basic",
+      outputFormat: "pdf",
+      pageCount: selectedPdf.pageCount,
+    });
 
     try {
       const sourcePdf = await PDFDocument.load(
@@ -156,10 +179,17 @@ export function CompressPdfTool() {
         finalSize: blob.size,
       });
       setCompressionStep("Compressed PDF created successfully.");
+      analytics.trackConversionCompleted({
+        mode: "basic",
+        outputFormat: "pdf",
+        pageCount: selectedPdf.pageCount,
+        status: "success",
+      });
     } catch {
       setError(
         "The PDF could not be compressed. If it is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "compression_failed" });
       setCompressionStep(null);
     } finally {
       setIsCompressing(false);
@@ -342,7 +372,14 @@ export function CompressPdfTool() {
 
           {result ? (
             <Button asChild variant="outline">
-              <a href={result.url} download={result.fileName}>
+              <a
+                href={result.url}
+                download={result.fileName}
+                onClick={() => {
+                  analytics.trackDownloadStarted({ outputFormat: "pdf" });
+                  analytics.trackDownloadCompleted({ outputFormat: "pdf" });
+                }}
+              >
                 <Download className="size-4" aria-hidden="true" />
                 Download compressed PDF
               </a>

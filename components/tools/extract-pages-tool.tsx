@@ -26,6 +26,10 @@ import {
   loadPdfDocument,
   renderPdfPageThumbnail,
 } from "@/components/tools/pdf/pdfjs-client";
+import {
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 
 type SelectedPdf = {
   file: File;
@@ -51,6 +55,10 @@ export function ExtractPagesTool() {
 
   const generatedFileRef = useRef<GeneratedFile | null>(null);
   const pagesRef = useRef<PdfPageThumbnail[]>([]);
+  const analytics = useToolAnalytics({
+    tool: "Extract Pages",
+    route: "/extract-pages",
+  });
 
   useEffect(() => {
     generatedFileRef.current = generatedFile;
@@ -90,6 +98,7 @@ export function ExtractPagesTool() {
   }, []);
 
   async function handleFilesSelected(files: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(files));
     const [file] = files;
 
     if (!file) {
@@ -98,16 +107,19 @@ export function ExtractPagesTool() {
 
     if (files.length > 1) {
       setError("Please choose only one PDF file.");
+      analytics.trackError({ errorCode: "too_many_files" });
       return;
     }
 
     if (!isPdfFile(file)) {
       setError("Only PDF files are supported.");
+      analytics.trackError({ errorCode: "invalid_file_type" });
       return;
     }
 
     if (file.size === 0) {
       setError("This PDF is empty. Please choose another file.");
+      analytics.trackError({ errorCode: "empty_file" });
       return;
     }
 
@@ -132,6 +144,11 @@ export function ExtractPagesTool() {
         pageCount: pdf.numPages,
       });
       setPages(thumbnails);
+      analytics.trackUploadCompleted({
+        ...summarizeFilesForAnalytics([file]),
+        pageCount: pdf.numPages,
+        outputFormat: "pdf",
+      });
       await pdf.destroy();
     } catch {
       clearPagePreviews();
@@ -140,6 +157,7 @@ export function ExtractPagesTool() {
       setError(
         "This PDF could not be read. If it is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "pdf_read_failed" });
     } finally {
       setIsLoadingPreview(false);
     }
@@ -188,11 +206,13 @@ export function ExtractPagesTool() {
   async function handleExtractPages() {
     if (!selectedPdf) {
       setError("Please choose a PDF file before extracting pages.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
     if (!selectedPages.length) {
       setError("Please select at least one page to extract.");
+      analytics.trackError({ errorCode: "no_pages_selected" });
       return;
     }
 
@@ -200,6 +220,11 @@ export function ExtractPagesTool() {
     setIsExporting(true);
     setProgress("Preparing PDF...");
     clearGeneratedFile();
+    analytics.trackConversionStarted({
+      mode: "extract_pages",
+      pageCount: selectedPages.length,
+      outputFormat: "pdf",
+    });
 
     try {
       const { PDFDocument } = await import("pdf-lib");
@@ -229,11 +254,20 @@ export function ExtractPagesTool() {
 
       setGeneratedFile(nextFile);
       setProgress("Pages extracted successfully.");
+      analytics.trackConversionCompleted({
+        mode: "extract_pages",
+        pageCount: selectedPages.length,
+        outputFormat: "pdf",
+        status: "success",
+      });
+      analytics.trackDownloadStarted({ outputFormat: "pdf" });
       triggerDownload(nextFile.url, nextFile.fileName);
+      analytics.trackDownloadCompleted({ outputFormat: "pdf" });
     } catch {
       setError(
         "The selected pages could not be extracted. If the PDF is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "extract_failed" });
       setProgress(null);
     } finally {
       setIsExporting(false);
@@ -402,6 +436,10 @@ export function ExtractPagesTool() {
                 href={generatedFile.url}
                 download={generatedFile.fileName}
                 aria-label="Download PDF"
+                onClick={() => {
+                  analytics.trackDownloadStarted({ outputFormat: "pdf" });
+                  analytics.trackDownloadCompleted({ outputFormat: "pdf" });
+                }}
               >
                 <Download className="size-4" aria-hidden="true" />
                 Download PDF

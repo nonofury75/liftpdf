@@ -16,6 +16,10 @@ import {
   loadPdfDocument,
   renderPdfPageThumbnail,
 } from "@/components/tools/pdf/pdfjs-client";
+import {
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 import { createClientId } from "@/lib/create-client-id";
 
 const mergedFileName = "merged.pdf";
@@ -28,6 +32,7 @@ export function MergePdfTool() {
   const addMoreInputRef = useRef<HTMLInputElement>(null);
   const filesRef = useRef<UploadedPdf[]>([]);
   const mergedPdfUrlRef = useRef<string | null>(null);
+  const analytics = useToolAnalytics({ tool: "Merge PDF", route: "/merge-pdf" });
 
   const totalSize = useMemo(
     () => files.reduce((sum, pdf) => sum + pdf.file.size, 0),
@@ -67,11 +72,13 @@ export function MergePdfTool() {
   }, []);
 
   function handleFilesSelected(selectedFiles: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(selectedFiles));
     const validFiles = selectedFiles.filter(isPdfFile);
     const invalidCount = selectedFiles.length - validFiles.length;
 
     if (invalidCount > 0) {
       setError("Only PDF files are supported.");
+      analytics.trackError({ errorCode: "invalid_file_type" });
     } else {
       setError(null);
     }
@@ -96,6 +103,10 @@ export function MergePdfTool() {
       ...currentFiles,
       ...pendingFiles,
     ]);
+    analytics.trackUploadCompleted({
+      ...summarizeFilesForAnalytics(validFiles),
+      outputFormat: "pdf",
+    });
 
     pendingFiles.forEach((pdf) => {
       void hydratePdfMetadata(pdf.id, pdf.file);
@@ -169,22 +180,30 @@ export function MergePdfTool() {
   async function handleMerge() {
     if (!files.length) {
       setError("Please choose at least one PDF file before merging.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
     if (isReadingFiles) {
       setError("Please wait until the selected PDFs are ready.");
+      analytics.trackError({ errorCode: "files_not_ready" });
       return;
     }
 
     if (hasUnreadableFiles) {
       setError("One of the selected PDFs could not be read. Remove it and try another file.");
+      analytics.trackError({ errorCode: "pdf_read_failed" });
       return;
     }
 
     setError(null);
     setIsMerging(true);
     clearMergedPdfUrl();
+    analytics.trackConversionStarted({
+      fileCount: files.length,
+      pageCount: totalPages,
+      outputFormat: "pdf",
+    });
 
     try {
       const mergedPdf = await PDFDocument.create();
@@ -206,7 +225,15 @@ export function MergePdfTool() {
       const blob = new Blob([mergedBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       setMergedPdfUrl(url);
+      analytics.trackConversionCompleted({
+        fileCount: files.length,
+        pageCount: totalPages,
+        outputFormat: "pdf",
+        status: "success",
+      });
+      analytics.trackDownloadStarted({ outputFormat: "pdf" });
       triggerDownload(url, mergedFileName);
+      analytics.trackDownloadCompleted({ outputFormat: "pdf" });
     } catch (mergeError) {
       const message =
         mergeError instanceof Error &&
@@ -216,6 +243,7 @@ export function MergePdfTool() {
       setError(
         message,
       );
+      analytics.trackError({ errorCode: "merge_failed" });
     } finally {
       setIsMerging(false);
     }
@@ -380,7 +408,14 @@ export function MergePdfTool() {
                 variant="outline"
                 className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
               >
-                <a href={mergedPdfUrl} download={mergedFileName}>
+                <a
+                  href={mergedPdfUrl}
+                  download={mergedFileName}
+                  onClick={() => {
+                    analytics.trackDownloadStarted({ outputFormat: "pdf" });
+                    analytics.trackDownloadCompleted({ outputFormat: "pdf" });
+                  }}
+                >
                   <Download className="size-4" aria-hidden="true" />
                   Download PDF
                 </a>

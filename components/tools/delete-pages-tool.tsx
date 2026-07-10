@@ -26,6 +26,10 @@ import {
   loadPdfDocument,
   renderPdfPageThumbnail,
 } from "@/components/tools/pdf/pdfjs-client";
+import {
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 
 type SelectedPdf = {
   file: File;
@@ -52,6 +56,10 @@ export function DeletePagesTool() {
 
   const generatedFileRef = useRef<GeneratedFile | null>(null);
   const pagesRef = useRef<PdfPageThumbnail[]>([]);
+  const analytics = useToolAnalytics({
+    tool: "Delete Pages",
+    route: "/delete-pages",
+  });
 
   useEffect(() => {
     generatedFileRef.current = generatedFile;
@@ -102,6 +110,7 @@ export function DeletePagesTool() {
   }, []);
 
   async function handleFilesSelected(files: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(files));
     const [file] = files;
 
     if (!file) {
@@ -110,16 +119,19 @@ export function DeletePagesTool() {
 
     if (files.length > 1) {
       setError("Please choose only one PDF file.");
+      analytics.trackError({ errorCode: "too_many_files" });
       return;
     }
 
     if (!isPdfFile(file)) {
       setError("Only PDF files are supported.");
+      analytics.trackError({ errorCode: "invalid_file_type" });
       return;
     }
 
     if (file.size === 0) {
       setError("This PDF is empty. Please choose another file.");
+      analytics.trackError({ errorCode: "empty_file" });
       return;
     }
 
@@ -144,6 +156,11 @@ export function DeletePagesTool() {
         pageCount: pdf.numPages,
       });
       setPages(thumbnails);
+      analytics.trackUploadCompleted({
+        ...summarizeFilesForAnalytics([file]),
+        pageCount: pdf.numPages,
+        outputFormat: "pdf",
+      });
       await pdf.destroy();
     } catch {
       clearPagePreviews();
@@ -152,6 +169,7 @@ export function DeletePagesTool() {
       setError(
         "This PDF could not be read. If it is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "pdf_read_failed" });
     } finally {
       setIsLoadingPreview(false);
     }
@@ -250,16 +268,19 @@ export function DeletePagesTool() {
   async function handleExportPdf() {
     if (!selectedPdf) {
       setError("Please choose a PDF file before exporting.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
     if (!deletedPages.length) {
       setError("Delete at least one page before downloading.");
+      analytics.trackError({ errorCode: "no_pages_deleted" });
       return;
     }
 
     if (remainingPageCount < 1) {
       setError("A PDF must contain at least one page.");
+      analytics.trackError({ errorCode: "all_pages_removed" });
       return;
     }
 
@@ -267,6 +288,11 @@ export function DeletePagesTool() {
     setIsExporting(true);
     setProgress("Preparing PDF...");
     clearGeneratedFile();
+    analytics.trackConversionStarted({
+      mode: "delete_pages",
+      pageCount: deletedPages.length,
+      outputFormat: "pdf",
+    });
 
     try {
       const { PDFDocument } = await import("pdf-lib");
@@ -289,6 +315,7 @@ export function DeletePagesTool() {
       if (outputPdf.getPageCount() < 1) {
         setError("A PDF must contain at least one page.");
         setProgress(null);
+        analytics.trackError({ errorCode: "all_pages_removed" });
         return;
       }
 
@@ -307,11 +334,20 @@ export function DeletePagesTool() {
 
       setGeneratedFile(nextFile);
       setProgress("PDF updated successfully.");
+      analytics.trackConversionCompleted({
+        mode: "delete_pages",
+        pageCount: outputPdf.getPageCount(),
+        outputFormat: "pdf",
+        status: "success",
+      });
+      analytics.trackDownloadStarted({ outputFormat: "pdf" });
       triggerDownload(nextFile.url, nextFile.fileName);
+      analytics.trackDownloadCompleted({ outputFormat: "pdf" });
     } catch {
       setError(
         "The PDF could not be exported. If it is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "export_failed" });
       setProgress(null);
     } finally {
       setIsExporting(false);
@@ -478,6 +514,10 @@ export function DeletePagesTool() {
                 href={generatedFile.url}
                 download={generatedFile.fileName}
                 aria-label="Download PDF"
+                onClick={() => {
+                  analytics.trackDownloadStarted({ outputFormat: "pdf" });
+                  analytics.trackDownloadCompleted({ outputFormat: "pdf" });
+                }}
               >
                 <Download className="size-4" aria-hidden="true" />
                 Download PDF

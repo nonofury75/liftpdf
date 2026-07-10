@@ -6,6 +6,7 @@ import {
   type PremiumToolContentData,
 } from "@/components/tools/premium-tool-content";
 import { ToolFaq, type ToolFaqItem } from "@/components/tools/tool-faq";
+import { ToolAnalytics } from "@/components/tools/tool-analytics";
 import { ToolHero } from "@/components/tools/tool-hero";
 import { ToolSeoBlock } from "@/components/tools/tool-seo-block";
 
@@ -119,6 +120,7 @@ export function ToolPageShell({
           __html: JSON.stringify(structuredData),
         }}
       />
+      <ToolAnalytics title={title} currentHref={currentHref} />
       <ToolHero
         title={title}
         description={description}

@@ -29,6 +29,10 @@ import {
   renderPdfPagePreview,
 } from "@/components/tools/pdf/pdfjs-client";
 import { PdfSummaryRow } from "@/components/tools/pdf/pdf-summary-row";
+import {
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 import { cn } from "@/lib/utils";
 
 type WatermarkMode = "text" | "image";
@@ -115,6 +119,10 @@ export function WatermarkPdfTool() {
   const generatedFileRef = useRef<GeneratedFile | null>(null);
   const pagesRef = useRef<PagePreview[]>([]);
   const imageWatermarkRef = useRef<ImageWatermark | null>(null);
+  const analytics = useToolAnalytics({
+    tool: "Watermark PDF",
+    route: "/watermark-pdf",
+  });
 
   const activeOpacity = mode === "text" ? textOpacity : imageOpacity;
   const activeRotation = mode === "text" ? textRotation : imageRotation;
@@ -177,6 +185,7 @@ export function WatermarkPdfTool() {
   }, []);
 
   async function handlePdfSelected(files: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(files));
     const [file] = files;
 
     if (!file) {
@@ -185,11 +194,13 @@ export function WatermarkPdfTool() {
 
     if (files.length > 1) {
       setError("Please choose only one PDF file.");
+      analytics.trackError({ errorCode: "too_many_files" });
       return;
     }
 
     if (!isPdfFile(file)) {
       setError("Only PDF files are supported.");
+      analytics.trackError({ errorCode: "invalid_file_type" });
       return;
     }
 
@@ -216,6 +227,11 @@ export function WatermarkPdfTool() {
         pageCount: pdf.numPages,
       });
       setPages(previews);
+      analytics.trackUploadCompleted({
+        ...summarizeFilesForAnalytics([file]),
+        pageCount: pdf.numPages,
+        outputFormat: "pdf",
+      });
       await pdf.destroy();
     } catch {
       clearPagePreviews();
@@ -223,6 +239,7 @@ export function WatermarkPdfTool() {
       setError(
         "This PDF could not be read. If it is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "pdf_read_failed" });
     } finally {
       setIsLoadingPreview(false);
     }
@@ -238,6 +255,7 @@ export function WatermarkPdfTool() {
 
     if (!isImageFile(file)) {
       setError("Only PNG, JPG, JPEG and WEBP images are supported.");
+      analytics.trackError({ errorCode: "invalid_watermark_image_type" });
       return;
     }
 
@@ -264,22 +282,26 @@ export function WatermarkPdfTool() {
     } catch {
       URL.revokeObjectURL(previewUrl);
       setError("This image could not be read. Please choose another file.");
+      analytics.trackError({ errorCode: "watermark_image_read_failed" });
     }
   }
 
   async function handleAddWatermark() {
     if (!selectedPdf) {
       setError("Please choose one PDF file before adding a watermark.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
     if (mode === "text" && !text.trim()) {
       setError("Enter watermark text before generating the PDF.");
+      analytics.trackError({ errorCode: "missing_watermark_text" });
       return;
     }
 
     if (mode === "image" && !imageWatermark) {
       setError("Choose an image watermark before generating the PDF.");
+      analytics.trackError({ errorCode: "missing_watermark_image" });
       return;
     }
 
@@ -287,6 +309,11 @@ export function WatermarkPdfTool() {
     setIsGenerating(true);
     setProgress("Preparing PDF...");
     clearGeneratedFile();
+    analytics.trackConversionStarted({
+      mode,
+      pageCount: selectedPdf.pageCount,
+      outputFormat: "pdf",
+    });
 
     try {
       const pdf = await PDFDocument.load(await selectedPdf.file.arrayBuffer());
@@ -344,10 +371,17 @@ export function WatermarkPdfTool() {
         fileName: watermarkedFileName,
       });
       setProgress("Watermarked PDF created successfully.");
+      analytics.trackConversionCompleted({
+        mode,
+        pageCount: selectedPdf.pageCount,
+        outputFormat: "pdf",
+        status: "success",
+      });
     } catch {
       setError(
         "The watermark could not be added. If the PDF is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "watermark_failed" });
       setProgress(null);
     } finally {
       setIsGenerating(false);
@@ -747,6 +781,10 @@ export function WatermarkPdfTool() {
                 href={generatedFile.url}
                 download={generatedFile.fileName}
                 aria-label="Download watermarked PDF"
+                onClick={() => {
+                  analytics.trackDownloadStarted({ outputFormat: "pdf" });
+                  analytics.trackDownloadCompleted({ outputFormat: "pdf" });
+                }}
               >
                 <Download className="size-4" aria-hidden="true" />
                 Download PDF

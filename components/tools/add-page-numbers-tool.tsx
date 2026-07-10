@@ -21,6 +21,10 @@ import {
   renderPdfPagePreview,
 } from "@/components/tools/pdf/pdfjs-client";
 import { PdfSummaryRow } from "@/components/tools/pdf/pdf-summary-row";
+import {
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 import { cn } from "@/lib/utils";
 
 type NumberPosition =
@@ -121,6 +125,10 @@ export function AddPageNumbersTool() {
   );
   const generatedFileRef = useRef<GeneratedFile | null>(null);
   const pagesRef = useRef<PagePreview[]>([]);
+  const analytics = useToolAnalytics({
+    tool: "Add Page Numbers",
+    route: "/add-page-numbers",
+  });
 
   const previewTotalNumber = useMemo(
     () =>
@@ -149,6 +157,7 @@ export function AddPageNumbersTool() {
   }, []);
 
   async function handleFilesSelected(files: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(files));
     const [file] = files;
 
     if (!file) {
@@ -157,11 +166,13 @@ export function AddPageNumbersTool() {
 
     if (files.length > 1) {
       setError("Please choose only one PDF file.");
+      analytics.trackError({ errorCode: "too_many_files" });
       return;
     }
 
     if (!isPdfFile(file)) {
       setError("Only PDF files are supported.");
+      analytics.trackError({ errorCode: "invalid_file_type" });
       return;
     }
 
@@ -188,6 +199,11 @@ export function AddPageNumbersTool() {
         pageCount: pdf.numPages,
       });
       setPages(previews);
+      analytics.trackUploadCompleted({
+        ...summarizeFilesForAnalytics([file]),
+        pageCount: pdf.numPages,
+        outputFormat: "pdf",
+      });
       await pdf.destroy();
     } catch {
       clearPagePreviews();
@@ -195,6 +211,7 @@ export function AddPageNumbersTool() {
       setError(
         "This PDF could not be read. If it is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "pdf_read_failed" });
     } finally {
       setIsLoadingPreview(false);
     }
@@ -203,11 +220,13 @@ export function AddPageNumbersTool() {
   async function handleAddPageNumbers() {
     if (!selectedPdf) {
       setError("Please choose one PDF file before adding page numbers.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
     if (!Number.isInteger(options.startNumber) || options.startNumber < 1) {
       setError("Start number must be 1 or higher.");
+      analytics.trackError({ errorCode: "invalid_start_number" });
       return;
     }
 
@@ -215,6 +234,11 @@ export function AddPageNumbersTool() {
     setIsGenerating(true);
     setProgress("Preparing PDF...");
     clearGeneratedFile();
+    analytics.trackConversionStarted({
+      mode: options.format,
+      pageCount: selectedPdf.pageCount,
+      outputFormat: "pdf",
+    });
 
     try {
       const pdf = await PDFDocument.load(await selectedPdf.file.arrayBuffer());
@@ -264,10 +288,17 @@ export function AddPageNumbersTool() {
         fileName: numberedFileName,
       });
       setProgress("Numbered PDF created successfully.");
+      analytics.trackConversionCompleted({
+        mode: options.format,
+        pageCount: selectedPdf.pageCount,
+        outputFormat: "pdf",
+        status: "success",
+      });
     } catch {
       setError(
         "Page numbers could not be added. If the PDF is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "numbering_failed" });
       setProgress(null);
     } finally {
       setIsGenerating(false);
@@ -593,6 +624,10 @@ export function AddPageNumbersTool() {
                 href={generatedFile.url}
                 download={generatedFile.fileName}
                 aria-label="Download numbered PDF"
+                onClick={() => {
+                  analytics.trackDownloadStarted({ outputFormat: "pdf" });
+                  analytics.trackDownloadCompleted({ outputFormat: "pdf" });
+                }}
               >
                 <Download className="size-4" aria-hidden="true" />
                 Download PDF

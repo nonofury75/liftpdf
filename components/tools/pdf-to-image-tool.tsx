@@ -22,6 +22,10 @@ import {
   renderPdfPageThumbnail,
 } from "@/components/tools/pdf/pdfjs-client";
 import { PdfSummaryRow } from "@/components/tools/pdf/pdf-summary-row";
+import {
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 import { cn } from "@/lib/utils";
 
 type SelectedPdf = {
@@ -101,6 +105,10 @@ export function PdfToImageTool({
   const generatedFileRef = useRef<GeneratedFile | null>(null);
   const pagesRef = useRef<PagePreview[]>([]);
   const isJpg = format === "jpg";
+  const analytics = useToolAnalytics({
+    tool: format === "jpg" ? "PDF to JPG" : "PDF to PNG",
+    route: format === "jpg" ? "/pdf-to-jpg" : "/pdf-to-png",
+  });
   const selectedPages = useMemo(
     () =>
       selectedPdf
@@ -155,6 +163,7 @@ export function PdfToImageTool({
   }, []);
 
   async function handleFilesSelected(files: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(files));
     const [file] = files;
 
     if (!file) {
@@ -163,11 +172,13 @@ export function PdfToImageTool({
 
     if (files.length > 1) {
       setError("Please choose only one PDF file.");
+      analytics.trackError({ errorCode: "too_many_files" });
       return;
     }
 
     if (!isPdfFile(file)) {
       setError("Only PDF files are supported.");
+      analytics.trackError({ errorCode: "invalid_file_type" });
       return;
     }
 
@@ -190,11 +201,17 @@ export function PdfToImageTool({
         pageCount: pdf.numPages,
       });
       setPages(previews);
+      analytics.trackUploadCompleted({
+        ...summarizeFilesForAnalytics([file]),
+        pageCount: pdf.numPages,
+        outputFormat: format,
+      });
       await pdf.destroy();
     } catch (loadError) {
       setSelectedPdf(null);
       clearPagePreviews();
       setError(getPdfLoadErrorMessage(loadError));
+      analytics.trackError({ errorCode: "pdf_read_failed" });
     } finally {
       setIsLoadingPreview(false);
     }
@@ -203,6 +220,7 @@ export function PdfToImageTool({
   async function handleConvert() {
     if (!selectedPdf) {
       setError("Please choose one PDF file before converting.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
@@ -210,6 +228,10 @@ export function PdfToImageTool({
     setIsConverting(true);
     clearGeneratedFile();
     setProgress("Preparing PDF...");
+    analytics.trackConversionStarted({
+      mode: pageSelectionMode,
+      outputFormat: format,
+    });
 
     try {
       const selectedPages = parseSelectedPages({
@@ -241,6 +263,11 @@ export function PdfToImageTool({
         url: URL.createObjectURL(result.blob),
         fileName: result.fileName,
       });
+      analytics.trackConversionCompleted({
+        pageCount: selectedPages.length,
+        outputFormat: format,
+        status: "success",
+      });
       await pdf.destroy();
       setProgress(null);
     } catch (conversionError) {
@@ -249,6 +276,7 @@ export function PdfToImageTool({
           ? conversionError.message
           : "The PDF could not be converted. Please try another file.",
       );
+      analytics.trackError({ errorCode: "conversion_failed" });
       setProgress(null);
     } finally {
       setIsConverting(false);
@@ -604,7 +632,18 @@ export function PdfToImageTool({
               variant="outline"
               className="transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm"
             >
-              <a href={generatedFile.url} download={generatedFile.fileName}>
+              <a
+                href={generatedFile.url}
+                download={generatedFile.fileName}
+                onClick={() => {
+                  analytics.trackDownloadStarted({
+                    outputFormat: selectedPages.length === 1 ? format : "zip",
+                  });
+                  analytics.trackDownloadCompleted({
+                    outputFormat: selectedPages.length === 1 ? format : "zip",
+                  });
+                }}
+              >
                 <Download className="size-4" aria-hidden="true" />
                 Download {selectedPages.length === 1 ? format.toUpperCase() : "ZIP"}
               </a>

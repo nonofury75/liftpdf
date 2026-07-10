@@ -18,6 +18,10 @@ import {
   loadPdfDocument,
   renderPdfPageThumbnail,
 } from "@/components/tools/pdf/pdfjs-client";
+import {
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 import { cn } from "@/lib/utils";
 
 type SplitMode = "extract" | "every-page";
@@ -56,6 +60,7 @@ export function SplitPdfTool() {
   );
   const selectedPdfRef = useRef<SelectedPdf | null>(null);
   const generatedFileRef = useRef<GeneratedFile | null>(null);
+  const analytics = useToolAnalytics({ tool: "Split PDF", route: "/split-pdf" });
 
   const outputFileName = useMemo(
     () => (mode === "extract" ? extractedFileName : splitZipFileName),
@@ -101,6 +106,7 @@ export function SplitPdfTool() {
   }, []);
 
   async function handleFilesSelected(files: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(files));
     const [file] = files;
 
     if (!file) {
@@ -109,11 +115,13 @@ export function SplitPdfTool() {
 
     if (files.length > 1) {
       setError("Please choose only one PDF file.");
+      analytics.trackError({ errorCode: "too_many_files" });
       return;
     }
 
     if (!isPdfFile(file)) {
       setError("Only PDF files are supported.");
+      analytics.trackError({ errorCode: "invalid_file_type" });
       return;
     }
 
@@ -146,12 +154,18 @@ export function SplitPdfTool() {
         pageCount: pdf.numPages,
         pages,
       });
+      analytics.trackUploadCompleted({
+        ...summarizeFilesForAnalytics([file]),
+        pageCount: pdf.numPages,
+        outputFormat: "pdf",
+      });
       await pdf.destroy();
     } catch {
       setSelectedPdf(null);
       setError(
         "This PDF could not be read. If it is password protected, unlock it first and try again.",
       );
+      analytics.trackError({ errorCode: "pdf_read_failed" });
     } finally {
       setIsReadingPdf(false);
       setRenderProgress(null);
@@ -161,12 +175,18 @@ export function SplitPdfTool() {
   async function handleSplit() {
     if (!selectedPdf) {
       setError("Please choose one PDF file before splitting.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
     setError(null);
     setIsSplitting(true);
     clearGeneratedFile();
+    analytics.trackConversionStarted({
+      mode,
+      outputFormat: mode === "extract" ? "pdf" : "zip",
+      pageCount: selectedPdf.pageCount,
+    });
 
     try {
       const sourcePdf = await PDFDocument.load(
@@ -189,7 +209,15 @@ export function SplitPdfTool() {
           fileName: extractedFileName,
         };
         setGeneratedFile(nextFile);
+        analytics.trackConversionCompleted({
+          mode,
+          outputFormat: "pdf",
+          pageCount: pageNumbers.length,
+          status: "success",
+        });
+        analytics.trackDownloadStarted({ outputFormat: "pdf" });
         triggerDownload(nextFile.url, nextFile.fileName);
+        analytics.trackDownloadCompleted({ outputFormat: "pdf" });
       } else {
         const zip = new JSZip();
 
@@ -207,7 +235,15 @@ export function SplitPdfTool() {
           fileName: splitZipFileName,
         };
         setGeneratedFile(nextFile);
+        analytics.trackConversionCompleted({
+          mode,
+          outputFormat: "zip",
+          pageCount: selectedPdf.pageCount,
+          status: "success",
+        });
+        analytics.trackDownloadStarted({ outputFormat: "zip" });
         triggerDownload(nextFile.url, nextFile.fileName);
+        analytics.trackDownloadCompleted({ outputFormat: "zip" });
       }
     } catch (splitError) {
       setError(
@@ -215,6 +251,7 @@ export function SplitPdfTool() {
           ? splitError.message
           : "The PDF could not be split. Please try another file.",
       );
+      analytics.trackError({ errorCode: "split_failed" });
     } finally {
       setIsSplitting(false);
     }
@@ -441,7 +478,17 @@ export function SplitPdfTool() {
                 variant="outline"
                 className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
               >
-                <a href={generatedFile.url} download={generatedFile.fileName}>
+                <a
+                  href={generatedFile.url}
+                  download={generatedFile.fileName}
+                  onClick={() => {
+                    const outputFormat = generatedFile.fileName.endsWith(".zip")
+                      ? "zip"
+                      : "pdf";
+                    analytics.trackDownloadStarted({ outputFormat });
+                    analytics.trackDownloadCompleted({ outputFormat });
+                  }}
+                >
                   <Download className="size-4" aria-hidden="true" />
                   {generatedFile.fileName.endsWith(".zip")
                     ? "Download ZIP"

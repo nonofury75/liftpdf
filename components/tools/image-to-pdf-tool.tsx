@@ -16,6 +16,11 @@ import {
   UploadedImage,
 } from "@/components/tools/image-preview-list";
 import { ImageUploadZone } from "@/components/tools/image-upload-zone";
+import {
+  getFileSizeBucket,
+  summarizeFilesForAnalytics,
+  useToolAnalytics,
+} from "@/hooks/use-tool-analytics";
 import { createClientId } from "@/lib/create-client-id";
 import { cn } from "@/lib/utils";
 
@@ -93,6 +98,11 @@ export function ImageToPdfTool({
   const imagesRef = useRef<UploadedImage[]>([]);
   const pdfUrlRef = useRef<string | null>(null);
   const addMoreInputRef = useRef<HTMLInputElement>(null);
+  const toolName = getToolNameFromFileName(downloadFileName);
+  const analytics = useToolAnalytics({
+    tool: toolName,
+    route: `/${downloadFileName.replace(".pdf", "")}`,
+  });
   const acceptedImageTypeSet = useMemo(
     () => new Set(acceptedImageTypes),
     [acceptedImageTypes],
@@ -146,6 +156,7 @@ export function ImageToPdfTool({
   }, []);
 
   async function handleFilesSelected(files: File[]) {
+    analytics.trackUploadStarted(summarizeFilesForAnalytics(files));
     const validFiles = files.filter((file) =>
       acceptedImageTypeSet.has(file.type),
     );
@@ -153,6 +164,7 @@ export function ImageToPdfTool({
 
     if (invalidCount > 0) {
       setError(invalidFileMessage);
+      analytics.trackError({ errorCode: "invalid_file_type" });
     } else {
       setError(null);
     }
@@ -172,9 +184,14 @@ export function ImageToPdfTool({
 
     if (uploadedImages.length < validFiles.length) {
       setError("Some images could not be read and were skipped.");
+      analytics.trackError({ errorCode: "image_read_failed" });
     }
 
     setImages((currentImages) => [...currentImages, ...uploadedImages]);
+    analytics.trackUploadCompleted({
+      ...summarizeFilesForAnalytics(validFiles),
+      outputFormat: "pdf",
+    });
   }
 
   function handleAddMoreChange(event: ChangeEvent<HTMLInputElement>) {
@@ -226,12 +243,19 @@ export function ImageToPdfTool({
   async function handleConvert() {
     if (!images.length) {
       setError("Please choose at least one image before converting.");
+      analytics.trackError({ errorCode: "missing_file" });
       return;
     }
 
     setError(null);
     setIsConverting(true);
     clearPdfUrl();
+    analytics.trackConversionStarted({
+      fileCount: images.length,
+      fileSizeBucket: getFileSizeBucket(totalSize),
+      mode: `${effectivePageSize}_${effectiveOrientation}_${effectiveMargin}_${effectiveFitMode}`,
+      outputFormat: "pdf",
+    });
 
     try {
       const pdfDocument = await PDFDocument.create();
@@ -269,8 +293,14 @@ export function ImageToPdfTool({
 
       const blob = new Blob([pdfBuffer], { type: "application/pdf" });
       setPdfUrl(URL.createObjectURL(blob));
+      analytics.trackConversionCompleted({
+        fileCount: images.length,
+        outputFormat: "pdf",
+        status: "success",
+      });
     } catch {
       setError("The PDF could not be created. Please try another image file.");
+      analytics.trackError({ errorCode: "conversion_failed" });
     } finally {
       setIsConverting(false);
     }
@@ -432,7 +462,14 @@ export function ImageToPdfTool({
                 variant="outline"
                 className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm"
               >
-                <a href={pdfUrl} download={downloadFileName}>
+                <a
+                  href={pdfUrl}
+                  download={downloadFileName}
+                  onClick={() => {
+                    analytics.trackDownloadStarted({ outputFormat: "pdf" });
+                    analytics.trackDownloadCompleted({ outputFormat: "pdf" });
+                  }}
+                >
                   <Download className="size-4" aria-hidden="true" />
                   Download PDF
                 </a>
@@ -903,4 +940,16 @@ function formatFileSize(bytes: number) {
   }
 
   return `${(kilobytes / 1024).toFixed(1)} MB`;
+}
+
+function getToolNameFromFileName(fileName: string) {
+  if (fileName === "jpg-to-pdf.pdf") {
+    return "JPG to PDF";
+  }
+
+  if (fileName === "png-to-pdf.pdf") {
+    return "PNG to PDF";
+  }
+
+  return "Images to PDF";
 }
