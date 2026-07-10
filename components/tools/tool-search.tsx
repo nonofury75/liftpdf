@@ -81,6 +81,7 @@ export function ToolSearch({
           onChange={(event) => setQuery(event.target.value)}
           placeholder={placeholder}
           aria-label="Search PDF tools"
+          suppressHydrationWarning
           className="h-14 w-full rounded-lg border border-input bg-background pl-12 pr-4 text-base font-medium text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>

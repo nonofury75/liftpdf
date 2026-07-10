@@ -52,3 +52,72 @@ a {
   outline: 2px solid var(--color-ring);
   outline-offset: 3px;
 }
+
+@keyframes liftpdf-flow {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.78;
+  }
+
+  50% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+@keyframes liftpdf-scan {
+  0% {
+    transform: translateY(-120%);
+  }
+
+  100% {
+    transform: translateY(260%);
+  }
+}
+
+@keyframes liftpdf-progress {
+  0% {
+    width: 18%;
+  }
+
+  55% {
+    width: 72%;
+  }
+
+  100% {
+    width: 92%;
+  }
+}
+
+.liftpdf-flow-card {
+  animation: liftpdf-flow 4.5s ease-in-out infinite;
+}
+
+.liftpdf-flow-card:nth-child(2) {
+  animation-delay: 0.35s;
+}
+
+.liftpdf-flow-card:nth-child(3) {
+  animation-delay: 0.7s;
+}
+
+.liftpdf-scan-line {
+  animation: liftpdf-scan 2.8s ease-in-out infinite;
+}
+
+.liftpdf-progress-bar {
+  animation: liftpdf-progress 3.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .liftpdf-flow-card,
+  .liftpdf-scan-line,
+  .liftpdf-progress-bar {
+    animation: none;
+  }
+}
