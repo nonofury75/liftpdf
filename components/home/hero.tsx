@@ -44,7 +44,7 @@ export function Hero() {
               return (
                 <span
                   key={badge.label}
-                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-semibold text-muted-foreground shadow-sm"
+                  className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-semibold text-foreground/70 shadow-sm"
                 >
                   <Icon className="size-4 text-primary" aria-hidden="true" />
                   {badge.label}
@@ -86,7 +86,7 @@ function ProductDemo() {
                 <p className="text-sm font-semibold text-foreground">
                   LiftPDF workspace
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-foreground/70">
                   Upload, preview, download
                 </p>
               </div>
@@ -116,7 +116,7 @@ function ProductDemo() {
             </div>
 
             <div className="relative min-h-[360px] overflow-hidden rounded-xl border border-border bg-gradient-to-br from-slate-50 to-slate-200/70 p-5 shadow-inner">
-              <div className="absolute left-5 top-5 z-10 rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">
+              <div className="absolute left-5 top-5 z-10 rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground/70 shadow-sm">
                 Live preview
               </div>
               <div className="absolute right-5 top-5 z-10 flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
@@ -179,7 +179,7 @@ function FlowStep({ icon: Icon, title, text }: FlowStepProps) {
         </span>
         <div>
           <p className="text-sm font-semibold text-foreground">{title}</p>
-          <p className="text-xs text-muted-foreground">{text}</p>
+          <p className="text-xs text-foreground/80">{text}</p>
         </div>
       </div>
     </div>

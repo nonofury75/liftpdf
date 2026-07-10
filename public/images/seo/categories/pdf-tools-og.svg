@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="LiftPDF PDF tools">
+  <rect width="1200" height="630" fill="#fff7f7"/>
+  <rect x="86" y="78" width="1028" height="474" rx="42" fill="#ffffff" stroke="#f1d4d4" stroke-width="3"/>
+  <circle cx="170" cy="158" r="34" fill="#ef4444"/>
+  <text x="225" y="170" fill="#111827" font-family="Arial, sans-serif" font-size="44" font-weight="700">LiftPDF</text>
+  <text x="118" y="285" fill="#111827" font-family="Arial, sans-serif" font-size="72" font-weight="800">All PDF Tools</text>
+  <text x="122" y="350" fill="#475569" font-family="Arial, sans-serif" font-size="30">Convert, organize, edit and secure PDFs in your browser.</text>
+  <g fill="#fee2e2" stroke="#fecaca" stroke-width="2">
+    <rect x="126" y="420" width="156" height="76" rx="18"/>
+    <rect x="306" y="420" width="156" height="76" rx="18"/>
+    <rect x="486" y="420" width="156" height="76" rx="18"/>
+    <rect x="666" y="420" width="156" height="76" rx="18"/>
+  </g>
+  <g fill="#b91c1c" font-family="Arial, sans-serif" font-size="22" font-weight="700">
+    <text x="166" y="466">Convert</text>
+    <text x="348" y="466">Merge</text>
+    <text x="529" y="466">Edit</text>
+    <text x="704" y="466">Secure</text>
+  </g>
+</svg>

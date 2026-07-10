@@ -10,8 +10,25 @@ export const metadata: Metadata = {
   title: { absolute: `${title} - Free PDF Editing Tools` },
   description,
   alternates: { canonical: "/pdf-editor" },
-  openGraph: { title, description, url: `${siteConfig.url}/pdf-editor` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/pdf-editor`,
+    images: [
+      {
+        url: "/images/seo/categories/edit-og.svg",
+        width: 1200,
+        height: 630,
+        alt: "LiftPDF PDF editor tools",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/images/seo/categories/edit-og.svg"],
+  },
 };
 
 export default function PdfEditorPage() {

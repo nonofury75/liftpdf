@@ -9,7 +9,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { HomeToolsBrowser } from "@/components/home/home-tools-browser";
 import { Button } from "@/components/ui/button";
 import { popularTools } from "@/data/tools";
 import type { ToolCard } from "@/types/tools";
@@ -79,7 +78,28 @@ export function PopularTools() {
               {popularTools.length} available tools
             </span>
           </div>
-          <HomeToolsBrowser tools={popularTools} />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {popularTools.map((tool) => (
+              <Link
+                key={tool.href}
+                href={tool.href}
+                className="group flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md"
+              >
+                <span>
+                  <span className="block font-semibold text-foreground">
+                    {tool.title}
+                  </span>
+                  <span className="mt-1 block text-sm leading-6 text-foreground/70">
+                    {tool.description}
+                  </span>
+                </span>
+                <ArrowRight
+                  className="size-4 shrink-0 text-primary transition-transform duration-200 group-hover:translate-x-1"
+                  aria-hidden="true"
+                />
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -96,11 +116,10 @@ function FeaturedToolCard({ tool, icon: Icon = ImageIcon, index }: FeaturedToolC
   return (
     <Link
       href={tool.href}
-      aria-label={`Open ${tool.title}`}
       className="group block h-full"
     >
       <article className="relative flex min-h-72 h-full flex-col overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-xl">
-        <div className="absolute right-4 top-4 rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-muted-foreground">
+        <div className="absolute right-4 top-4 rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-foreground/70">
           0{index + 1}
         </div>
         <span className="grid size-12 place-items-center rounded-xl bg-primary/10 text-primary transition-transform duration-200 group-hover:scale-105">
@@ -109,7 +128,7 @@ function FeaturedToolCard({ tool, icon: Icon = ImageIcon, index }: FeaturedToolC
 
         <div className="mt-6">
           <h3 className="text-xl font-bold text-foreground">{tool.title}</h3>
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          <p className="mt-3 text-sm leading-6 text-foreground/70">
             {tool.description}
           </p>
         </div>
@@ -119,7 +138,7 @@ function FeaturedToolCard({ tool, icon: Icon = ImageIcon, index }: FeaturedToolC
             {["Free", "Secure", "Browser"].map((label) => (
               <span
                 key={label}
-                className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground"
+                className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs font-semibold text-foreground/70"
               >
                 <ShieldCheck className="size-3.5 text-primary" aria-hidden="true" />
                 {label}

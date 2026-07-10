@@ -39,8 +39,25 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/why-liftpdf" },
-  openGraph: { title, description, url: `${siteConfig.url}/why-liftpdf` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/why-liftpdf`,
+    images: [
+      {
+        url: "/images/seo/trust/og-image.svg",
+        width: 1200,
+        height: 630,
+        alt: "Why LiftPDF browser-based PDF tools",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/images/seo/trust/og-image.svg"],
+  },
 };
 
 export default function WhyLiftPdfPage() {

@@ -34,8 +34,25 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/pdf-tools" },
-  openGraph: { title, description, url: `${siteConfig.url}/pdf-tools` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/pdf-tools`,
+    images: [
+      {
+        url: "/images/seo/categories/pdf-tools-og.svg",
+        width: 1200,
+        height: 630,
+        alt: "LiftPDF all PDF tools",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/images/seo/categories/pdf-tools-og.svg"],
+  },
 };
 
 export default function PdfToolsPage() {

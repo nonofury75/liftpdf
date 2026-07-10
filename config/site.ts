@@ -1,6 +1,7 @@
 export const siteConfig = {
   name: "LiftPDF",
-  description: "Fast PDF Tools Online",
+  description:
+    "Free PDF tools to convert, merge, split, compress, protect and edit files directly in your browser.",
   url: "https://liftpdf.com",
   links: {
     tools: "/#popular-tools",

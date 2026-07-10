@@ -53,6 +53,7 @@ export function ToolCatalog({ tools }: ToolCatalogProps) {
   return (
     <div className="space-y-14">
       <section id="browse-tools" className="space-y-8">
+        <h2 className="sr-only">Browse PDF tools</h2>
         <ToolSearch
           tools={tools}
           activeCategory={activeCategory}

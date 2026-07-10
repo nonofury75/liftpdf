@@ -2,6 +2,8 @@ import type { MetadataRoute } from "next";
 import { siteConfig } from "@/config/site";
 import { tools } from "@/data/tools";
 
+const releaseLastModified = new Date("2026-07-10");
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = [
     { path: "", priority: 1 },
@@ -15,6 +17,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/security", priority: 0.75 },
     { path: "/about", priority: 0.65 },
     { path: "/why-liftpdf", priority: 0.75 },
+    { path: "/terms", priority: 0.55 },
+    { path: "/contact", priority: 0.55 },
   ];
 
   const toolRoutes = tools
@@ -26,7 +30,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return [...staticRoutes, ...toolRoutes].map((route) => ({
     url: `${siteConfig.url}${route.path}`,
-    lastModified: new Date(),
+    lastModified: releaseLastModified,
     changeFrequency: "weekly",
     priority: route.priority,
   }));

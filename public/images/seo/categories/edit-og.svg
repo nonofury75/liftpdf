@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="LiftPDF PDF editor tools">
+  <rect width="1200" height="630" fill="#fff7f7"/>
+  <rect x="90" y="82" width="1020" height="466" rx="42" fill="#ffffff" stroke="#fecaca" stroke-width="3"/>
+  <text x="125" y="176" fill="#ef4444" font-family="Arial, sans-serif" font-size="30" font-weight="700">LiftPDF</text>
+  <text x="125" y="286" fill="#111827" font-family="Arial, sans-serif" font-size="68" font-weight="800">PDF Editor</text>
+  <text x="128" y="348" fill="#475569" font-family="Arial, sans-serif" font-size="30">Rotate, compress, watermark and number PDF pages.</text>
+  <rect x="760" y="250" width="250" height="280" rx="24" fill="#fee2e2" stroke="#fca5a5" stroke-width="3"/>
+  <path d="M820 335h130M820 390h90M820 445h150" stroke="#b91c1c" stroke-width="18" stroke-linecap="round"/>
+</svg>

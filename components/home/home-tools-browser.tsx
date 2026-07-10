@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { useCallback, useState } from "react";
-import { ToolCard } from "@/components/tools/tool-card";
 import { ToolSearch } from "@/components/tools/tool-search";
 import type { ToolCard as ToolCardType, ToolCategory } from "@/types/tools";
 
@@ -29,9 +30,26 @@ export function HomeToolsBrowser({ tools }: HomeToolsBrowserProps) {
         placeholder="Search tools..."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {results.map((tool) => (
-          <ToolCard key={tool.href} tool={tool} />
+          <Link
+            key={tool.href}
+            href={tool.href}
+            className="group flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md"
+          >
+            <span>
+              <span className="block font-semibold text-foreground">
+                {tool.title}
+              </span>
+              <span className="mt-1 block text-sm leading-6 text-foreground/70">
+                {tool.description}
+              </span>
+            </span>
+            <ArrowRight
+              className="size-4 shrink-0 text-primary transition-transform duration-200 group-hover:translate-x-1"
+              aria-hidden="true"
+            />
+          </Link>
         ))}
       </div>
     </div>

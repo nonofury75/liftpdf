@@ -130,7 +130,7 @@ export function ToolCard({ tool, compact = false }: ToolCardProps) {
   }
 
   return (
-    <Link href={tool.href} aria-label={`Open ${tool.title}`} className="block h-full">
+    <Link href={tool.href} className="block h-full">
       {card}
     </Link>
   );

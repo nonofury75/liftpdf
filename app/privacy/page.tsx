@@ -36,8 +36,25 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/privacy" },
-  openGraph: { title, description, url: `${siteConfig.url}/privacy` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/privacy`,
+    images: [
+      {
+        url: "/images/seo/trust/og-image.svg",
+        width: 1200,
+        height: 630,
+        alt: "LiftPDF privacy first PDF tools",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/images/seo/trust/og-image.svg"],
+  },
 };
 
 export default function PrivacyPage() {

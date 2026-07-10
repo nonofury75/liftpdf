@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="LiftPDF organize PDF tools">
+  <rect width="1200" height="630" fill="#f8fafc"/>
+  <rect x="92" y="84" width="1016" height="462" rx="42" fill="#ffffff" stroke="#e2e8f0" stroke-width="3"/>
+  <text x="125" y="176" fill="#ef4444" font-family="Arial, sans-serif" font-size="30" font-weight="700">LiftPDF</text>
+  <text x="125" y="286" fill="#111827" font-family="Arial, sans-serif" font-size="68" font-weight="800">Organize PDF</text>
+  <text x="128" y="348" fill="#475569" font-family="Arial, sans-serif" font-size="30">Merge, split, delete, extract and reorder PDF pages.</text>
+  <g fill="#fee2e2" stroke="#ef4444" stroke-width="6">
+    <rect x="790" y="238" width="110" height="150" rx="16"/>
+    <rect x="850" y="288" width="110" height="150" rx="16"/>
+    <rect x="910" y="338" width="110" height="150" rx="16"/>
+  </g>
+</svg>

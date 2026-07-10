@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="LiftPDF private browser-based PDF tools">
+  <rect width="1200" height="630" fill="#fff7f7"/>
+  <rect x="86" y="78" width="1028" height="474" rx="42" fill="#ffffff" stroke="#fecaca" stroke-width="3"/>
+  <text x="125" y="176" fill="#ef4444" font-family="Arial, sans-serif" font-size="30" font-weight="700">LiftPDF</text>
+  <text x="125" y="286" fill="#111827" font-family="Arial, sans-serif" font-size="68" font-weight="800">Private by Design</text>
+  <text x="128" y="348" fill="#475569" font-family="Arial, sans-serif" font-size="30">Fast PDF tools that process files directly in your browser.</text>
+  <path d="M900 238 760 294v104c0 92 62 148 140 180 78-32 140-88 140-180V294z" fill="#fee2e2" stroke="#ef4444" stroke-width="10"/>
+  <path d="M848 392h104M900 340v104" stroke="#b91c1c" stroke-width="18" stroke-linecap="round"/>
+</svg>

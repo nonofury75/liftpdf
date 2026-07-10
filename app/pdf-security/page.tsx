@@ -4,14 +4,31 @@ import { CategoryPageShell } from "@/components/tools/category-page-shell";
 
 const title = "PDF Security Tools | LiftPDF";
 const description =
-  "Protect, unlock and sign PDF files with privacy-first browser PDF security tools.";
+  "Protect and unlock PDF files with privacy-first browser PDF security tools.";
 
 export const metadata: Metadata = {
   title: { absolute: `${title} - Secure PDF Tools Online` },
   description,
   alternates: { canonical: "/pdf-security" },
-  openGraph: { title, description, url: `${siteConfig.url}/pdf-security` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/pdf-security`,
+    images: [
+      {
+        url: "/images/seo/categories/security-og.svg",
+        width: 1200,
+        height: 630,
+        alt: "LiftPDF PDF security tools",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/images/seo/categories/security-og.svg"],
+  },
 };
 
 export default function PdfSecurityPage() {
@@ -27,7 +44,7 @@ export default function PdfSecurityPage() {
         {
           question: "Are PDF security tools available now?",
           answer:
-            "Protect PDF, Unlock PDF and Sign PDF are currently listed as coming soon.",
+            "Protect PDF and Unlock PDF are available now. Sign PDF is listed as coming soon and stays non-clickable until it is real.",
         },
         {
           question: "Why show coming soon security tools?",

@@ -10,8 +10,25 @@ export const metadata: Metadata = {
   title: { absolute: `${title} - Image and PDF Converters` },
   description,
   alternates: { canonical: "/pdf-image-tools" },
-  openGraph: { title, description, url: `${siteConfig.url}/pdf-image-tools` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/pdf-image-tools`,
+    images: [
+      {
+        url: "/images/seo/categories/images-og.svg",
+        width: 1200,
+        height: 630,
+        alt: "LiftPDF PDF image tools",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/images/seo/categories/images-og.svg"],
+  },
 };
 
 export default function PdfImageToolsPage() {

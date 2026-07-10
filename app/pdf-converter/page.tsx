@@ -10,8 +10,25 @@ export const metadata: Metadata = {
   title: { absolute: `${title} - Free Browser PDF Tools` },
   description,
   alternates: { canonical: "/pdf-converter" },
-  openGraph: { title, description, url: `${siteConfig.url}/pdf-converter` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/pdf-converter`,
+    images: [
+      {
+        url: "/images/seo/categories/convert-og.svg",
+        width: 1200,
+        height: 630,
+        alt: "LiftPDF PDF converter tools",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/images/seo/categories/convert-og.svg"],
+  },
 };
 
 export default function PdfConverterPage() {

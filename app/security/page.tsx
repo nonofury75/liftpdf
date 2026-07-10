@@ -36,8 +36,25 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/security" },
-  openGraph: { title, description, url: `${siteConfig.url}/security` },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    title,
+    description,
+    url: `${siteConfig.url}/security`,
+    images: [
+      {
+        url: "/images/seo/trust/og-image.svg",
+        width: 1200,
+        height: 630,
+        alt: "LiftPDF security overview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/images/seo/trust/og-image.svg"],
+  },
 };
 
 export default function SecurityPage() {
