@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import {
   Clipboard,
   Download,
@@ -8,6 +9,7 @@ import {
   FileText,
   Loader2,
   RotateCcw,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PdfUploadZone } from "@/components/tools/pdf-upload-zone";
@@ -18,6 +20,7 @@ import {
 import { PdfSummaryRow } from "@/components/tools/pdf/pdf-summary-row";
 import { extractPdfText, loadPdfDocument } from "@/components/tools/pdf/pdfjs-client";
 import { hasPdfEncryptionDictionary } from "@/components/tools/pdf/qpdf-client";
+import { cn } from "@/lib/utils";
 
 type SelectedPdf = {
   file: File;
@@ -31,7 +34,7 @@ type GeneratedFile = {
 
 const outputFileName = "extracted-text.txt";
 const noTextMessage =
-  "No selectable text was found. This PDF may be scanned or image-based. OCR is required to extract text from scanned documents.";
+  "No selectable text was found. This PDF may be scanned or image-based. OCR is required.";
 
 export function PdfToTextTool() {
   const [selectedPdf, setSelectedPdf] = useState<SelectedPdf | null>(null);
@@ -136,7 +139,7 @@ export function PdfToTextTool() {
     setExtractedText("");
     setProcessedPages(0);
     setError(null);
-    setStatusMessage(null);
+    setStatusMessage("Preparing PDF...");
     setIsExtracting(true);
 
     let pdfDocument: Awaited<ReturnType<typeof loadPdfDocument>> | null = null;
@@ -145,6 +148,9 @@ export function PdfToTextTool() {
       pdfDocument = await loadPdfDocument(selectedPdf.file);
       const pages = await extractPdfText(pdfDocument, (pageNumber) => {
         setProcessedPages(pageNumber);
+        setStatusMessage(
+          `Extracting text page ${pageNumber} of ${selectedPdf.pageCount}...`,
+        );
       });
       const text = pages
         .map((page) => `Page ${page.pageNumber}\n\n${page.text}`)
@@ -158,11 +164,12 @@ export function PdfToTextTool() {
       }
 
       setExtractedText(text);
+      setStatusMessage("Generating TXT...");
 
       const nextFile = createTextDownload(text);
       setGeneratedFile(nextFile);
       triggerDownload(nextFile.url, nextFile.fileName);
-      setStatusMessage("Text extracted successfully. The download has started.");
+      setStatusMessage("Text extracted successfully.");
     } catch {
       setError("The text could not be extracted. Please try another PDF file.");
     } finally {
@@ -199,7 +206,7 @@ export function PdfToTextTool() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
         <PdfUploadZone
           multiple={false}
@@ -210,38 +217,19 @@ export function PdfToTextTool() {
         />
 
         {error ? (
-          <p
-            id="pdf-to-text-error"
-            className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-            role="alert"
-          >
+          <StatusNotice id="pdf-to-text-error" tone="error">
             {error}
-          </p>
+          </StatusNotice>
         ) : null}
 
         {statusMessage ? (
-          <p
-            className="rounded-md bg-primary/10 px-4 py-3 text-sm font-medium text-primary"
-            aria-live="polite"
-          >
+          <StatusNotice tone={generatedFile ? "success" : "neutral"}>
             {statusMessage}
-          </p>
+          </StatusNotice>
         ) : null}
 
         {isReadingPdf ? (
-          <p className="rounded-md bg-muted px-4 py-3 text-sm font-medium text-muted-foreground">
-            Reading PDF...
-          </p>
-        ) : null}
-
-        {isExtracting && selectedPdf ? (
-          <p
-            className="rounded-md bg-muted px-4 py-3 text-sm font-medium text-muted-foreground"
-            aria-live="polite"
-          >
-            Extracting page {Math.max(processedPages, 1)} of{" "}
-            {selectedPdf.pageCount}
-          </p>
+          <StatusNotice>Reading PDF...</StatusNotice>
         ) : null}
 
         {selectedPdf ? (
@@ -252,9 +240,9 @@ export function PdfToTextTool() {
           />
         ) : null}
 
-        <section className="rounded-lg border border-border bg-card p-5">
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
           <div className="flex items-start gap-3">
-            <span className="grid size-10 place-items-center rounded-md bg-primary/10 text-primary">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
               <FileText className="size-5" aria-hidden="true" />
             </span>
             <div>
@@ -268,37 +256,77 @@ export function PdfToTextTool() {
             </div>
           </div>
 
-          <label
-            htmlFor="pdf-to-text-preview"
-            className="mt-5 block text-sm font-semibold text-foreground"
-          >
-            Extracted text
-          </label>
-          <textarea
-            id="pdf-to-text-preview"
-            value={extractedText}
-            readOnly
-            aria-describedby="pdf-to-text-preview-help pdf-to-text-error"
-            className="mt-2 min-h-80 w-full resize-y rounded-lg border border-border bg-background p-4 font-mono text-sm leading-6 text-foreground shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary"
-            placeholder="Your extracted text will appear here."
-          />
+          <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-background shadow-inner">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/60 px-4 py-3">
+              <label
+                htmlFor="pdf-to-text-preview"
+                className="text-sm font-semibold text-foreground"
+              >
+                Extracted text
+              </label>
+              <div className="flex flex-wrap gap-2 text-xs font-semibold text-muted-foreground">
+                <span className="rounded-full bg-background px-2.5 py-1">
+                  {processedPages} pages processed
+                </span>
+                <span className="rounded-full bg-background px-2.5 py-1">
+                  {wordCount} words
+                </span>
+                <span className="rounded-full bg-background px-2.5 py-1">
+                  {characterCount} characters
+                </span>
+              </div>
+            </div>
+            <textarea
+              id="pdf-to-text-preview"
+              value={extractedText}
+              readOnly
+              aria-describedby="pdf-to-text-preview-help pdf-to-text-error"
+              className="min-h-[28rem] w-full resize-y bg-transparent p-4 font-mono text-sm leading-7 text-foreground outline-none transition focus-visible:ring-2 focus-visible:ring-primary"
+              placeholder="Your extracted text will appear here."
+            />
+          </div>
           <p
             id="pdf-to-text-preview-help"
-            className="mt-2 text-sm text-muted-foreground"
+            className="mt-3 text-sm leading-6 text-muted-foreground"
           >
-            {characterCount} characters - {wordCount} words - {processedPages}{" "}
-            pages processed
+            Text is separated by page. Scanned or image-only PDFs require OCR
+            and are reported clearly instead of producing an empty TXT file.
           </p>
         </section>
       </div>
 
-      <aside className="h-fit rounded-lg border border-border bg-card p-5">
-        <h2 className="text-lg font-semibold text-foreground">
-          Extraction summary
-        </h2>
+      <aside className="h-fit rounded-2xl border border-border bg-card p-5 shadow-sm lg:sticky lg:top-24">
+        <div className="flex items-start gap-3">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <FileText className="size-5" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Text extraction
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Extract selectable PDF text into a plain TXT file.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-primary/15 bg-primary/5 p-4">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Private by design
+              </p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Text extraction runs locally in your browser. This is not OCR.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="mt-5 space-y-3 text-sm">
           <PdfSummaryRow
-            label="PDF file"
+            label="File"
             value={selectedPdf ? selectedPdf.file.name : "None"}
           />
           <PdfSummaryRow
@@ -310,6 +338,8 @@ export function PdfToTextTool() {
             value={selectedPdf ? formatFileSize(selectedPdf.file.size) : "-"}
           />
           <PdfSummaryRow label="Status" value={extractionState} />
+          <PdfSummaryRow label="Pages processed" value={String(processedPages)} />
+          <PdfSummaryRow label="Words" value={String(wordCount)} />
           <PdfSummaryRow label="Characters" value={String(characterCount)} />
           <PdfSummaryRow label="Output" value={outputFileName} />
         </div>
@@ -318,14 +348,15 @@ export function PdfToTextTool() {
           <Button
             type="button"
             onClick={handleExtractText}
-            disabled={isReadingPdf || isExtracting}
+            disabled={!selectedPdf || isReadingPdf || isExtracting}
+            className="shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
           >
             {isExtracting ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
               <FileCheck2 className="size-4" aria-hidden="true" />
             )}
-            Extract Text
+            {isExtracting ? "Extracting Text..." : "Extract Text"}
           </Button>
 
           <Button
@@ -345,22 +376,29 @@ export function PdfToTextTool() {
                 Download TXT
               </a>
             </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setError("Extract text before downloading.")}
-            >
-              <Download className="size-4" aria-hidden="true" />
-              Download TXT
-            </Button>
-          )}
+          ) : null}
 
           <Button type="button" variant="ghost" onClick={handleReset}>
             <RotateCcw className="size-4" aria-hidden="true" />
-            Reset
+            {generatedFile ? "Extract text from another PDF" : "Reset"}
           </Button>
         </div>
+
+        {generatedFile ? (
+          <div
+            className="mt-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700"
+            aria-live="polite"
+          >
+            <p className="flex items-center gap-2 font-semibold">
+              <FileCheck2 className="size-4" aria-hidden="true" />
+              Text extracted successfully
+            </p>
+            <p className="mt-1 leading-6">
+              The TXT file was generated and the download started
+              automatically.
+            </p>
+          </div>
+        ) : null}
       </aside>
     </div>
   );
@@ -425,4 +463,30 @@ function triggerDownload(url: string, fileName: string) {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
+}
+
+function StatusNotice({
+  id,
+  tone = "neutral",
+  children,
+}: {
+  id?: string;
+  tone?: "neutral" | "error" | "success";
+  children: ReactNode;
+}) {
+  return (
+    <p
+      id={id}
+      className={cn(
+        "rounded-xl border px-4 py-3 text-sm font-medium",
+        tone === "error" && "border-red-200 bg-red-50 text-red-700",
+        tone === "success" && "border-green-200 bg-green-50 text-green-700",
+        tone === "neutral" && "border-border bg-muted text-muted-foreground",
+      )}
+      role={tone === "error" ? "alert" : undefined}
+      aria-live={tone === "error" ? "assertive" : "polite"}
+    >
+      {children}
+    </p>
+  );
 }
