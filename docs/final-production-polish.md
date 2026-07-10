@@ -162,6 +162,15 @@ Measured against local production build on `next start`.
 | `/` | Desktop | 100 | 100 | 100 | 100 | 0.6 s | 0 | 0 ms |
 | `/` | Mobile | 97 | 100 | 100 | 100 | 2.2 s | 0 | 160 ms |
 
+## Production Lighthouse Results
+
+Measured against `https://liftpdf.com` after deployment.
+
+| Page | Device | Performance | Accessibility | Best Practices | SEO | LCP | CLS | TBT |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `/` | Desktop | 99 | 100 | 100 | 100 | 0.6 s | 0 | 90 ms |
+| `/` | Mobile | 95 | 100 | 100 | 100 | 1.8 s | 0 | 220 ms |
+
 Target achieved:
 
 - Performance >= 95
@@ -209,6 +218,23 @@ Result:
 - JSON-LD present
 - No console errors
 - No mobile horizontal overflow
+
+## Production Checks
+
+Verified after Vercel deployment:
+
+- `/`: HTTP 200, updated meta description, JSON-LD present
+- `/terms`: HTTP 200
+- `/contact`: HTTP 200
+- `/pdf-tools`: category OG image present
+- `/pdf-security`: updated description and category OG image present
+- `/organize-pdf`: updated description and category OG image present
+- `/privacy`: trust OG image present
+- `/security`: trust OG image present
+- category OG SVG assets: HTTP 200
+- trust OG SVG asset: HTTP 200
+- console errors: none
+- mobile horizontal overflow: none
 
 ## Files Modified
 
