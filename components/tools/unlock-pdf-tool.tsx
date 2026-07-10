@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import {
   Download,
   FileCheck2,
+  FileLock2,
   Loader2,
   LockOpen,
   RotateCcw,
@@ -23,6 +25,7 @@ import {
   QpdfPasswordError,
   unlockPdfWithPassword,
 } from "@/components/tools/pdf/qpdf-client";
+import { cn } from "@/lib/utils";
 
 type SelectedPdf = {
   file: File;
@@ -44,6 +47,7 @@ export function UnlockPdfTool() {
   const [error, setError] = useState<string | null>(null);
   const [isReadingPdf, setIsReadingPdf] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
   const [generatedFile, setGeneratedFile] = useState<GeneratedFile | null>(null);
 
   const generatedFileRef = useRef<GeneratedFile | null>(null);
@@ -96,6 +100,7 @@ export function UnlockPdfTool() {
     setSelectedPdf(null);
     setPassword("");
     setError(null);
+    setProgress(null);
     setIsReadingPdf(true);
 
     try {
@@ -151,14 +156,17 @@ export function UnlockPdfTool() {
 
     setError(null);
     setIsUnlocking(true);
+    setProgress("Preparing PDF...");
     clearGeneratedFile();
 
     try {
       const fileBuffer = await selectedPdf.file.arrayBuffer();
+      setProgress("Decrypting PDF...");
       const unlockedBytes = await unlockPdfWithPassword(
         new Uint8Array(fileBuffer),
         password,
       );
+      setProgress("Generating unlocked PDF...");
       const buffer = new ArrayBuffer(unlockedBytes.byteLength);
       new Uint8Array(buffer).set(unlockedBytes);
       const blob = new Blob([buffer], { type: "application/pdf" });
@@ -168,6 +176,7 @@ export function UnlockPdfTool() {
       };
 
       setGeneratedFile(nextFile);
+      setProgress("PDF unlocked successfully.");
       triggerDownload(nextFile.url, nextFile.fileName);
     } catch (caughtError) {
       setError(
@@ -175,6 +184,7 @@ export function UnlockPdfTool() {
           ? "The password is incorrect or the PDF could not be unlocked."
           : "The PDF could not be unlocked. Please try another file.",
       );
+      setProgress(null);
     } finally {
       setIsUnlocking(false);
     }
@@ -187,11 +197,12 @@ export function UnlockPdfTool() {
     setError(null);
     setIsReadingPdf(false);
     setIsUnlocking(false);
+    setProgress(null);
     clearGeneratedFile();
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       <div className="space-y-6">
         <PdfUploadZone
           multiple={false}
@@ -202,19 +213,13 @@ export function UnlockPdfTool() {
         />
 
         {error ? (
-          <p
-            id="unlock-pdf-error"
-            className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-            role="alert"
-          >
+          <StatusNotice id="unlock-pdf-error" tone="error">
             {error}
-          </p>
+          </StatusNotice>
         ) : null}
 
         {isReadingPdf ? (
-          <p className="rounded-md bg-muted px-4 py-3 text-sm font-medium text-muted-foreground">
-            Reading PDF...
-          </p>
+          <StatusNotice>Reading PDF...</StatusNotice>
         ) : null}
 
         {selectedPdf ? (
@@ -225,9 +230,9 @@ export function UnlockPdfTool() {
           />
         ) : null}
 
-        <section className="rounded-lg border border-border bg-card p-5">
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
           <div className="flex items-start gap-3">
-            <span className="grid size-10 place-items-center rounded-md bg-primary/10 text-primary">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
               <ShieldCheck className="size-5" aria-hidden="true" />
             </span>
             <div>
@@ -235,10 +240,10 @@ export function UnlockPdfTool() {
                 Password unlock
               </h2>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                Your PDF is unlocked locally in your browser. Your password and
-                file are never uploaded.
+                Your PDF is decrypted locally in your browser with QPDF WASM.
+                Your password and file are never uploaded.
               </p>
-              <span className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+              <span className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
                 <LockOpen className="size-3.5 text-primary" aria-hidden="true" />
                 Private by Design
               </span>
@@ -270,11 +275,38 @@ export function UnlockPdfTool() {
         </section>
       </div>
 
-      <aside className="h-fit rounded-lg border border-border bg-card p-5">
-        <h2 className="text-lg font-semibold text-foreground">Unlock summary</h2>
+      <aside className="h-fit rounded-2xl border border-border bg-card p-5 shadow-sm lg:sticky lg:top-24">
+        <div className="flex items-start gap-3">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+            <FileLock2 className="size-5" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Unlock settings
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              Remove encryption when you know the current password.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-primary/15 bg-primary/5 p-4">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Private by design
+              </p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Decryption runs locally. LiftPDF cannot see your PDF password.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="mt-5 space-y-3 text-sm">
           <PdfSummaryRow
-            label="PDF file"
+            label="File"
             value={selectedPdf ? selectedPdf.file.name : "None"}
           />
           <PdfSummaryRow
@@ -288,20 +320,39 @@ export function UnlockPdfTool() {
             value={selectedPdf ? formatFileSize(selectedPdf.file.size) : "-"}
           />
           <PdfSummaryRow
-            label="Protected"
+            label="Encrypted"
             value={selectedPdf?.isProtected ? "Yes" : "No"}
           />
           <PdfSummaryRow label="Output" value={outputFileName} />
         </div>
 
+        {progress ? (
+          <p
+            className={cn(
+              "mt-5 rounded-xl px-3 py-2 text-sm font-medium",
+              generatedFile
+                ? "bg-green-50 text-green-700"
+                : "bg-muted text-muted-foreground",
+            )}
+            aria-live="polite"
+          >
+            {progress}
+          </p>
+        ) : null}
+
         <div className="mt-6 grid gap-3">
-          <Button type="button" onClick={handleUnlockPdf} disabled={isUnlocking}>
+          <Button
+            type="button"
+            onClick={handleUnlockPdf}
+            disabled={!selectedPdf || isReadingPdf || isUnlocking}
+            className="shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
+          >
             {isUnlocking ? (
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
             ) : (
               <FileCheck2 className="size-4" aria-hidden="true" />
             )}
-            Unlock PDF
+            {isUnlocking ? "Unlocking PDF..." : "Unlock PDF"}
           </Button>
 
           {generatedFile ? (
@@ -311,30 +362,28 @@ export function UnlockPdfTool() {
                 Download PDF
               </a>
             </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setError("Unlock your PDF before downloading.")}
-            >
-              <Download className="size-4" aria-hidden="true" />
-              Download PDF
-            </Button>
-          )}
+          ) : null}
 
           <Button type="button" variant="ghost" onClick={handleReset}>
             <RotateCcw className="size-4" aria-hidden="true" />
-            Reset
+            {generatedFile ? "Unlock another PDF" : "Reset"}
           </Button>
         </div>
 
         {generatedFile ? (
-          <p
-            className="mt-4 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
+          <div
+            className="mt-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700"
             aria-live="polite"
           >
-            Your unlocked PDF is ready. The download has started automatically.
-          </p>
+            <p className="flex items-center gap-2 font-semibold">
+              <FileCheck2 className="size-4" aria-hidden="true" />
+              PDF unlocked successfully
+            </p>
+            <p className="mt-1 leading-6">
+              The unlocked PDF was generated and the download started
+              automatically.
+            </p>
+          </div>
         ) : null}
       </aside>
     </div>
@@ -355,4 +404,30 @@ function triggerDownload(url: string, fileName: string) {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
+}
+
+function StatusNotice({
+  id,
+  tone = "neutral",
+  children,
+}: {
+  id?: string;
+  tone?: "neutral" | "error";
+  children: ReactNode;
+}) {
+  return (
+    <p
+      id={id}
+      className={cn(
+        "rounded-xl border px-4 py-3 text-sm font-medium",
+        tone === "error"
+          ? "border-red-200 bg-red-50 text-red-700"
+          : "border-border bg-muted text-muted-foreground",
+      )}
+      role={tone === "error" ? "alert" : undefined}
+      aria-live={tone === "error" ? "assertive" : "polite"}
+    >
+      {children}
+    </p>
+  );
 }
