@@ -89,12 +89,16 @@ Generated locally with Playwright:
 - Before mobile: `artifacts/homepage-v2/before-production-mobile.png`
 - After desktop: `artifacts/homepage-v2/after-local-desktop.png`
 - After mobile: `artifacts/homepage-v2/after-local-mobile.png`
+- After production desktop: `artifacts/homepage-v2/after-production-desktop.png`
+- After production mobile: `artifacts/homepage-v2/after-production-mobile.png`
 
 QA result:
 
 - desktop overflow: false;
 - mobile overflow: false;
-- console errors after fix: none.
+- production console errors: none;
+- production page errors: none;
+- production failed requests: none.
 
 ## Performance Notes
 
@@ -111,6 +115,13 @@ Implementation uses:
 Build result:
 
 - homepage first load JS remains `121 kB`.
+
+Production Lighthouse:
+
+| Target | Performance | Accessibility | Best Practices | SEO | LCP | CLS | TBT |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Desktop | 100 | 100 | 96 | 100 | 0.5 s | 0 | 0 ms |
+| Mobile | 98 | 100 | 100 | 100 | 1.7 s | 0 | 160 ms |
 
 ## SEO
 
@@ -156,11 +167,16 @@ Completed locally:
 - `npm run build`: passed;
 - `npm run test:e2e`: passed, 45 passed and 5 skipped.
 
-Production Lighthouse results are added after deployment.
+Completed in production:
+
+- `https://liftpdf.com/`: HTTP 200;
+- desktop Playwright QA: passed;
+- mobile Playwright QA: passed;
+- Lighthouse desktop: passed;
+- Lighthouse mobile: passed.
 
 ## Conclusion
 
 Homepage V2 shifts LiftPDF from a simple tool directory to a more credible product landing page.
 
 The product now feels more alive without adding fake proof, fake logos, fake stats or heavy media.
-
