@@ -95,6 +95,26 @@ test.describe("navigation and catalog", () => {
       await expect(page.getByText("Related Tools")).toBeVisible();
     });
   }
+
+  test("Search Console opportunity pages expose enriched guidance", async ({
+    page,
+  }) => {
+    for (const href of ["/extract-pages", "/delete-pages", "/reorder-pages"]) {
+      await page.goto(href);
+      await expect(page.getByText("Common problems")).toBeVisible();
+      await expect(
+        page.getByRole("heading", {
+          name: "Quick answers before editing your PDF",
+        }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: "See the tool before you use it" }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(/without Adobe|password-protected|selected pages/i).first(),
+      ).toBeVisible();
+    }
+  });
 });
 
 test.describe("critical PDF workflows", () => {

@@ -53,6 +53,11 @@ export type PremiumGuideSection = {
   paragraphs: string[];
 };
 
+export type PremiumWorkflowScreenshot = PremiumVisual & {
+  label: string;
+  caption: string;
+};
+
 export type PremiumToolContentData = {
   heroImage: PremiumVisual;
   ogImage: PremiumVisual;
@@ -61,6 +66,11 @@ export type PremiumToolContentData = {
   whyUse: PremiumToolSectionItem[];
   features: PremiumToolSectionItem[];
   useCases: PremiumToolSectionItem[];
+  commonProblems?: PremiumGuideSection[];
+  workflowScreenshots?: {
+    before: PremiumWorkflowScreenshot;
+    after: PremiumWorkflowScreenshot;
+  };
   guide: PremiumGuideSection[];
   internalLinks: PremiumInternalLink[];
 };
@@ -186,12 +196,108 @@ export function PremiumToolContent({
         items={content.useCases}
       />
 
+      {content.workflowScreenshots ? (
+        <WorkflowScreenshots screenshots={content.workflowScreenshots} />
+      ) : null}
+
+      {content.commonProblems?.length ? (
+        <ProblemSection sections={content.commonProblems} />
+      ) : null}
+
       <GuideSection content={content} />
 
       <ComparisonSection />
 
       <InternalLinks links={content.internalLinks} />
     </div>
+  );
+}
+
+function WorkflowScreenshots({
+  screenshots,
+}: {
+  screenshots: NonNullable<PremiumToolContentData["workflowScreenshots"]>;
+}) {
+  return (
+    <section aria-labelledby="real-workflow-preview">
+      <div className="max-w-3xl">
+        <p className="text-sm font-semibold uppercase tracking-normal text-primary">
+          Real workflow preview
+        </p>
+        <h2
+          id="real-workflow-preview"
+          className="mt-2 text-2xl font-bold tracking-normal text-foreground"
+        >
+          See the tool before you use it
+        </h2>
+        <p className="mt-3 text-sm leading-7 text-muted-foreground">
+          These are real LiftPDF interface captures, not decorative mockups.
+          They show how the page preview and final action state look during a
+          normal browser workflow.
+        </p>
+      </div>
+      <div className="mt-6 grid gap-5 lg:grid-cols-2">
+        {[screenshots.before, screenshots.after].map((screenshot) => (
+          <figure
+            key={screenshot.src}
+            className="overflow-hidden rounded-2xl border border-border bg-card p-3 shadow-sm"
+          >
+            <Image
+              src={screenshot.src}
+              alt={screenshot.alt}
+              width={screenshot.width}
+              height={screenshot.height}
+              className="h-auto w-full rounded-xl border border-border/70"
+              loading="lazy"
+              decoding="async"
+              sizes="(min-width: 1024px) 560px, 100vw"
+            />
+            <figcaption className="px-1 pt-4">
+              <span className="text-sm font-semibold text-foreground">
+                {screenshot.label}
+              </span>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                {screenshot.caption}
+              </p>
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProblemSection({ sections }: { sections: PremiumGuideSection[] }) {
+  return (
+    <section
+      aria-labelledby="common-problems"
+      className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8"
+    >
+      <p className="text-sm font-semibold uppercase tracking-normal text-primary">
+        Common problems
+      </p>
+      <h2
+        id="common-problems"
+        className="mt-2 text-2xl font-bold tracking-normal text-foreground"
+      >
+        Quick answers before editing your PDF
+      </h2>
+      <div className="mt-6 grid gap-5 md:grid-cols-2">
+        {sections.map((section) => (
+          <article
+            key={section.title}
+            className="rounded-2xl border border-border bg-muted/35 p-5"
+          >
+            <h3 className="font-semibold text-foreground">{section.title}</h3>
+            <div className="mt-3 space-y-3 text-sm leading-7 text-muted-foreground">
+              {section.paragraphs.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 

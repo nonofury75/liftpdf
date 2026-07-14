@@ -6,7 +6,7 @@ import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Extract PDF Pages Online Free | LiftPDF";
 const description =
-  "Extract selected pages from a PDF online for free. Choose the pages you need and create a new PDF directly in your browser.";
+  "Extract one page or selected pages from a PDF online for free. Create a new PDF directly in your browser without uploading your file.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
@@ -25,16 +25,16 @@ export default function ExtractPagesPage() {
   return (
     <ToolPageShell
       title="Extract PDF Pages"
-      description="Select one or more PDF pages and save them into a new document directly in your browser."
-      seoTitle="Extract selected PDF pages online"
-      seoText="LiftPDF lets you preview every PDF page, select exactly the pages you need and export them into a new PDF while preserving the original page order and quality."
+      description="Select one page, multiple pages, or a focused excerpt and save them as a new PDF directly in your browser."
+      seoTitle="Extract pages from PDF online"
+      seoText="LiftPDF helps you extract one page or selected pages from a PDF without Adobe Acrobat. Preview every page, choose exactly what you need and export a new PDF locally while preserving page order and quality."
       currentHref="/extract-pages"
       premiumContent={premiumToolContent.extractPages}
       faq={[
         {
-          question: "Can I extract PDF pages for free?",
+          question: "Can I extract PDF pages online for free?",
           answer:
-            "Yes. Extract PDF Pages is free to use directly in your browser.",
+            "Yes. LiftPDF lets you extract selected PDF pages for free directly in your browser.",
         },
         {
           question: "Are my files uploaded?",
@@ -42,9 +42,19 @@ export default function ExtractPagesPage() {
             "No. The PDF is read and processed locally on your device without a backend upload.",
         },
         {
-          question: "Can I extract multiple pages?",
+          question: "Can I extract multiple pages from a PDF?",
           answer:
             "Yes. Select one page, several pages, or all pages before exporting the new PDF.",
+        },
+        {
+          question: "How do I extract one page from a PDF?",
+          answer:
+            "Upload your PDF, select only the page thumbnail you need, then export. LiftPDF creates a new one-page PDF.",
+        },
+        {
+          question: "Can I extract pages from a PDF without Adobe Acrobat?",
+          answer:
+            "Yes. LiftPDF runs in the browser and does not require Adobe Acrobat, a desktop installer, or an account.",
         },
         {
           question: "Can I preview pages before extracting them?",
@@ -67,9 +77,14 @@ export default function ExtractPagesPage() {
             "Password-protected PDFs must be unlocked first with Unlock PDF before selected pages can be extracted.",
         },
         {
-          question: "Can I extract one page only?",
+          question: "Can I extract pages from a scanned PDF?",
           answer:
-            "Yes. Select a single page and download it as a new one-page PDF.",
+            "Yes, if you want to copy whole pages. Scanned pages remain images inside the new PDF; OCR is only needed when you want to extract text from scans.",
+        },
+        {
+          question: "Why are extracted pages blank?",
+          answer:
+            "Blank results usually come from blank source pages, damaged PDFs, or protected files. Check the preview first and unlock encrypted PDFs before extracting.",
         },
       ]}
     >

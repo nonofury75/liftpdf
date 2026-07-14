@@ -6,7 +6,7 @@ import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Reorder PDF Pages Online Free | LiftPDF";
 const description =
-  "Reorder PDF pages online for free. Drag and drop pages to rearrange your PDF directly in your browser.";
+  "Reorder PDF pages online for free. Drag and drop or move pages to rearrange your PDF directly in your browser.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
@@ -25,9 +25,9 @@ export default function ReorderPagesPage() {
   return (
     <ToolPageShell
       title="Reorder PDF Pages"
-      description="Drag and drop PDF pages into a new order, then download a reordered PDF directly from your browser."
-      seoTitle="Reorder PDF pages online"
-      seoText="LiftPDF lets you preview every page, rearrange the order with drag and drop or accessible move buttons, and export a new PDF while preserving page quality."
+      description="Drag and drop PDF pages into a new order, use accessible move buttons, then download a reordered PDF."
+      seoTitle="How to reorder pages in a PDF online"
+      seoText="LiftPDF helps you reorder PDF pages without Adobe Acrobat. Preview every page, move thumbnails into the right sequence and export a new PDF locally while preserving page quality."
       currentHref="/reorder-pages"
       premiumContent={premiumToolContent.reorderPages}
       faq={[
@@ -35,6 +35,11 @@ export default function ReorderPagesPage() {
           question: "Can I reorder PDF pages for free?",
           answer:
             "Yes. Reorder PDF Pages is free to use directly in your browser.",
+        },
+        {
+          question: "How do I reorder pages in a PDF?",
+          answer:
+            "Upload your PDF, move page thumbnails into the correct sequence, then export. The downloaded PDF follows the preview order.",
         },
         {
           question: "Are my PDFs uploaded?",
@@ -52,6 +57,11 @@ export default function ReorderPagesPage() {
             "Yes. Every page has move buttons, so the tool remains usable on mobile and with keyboard navigation.",
         },
         {
+          question: "Can I reorder PDF pages without Adobe Acrobat?",
+          answer:
+            "Yes. LiftPDF rearranges pages in your browser, so you do not need Acrobat, a desktop installer, or an account for basic page reordering.",
+        },
+        {
           question: "Can I reset the original order?",
           answer:
             "Yes. Use Reset order to restore the original page sequence before exporting.",
@@ -65,6 +75,11 @@ export default function ReorderPagesPage() {
           question: "Can I reorder a password-protected PDF?",
           answer:
             "Password-protected PDFs must be unlocked first with Unlock PDF before pages can be rearranged.",
+        },
+        {
+          question: "Why did my PDF page order not change?",
+          answer:
+            "Make sure at least one page was moved before exporting. The downloaded PDF uses the order shown in the page preview grid.",
         },
         {
           question: "Will the quality change?",

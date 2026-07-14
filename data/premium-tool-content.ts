@@ -561,6 +561,8 @@ function makePdfWorkflowContent({
   output,
   related,
   guide,
+  commonProblems,
+  workflowScreenshots,
   emphasis = "browser",
 }: {
   slug: string;
@@ -572,6 +574,8 @@ function makePdfWorkflowContent({
   output: string;
   related: PremiumToolContentData["internalLinks"];
   guide: PremiumToolContentData["guide"];
+  commonProblems?: PremiumToolContentData["commonProblems"];
+  workflowScreenshots?: PremiumToolContentData["workflowScreenshots"];
   emphasis?: "browser" | "security" | "pages" | "edit";
 }): PremiumToolContentData {
   const privacyText =
@@ -701,6 +705,8 @@ function makePdfWorkflowContent({
         icon: "mobile",
       },
     ],
+    commonProblems,
+    workflowScreenshots,
     guide,
     internalLinks: related,
   };
@@ -953,7 +959,60 @@ Object.assign(premiumToolContent, {
           "For confidential documents, deleting pages locally is useful because the original file does not need to be uploaded to a remote editor.",
         ],
       },
+      {
+        title: "When removing pages is better than extracting pages",
+        paragraphs: [
+          "Use Delete Pages when most of the PDF should stay and only a few blank, duplicate or outdated pages need to be removed. This is faster than rebuilding a document from selected pages.",
+          "Use Extract Pages instead when you only need a small part of a large PDF, such as one contract clause, one invoice page or a short excerpt from a report.",
+        ],
+      },
     ],
+    commonProblems: [
+      {
+        title: "How to remove only one page",
+        paragraphs: [
+          "Upload the PDF, select the single page thumbnail you want to remove, then export the updated PDF. The other pages remain in their original order.",
+        ],
+      },
+      {
+        title: "How to remove multiple pages",
+        paragraphs: [
+          "Select every unwanted thumbnail before exporting. The selected counter helps you confirm how many pages will be removed and how many pages will remain.",
+        ],
+      },
+      {
+        title: "Why all pages cannot be deleted",
+        paragraphs: [
+          "A PDF needs at least one page to remain valid. If every page is selected, LiftPDF blocks the export and asks you to keep at least one page.",
+        ],
+      },
+      {
+        title: "What to do with password-protected PDFs",
+        paragraphs: [
+          "If the PDF is encrypted, unlock it first with the correct password. This avoids failed exports and keeps the page removal workflow honest.",
+        ],
+      },
+    ],
+    workflowScreenshots: {
+      before: {
+        src: "/images/seo/delete-pages/delete-pages-before.png",
+        alt: "Delete PDF Pages page thumbnails before removing selected pages",
+        width: 1280,
+        height: 860,
+        label: "Before deleting",
+        caption:
+          "Preview thumbnails make it easier to identify blank, duplicate or private pages before export.",
+      },
+      after: {
+        src: "/images/seo/delete-pages/delete-pages-after.png",
+        alt: "Delete PDF Pages success state after creating an updated PDF",
+        width: 1280,
+        height: 860,
+        label: "After export",
+        caption:
+          "The updated PDF is generated locally and is ready to download without uploading the original file.",
+      },
+    },
   }),
   extractPages: makePdfWorkflowContent({
     slug: "extract-pages",
@@ -979,7 +1038,60 @@ Object.assign(premiumToolContent, {
           "The exported PDF keeps the selected pages in their original order, which is usually what recipients expect.",
         ],
       },
+      {
+        title: "Extract one page, several pages or an excerpt",
+        paragraphs: [
+          "For a single page, select only that page and download a one-page PDF. For multiple pages, select each thumbnail you need and LiftPDF creates one clean PDF in the original order.",
+          "This workflow is useful for reports, books, contracts and scanned packets where the page numbers are known but the surrounding pages should not be shared.",
+        ],
+      },
     ],
+    commonProblems: [
+      {
+        title: "How to extract only one page",
+        paragraphs: [
+          "Select one thumbnail and export. The result is a new PDF containing only that page, which is easier to share than sending the full document.",
+        ],
+      },
+      {
+        title: "How to extract selected pages online",
+        paragraphs: [
+          "Use the visual page grid to select pages such as 2, 5 and 8. LiftPDF keeps the selected pages in document order so the output remains predictable.",
+        ],
+      },
+      {
+        title: "Why extracted pages may look blank",
+        paragraphs: [
+          "If the original page is blank, image-only, damaged or encrypted, the extracted result can appear empty. Check the preview first and unlock protected PDFs before extracting.",
+        ],
+      },
+      {
+        title: "How to extract pages without Adobe",
+        paragraphs: [
+          "LiftPDF performs the page copy in your browser. You do not need Acrobat, a desktop installer or an account for basic selected-page extraction.",
+        ],
+      },
+    ],
+    workflowScreenshots: {
+      before: {
+        src: "/images/seo/extract-pages/extract-pages-before.png",
+        alt: "Extract PDF Pages page preview before selecting pages",
+        width: 1280,
+        height: 860,
+        label: "Before extracting",
+        caption:
+          "Every page is visible as a thumbnail, so you can select one page or several pages before creating a new PDF.",
+      },
+      after: {
+        src: "/images/seo/extract-pages/extract-pages-after.png",
+        alt: "Extract PDF Pages success state after selected pages are exported",
+        width: 1280,
+        height: 860,
+        label: "After export",
+        caption:
+          "The selected pages are copied into a new PDF while the original document stays on your device.",
+      },
+    },
   }),
   reorderPages: makePdfWorkflowContent({
     slug: "reorder-pages",
@@ -1005,7 +1117,60 @@ Object.assign(premiumToolContent, {
           "If you are combining several workflows, merge first, reorder second, then add page numbers or watermarks last.",
         ],
       },
+      {
+        title: "Reorder PDF pages without changing quality",
+        paragraphs: [
+          "Reordering changes page sequence, not page content. LiftPDF copies each page into a new document in the order shown by the preview grid.",
+          "Use Reset order if you want to return to the original sequence before exporting. On mobile, the move buttons provide the same control without relying on drag and drop.",
+        ],
+      },
     ],
+    commonProblems: [
+      {
+        title: "How to reorder pages in a PDF",
+        paragraphs: [
+          "Upload the PDF, move thumbnails into the correct sequence, then export. The output PDF follows the new order shown in the preview grid.",
+        ],
+      },
+      {
+        title: "How to move one page to the beginning",
+        paragraphs: [
+          "Drag the page to the first position on desktop, or use the move buttons on mobile and keyboard workflows until the page reaches position one.",
+        ],
+      },
+      {
+        title: "Why the order did not change",
+        paragraphs: [
+          "The preview order is only applied after export. If the downloaded PDF still looks unchanged, confirm that at least one page was moved before clicking Reorder PDF.",
+        ],
+      },
+      {
+        title: "What to do with password-protected PDFs",
+        paragraphs: [
+          "Encrypted PDFs must be unlocked first with the correct password before pages can be rearranged and exported.",
+        ],
+      },
+    ],
+    workflowScreenshots: {
+      before: {
+        src: "/images/seo/reorder-pages/reorder-pages-before.png",
+        alt: "Reorder PDF Pages thumbnail grid before changing page order",
+        width: 1280,
+        height: 860,
+        label: "Before reordering",
+        caption:
+          "Original page numbers and current positions help you understand the document sequence before moving pages.",
+      },
+      after: {
+        src: "/images/seo/reorder-pages/reorder-pages-after.png",
+        alt: "Reorder PDF Pages success state after creating a reordered PDF",
+        width: 1280,
+        height: 860,
+        label: "After export",
+        caption:
+          "The reordered PDF is generated locally with pages copied in the exact order shown in the preview.",
+      },
+    },
   }),
   protectPdf: makePdfWorkflowContent({
     slug: "protect-pdf",

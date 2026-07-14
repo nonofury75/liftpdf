@@ -4,9 +4,9 @@ import { DeletePagesTool } from "@/components/tools/delete-pages-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
 import { premiumToolContent } from "@/data/premium-tool-content";
 
-const title = "Delete PDF Pages Online - Free PDF Page Remover | LiftPDF";
+const title = "Remove Pages from PDF Online Free | LiftPDF";
 const description =
-  "Delete pages from PDF files online for free. Select one or multiple pages, remove them and download a clean PDF with LiftPDF.";
+  "Remove pages from PDF files online for free. Delete one page, multiple pages, blank pages or unwanted pages directly in your browser.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
@@ -25,16 +25,21 @@ export default function DeletePagesPage() {
   return (
     <ToolPageShell
       title="Delete PDF Pages"
-      description="Remove unwanted pages from a PDF directly in your browser with page previews and multi-select controls."
-      seoTitle="Delete pages from PDF files online"
-      seoText="LiftPDF lets you preview every PDF page, select the pages you do not need and download a new PDF with the remaining pages preserved in their original order."
+      description="Remove unwanted, blank, duplicate or private pages from a PDF directly in your browser."
+      seoTitle="Remove pages from PDF files online"
+      seoText="LiftPDF lets you preview every PDF page, select one or multiple pages to remove and download a new PDF with the remaining pages preserved in their original order."
       currentHref="/delete-pages"
       premiumContent={premiumToolContent.deletePages}
       faq={[
         {
-          question: "Can I remove pages for free?",
+          question: "Can I remove pages from a PDF for free?",
           answer:
             "Yes. Delete PDF Pages is free to use and runs directly in your browser.",
+        },
+        {
+          question: "How do I remove one page from a PDF?",
+          answer:
+            "Upload your PDF, click the page thumbnail you want to remove, then export the updated PDF. The other pages stay in order.",
         },
         {
           question: "Are my PDFs uploaded?",
@@ -45,6 +50,11 @@ export default function DeletePagesPage() {
           question: "Can I delete multiple pages?",
           answer:
             "Yes. Select one page, multiple pages, all pages except one, or invert your selection before deleting.",
+        },
+        {
+          question: "Can I remove blank pages from a PDF?",
+          answer:
+            "Yes. Use the page thumbnails to identify blank pages, select them, and export a cleaned PDF.",
         },
         {
           question: "Can I preview pages before deleting them?",
@@ -65,6 +75,11 @@ export default function DeletePagesPage() {
           question: "Can I delete pages from a password-protected PDF?",
           answer:
             "Password-protected PDFs must be unlocked first with Unlock PDF before pages can be removed.",
+        },
+        {
+          question: "Can I remove pages from a PDF without Adobe Acrobat?",
+          answer:
+            "Yes. LiftPDF removes pages locally in your browser without requiring Acrobat, a desktop app, or an account.",
         },
         {
           question: "Is the quality preserved?",
