@@ -1025,6 +1025,26 @@ Object.assign(premiumToolContent, {
     output: "Download a new PDF containing only the selected pages in original order.",
     emphasis: "pages",
     related: [
+      {
+        label: "How to Extract Pages From a PDF",
+        href: "/guides/how-to-extract-pages-from-pdf",
+        text: "Read the complete extraction workflow before using the tool.",
+      },
+      {
+        label: "Extract One Page From a PDF",
+        href: "/guides/extract-one-page-from-pdf",
+        text: "Learn the safest way to save a single page as a new PDF.",
+      },
+      {
+        label: "Extract Multiple Pages",
+        href: "/guides/extract-multiple-pages-from-pdf",
+        text: "Save several selected pages into one clean PDF.",
+      },
+      {
+        label: "Extract Without Adobe",
+        href: "/guides/extract-pdf-pages-without-adobe",
+        text: "Use a browser-based workflow without installing Acrobat.",
+      },
       { label: "Delete Pages", href: "/delete-pages", text: "Remove pages from the original document instead." },
       { label: "Reorder Pages", href: "/reorder-pages", text: "Arrange pages before exporting a new version." },
       { label: "Split PDF", href: "/split-pdf", text: "Use typed ranges or split every page." },
