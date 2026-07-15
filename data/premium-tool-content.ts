@@ -69,22 +69,22 @@ const imageUseCases = [
 export const premiumToolContent: Record<string, PremiumToolContentData> = {
   jpgToPdf: {
     heroImage: {
-      src: "/images/seo/jpg-to-pdf/hero.webp",
-      alt: "JPG images flowing into a clean PDF document",
-      width: 1200,
-      height: 760,
+      src: "/images/seo/jpg-to-pdf/jpg-to-pdf-workflow.webp",
+      alt: "LiftPDF JPG to PDF workflow with upload preview and download",
+      width: 1280,
+      height: 860,
     },
     ogImage: {
-      src: "/images/seo/jpg-to-pdf/og-image.webp",
-      alt: "LiftPDF JPG to PDF converter",
+      src: "/images/seo/jpg-to-pdf/jpg-to-pdf-og.webp",
+      alt: "LiftPDF JPG to PDF browser-based converter preview",
       width: 1200,
       height: 630,
     },
     thumbnail: {
-      src: "/images/seo/jpg-to-pdf/thumbnail.webp",
-      alt: "JPG to PDF document preview",
-      width: 640,
-      height: 480,
+      src: "/images/seo/jpg-to-pdf/jpg-to-pdf-preview.webp",
+      alt: "JPG to PDF live layout preview",
+      width: 1280,
+      height: 860,
     },
     howItWorks: [
       {
@@ -127,6 +127,49 @@ export const premiumToolContent: Record<string, PremiumToolContentData> = {
     ],
     features: imageToolFeatures,
     useCases: imageUseCases,
+    workflowScreenshots: {
+      before: {
+        label: "Before conversion",
+        src: "/images/seo/jpg-to-pdf/jpg-to-pdf-before.webp",
+        alt: "LiftPDF JPG to PDF before conversion with uploaded images",
+        width: 1280,
+        height: 860,
+        caption:
+          "Upload JPG files, review thumbnails and choose the final PDF layout.",
+      },
+      after: {
+        label: "After conversion",
+        src: "/images/seo/jpg-to-pdf/jpg-to-pdf-after.webp",
+        alt: "LiftPDF JPG to PDF success state after creating a PDF",
+        width: 1280,
+        height: 860,
+        caption:
+          "Download the generated PDF or start another JPG to PDF conversion.",
+      },
+    },
+    commonProblems: [
+      {
+        title: "Why JPGs can look blurry in a PDF",
+        paragraphs: [
+          "Blurry output usually starts with the source file. A small, compressed or repeatedly saved JPG cannot become sharper just because it is placed into a PDF.",
+          "Use the original image, Auto page size and Fit mode when preserving the full image matters.",
+        ],
+      },
+      {
+        title: "Why the PDF can become large",
+        paragraphs: [
+          "Image PDFs carry the pixels from the images you add. Several high-resolution phone photos can naturally create a large PDF.",
+          "Remove duplicate images before conversion and use Compress PDF afterward if the final document must fit an upload or email limit.",
+        ],
+      },
+      {
+        title: "Why a JPG may fail to convert",
+        paragraphs: [
+          "The dedicated JPG to PDF tool accepts JPG and JPEG files. If the source is PNG, WEBP, HEIC or another format, use Images to PDF or the matching image tool.",
+          "Very large batches can also be limited by device memory because the conversion runs locally in your browser.",
+        ],
+      },
+    ],
     guide: [
       {
         title: "When JPG to PDF is the right format",

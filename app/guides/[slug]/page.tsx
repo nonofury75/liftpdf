@@ -10,8 +10,14 @@ import {
   mergePdfOgImage,
   mergePdfGuides,
 } from "@/data/merge-pdf-cluster";
+import {
+  getJpgToPdfGuide,
+  jpgToPdfGuides,
+  jpgToPdfOgImage,
+} from "@/data/jpg-to-pdf-cluster";
 import { ExtractPagesGuidePage } from "@/components/content/extract-pages-guide-page";
 import { MergePdfGuidePage } from "@/components/content/merge-pdf-guide-page";
+import { JpgToPdfGuidePage } from "@/components/content/jpg-to-pdf-guide-page";
 
 type GuidePageProps = {
   params: Promise<{
@@ -20,22 +26,31 @@ type GuidePageProps = {
 };
 
 export function generateStaticParams() {
-  return [...extractPagesGuides, ...mergePdfGuides].map((guide) => ({
-    slug: guide.slug,
-  }));
+  return [...extractPagesGuides, ...mergePdfGuides, ...jpgToPdfGuides].map(
+    (guide) => ({
+      slug: guide.slug,
+    }),
+  );
 }
 
 export async function generateMetadata({
   params,
 }: GuidePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const guide = getExtractPagesGuide(slug) || getMergePdfGuide(slug);
+  const extractGuide = getExtractPagesGuide(slug);
+  const mergeGuide = getMergePdfGuide(slug);
+  const jpgGuide = getJpgToPdfGuide(slug);
+  const guide = extractGuide || mergeGuide || jpgGuide;
 
   if (!guide) {
     return {};
   }
 
-  const socialImage = getMergePdfGuide(slug) ? mergePdfOgImage : guide.image;
+  const socialImage = mergeGuide
+    ? mergePdfOgImage
+    : jpgGuide
+      ? jpgToPdfOgImage
+      : guide.image;
 
   return {
     title: { absolute: guide.title },
@@ -67,7 +82,8 @@ export default async function GuidePage({ params }: GuidePageProps) {
   const { slug } = await params;
   const extractGuide = getExtractPagesGuide(slug);
   const mergeGuide = getMergePdfGuide(slug);
-  const guide = extractGuide || mergeGuide;
+  const jpgGuide = getJpgToPdfGuide(slug);
+  const guide = extractGuide || mergeGuide || jpgGuide;
 
   if (!guide) {
     notFound();
@@ -78,6 +94,11 @@ export default async function GuidePage({ params }: GuidePageProps) {
         name: "Merge PDF",
         url: `${siteConfig.url}/merge-pdf`,
       }
+    : jpgGuide
+      ? {
+          name: "JPG to PDF",
+          url: `${siteConfig.url}/jpg-to-pdf`,
+        }
     : {
         name: "Extract Pages",
         url: `${siteConfig.url}/extract-pages`,
@@ -166,6 +187,7 @@ export default async function GuidePage({ params }: GuidePageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       {mergeGuide ? <MergePdfGuidePage guide={mergeGuide} /> : null}
+      {jpgGuide ? <JpgToPdfGuidePage guide={jpgGuide} /> : null}
       {extractGuide ? (
         <ExtractPagesGuidePage guide={extractGuide} />
       ) : null}

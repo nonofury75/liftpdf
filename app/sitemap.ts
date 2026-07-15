@@ -3,6 +3,7 @@ import { siteConfig } from "@/config/site";
 import { tools } from "@/data/tools";
 import { extractPagesGuides } from "@/data/extract-pages-cluster";
 import { mergePdfGuides } from "@/data/merge-pdf-cluster";
+import { jpgToPdfGuides } from "@/data/jpg-to-pdf-cluster";
 
 const releaseLastModified = new Date("2026-07-10");
 
@@ -30,7 +31,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     }));
 
-  const guideRoutes = [...extractPagesGuides, ...mergePdfGuides].map((guide) => ({
+  const guideRoutes = [
+    ...extractPagesGuides,
+    ...mergePdfGuides,
+    ...jpgToPdfGuides,
+  ].map((guide) => ({
     path: guide.canonical,
     priority: guide.intent === "guide" ? 0.72 : 0.68,
   }));

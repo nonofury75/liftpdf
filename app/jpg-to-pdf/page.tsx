@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     url: `${siteConfig.url}/jpg-to-pdf`,
     images: [
       {
-        url: "/images/seo/jpg-to-pdf/og-image.webp",
+        url: "/images/seo/jpg-to-pdf/jpg-to-pdf-og.webp",
         width: 1200,
         height: 630,
         alt: "LiftPDF JPG to PDF converter",
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "JPG to PDF Converter - Free Online Tool | LiftPDF",
     description: "Convert JPG images to a PDF online for free with LiftPDF.",
-    images: ["/images/seo/jpg-to-pdf/og-image.webp"],
+    images: ["/images/seo/jpg-to-pdf/jpg-to-pdf-og.webp"],
   },
 };
 

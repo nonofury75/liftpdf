@@ -152,6 +152,46 @@ test.describe("navigation and catalog", () => {
     expect(await sitemap.text()).toContain("/guides/how-to-merge-pdf");
     expect(await sitemap.text()).toContain("/guides/merge-pdf-vs-ilovepdf");
   });
+
+  test("JPG to PDF guide cluster routes render and link back to tools", async ({
+    page,
+  }) => {
+    const guideRoutes = [
+      "/guides/how-to-convert-jpg-to-pdf",
+      "/guides/how-to-convert-multiple-jpg-to-pdf",
+      "/guides/how-to-convert-jpg-to-pdf-without-losing-quality",
+      "/guides/jpg-to-pdf-online",
+      "/guides/jpg-to-pdf-without-adobe",
+      "/guides/jpg-to-pdf-on-windows",
+      "/guides/jpg-to-pdf-on-mac",
+      "/guides/jpg-to-pdf-on-iphone",
+      "/guides/jpg-to-pdf-on-android",
+      "/guides/jpg-to-pdf-free",
+      "/guides/why-is-my-jpg-blurry-after-pdf",
+      "/guides/why-is-my-pdf-too-large-after-converting-jpg",
+      "/guides/why-cant-i-convert-jpg-to-pdf",
+      "/guides/how-to-keep-original-image-quality",
+      "/guides/jpg-vs-png",
+      "/guides/jpg-to-pdf-vs-word",
+      "/guides/jpg-to-pdf-vs-smallpdf",
+      "/guides/jpg-to-pdf-vs-adobe",
+      "/guides/jpg-to-pdf-faq",
+    ];
+
+    for (const route of guideRoutes) {
+      await page.goto(route);
+      await expect(
+        page.getByRole("link", { name: /JPG to PDF|Convert/i }).first(),
+      ).toBeVisible();
+      await expect(page.getByText("Questions about JPG to PDF")).toBeVisible();
+      await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1);
+    }
+
+    const sitemap = await page.request.get("/sitemap.xml");
+    const sitemapText = await sitemap.text();
+    expect(sitemapText).toContain("/guides/how-to-convert-jpg-to-pdf");
+    expect(sitemapText).toContain("/guides/jpg-to-pdf-vs-adobe");
+  });
 });
 
 test.describe("critical PDF workflows", () => {
