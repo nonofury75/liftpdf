@@ -9,6 +9,10 @@ const navItems = [
     href: "/pdf-tools",
   },
   {
+    label: "Learn",
+    href: "/learn",
+  },
+  {
     label: "Image to PDF",
     href: "/jpg-to-pdf",
   },

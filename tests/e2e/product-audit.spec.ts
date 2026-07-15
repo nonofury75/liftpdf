@@ -192,6 +192,68 @@ test.describe("navigation and catalog", () => {
     expect(sitemapText).toContain("/guides/how-to-convert-jpg-to-pdf");
     expect(sitemapText).toContain("/guides/jpg-to-pdf-vs-adobe");
   });
+
+  test("Learning Center routes, foundation guides and resource navigation render", async ({
+    page,
+  }) => {
+    const learningRoutes = [
+      "/learn",
+      "/guides",
+      "/learn/pdf-basics",
+      "/learn/convert-pdf",
+      "/learn/organize-pdf",
+      "/learn/edit-pdf",
+      "/learn/pdf-security",
+      "/learn/pdf-images",
+      "/learn/troubleshooting",
+      "/learn/comparisons",
+      "/pdf-glossary",
+      "/help",
+      "/guides/what-is-a-pdf",
+      "/guides/jpg-vs-jpeg",
+      "/guides/png-vs-pdf",
+      "/guides/what-is-pdf-compression",
+      "/guides/what-is-a-password-protected-pdf",
+      "/guides/what-is-browser-based-pdf-processing",
+      "/guides/scanned-pdf-vs-searchable-pdf",
+    ];
+
+    for (const route of learningRoutes) {
+      const response = await page.goto(route);
+      expect(response?.status()).toBe(200);
+      await expect(page.locator("h1")).toBeVisible();
+      await expect(page.locator('script[type="application/ld+json"]').first()).toBeAttached();
+      await expect(page.locator('link[rel="canonical"]')).toHaveCount(1);
+    }
+
+    await page.goto("/");
+    const isDesktopNavVisible = await page
+      .getByRole("link", { name: "Learn", exact: true })
+      .isVisible()
+      .catch(() => false);
+    if (!isDesktopNavVisible) {
+      await expect(
+        page.getByRole("link", { name: "Learning Center", exact: true }),
+      ).toBeVisible();
+    }
+    await expect(
+      page.getByRole("heading", { name: "Guides when the right workflow is not obvious" }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Learning Center" }).last()).toBeVisible();
+    await expect(page.getByRole("link", { name: "PDF Glossary" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Help Center" })).toBeVisible();
+
+    await page.goto("/guides");
+    await page.getByPlaceholder("Search guides").fill("browser");
+    await expect(page.getByText(/Browser-based PDF processing/i).first()).toBeVisible();
+
+    const sitemap = await page.request.get("/sitemap.xml");
+    const sitemapText = await sitemap.text();
+    expect(sitemapText).toContain("/learn");
+    expect(sitemapText).toContain("/learn/pdf-basics");
+    expect(sitemapText).toContain("/pdf-glossary");
+    expect(sitemapText).toContain("/guides/what-is-a-pdf");
+  });
 });
 
 test.describe("critical PDF workflows", () => {

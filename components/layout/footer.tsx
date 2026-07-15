@@ -22,6 +22,15 @@ const footerLinks = [
     ],
   },
   {
+    title: "Resources",
+    links: [
+      { label: "Learning Center", href: "/learn" },
+      { label: "Guides", href: "/guides" },
+      { label: "PDF Glossary", href: "/pdf-glossary" },
+      { label: "Help Center", href: "/help" },
+    ],
+  },
+  {
     title: "Company",
     links: [
       { label: "Privacy", href: "/privacy" },
@@ -51,7 +60,7 @@ export function Footer() {
           </p>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {footerLinks.map((group) => (
             <nav key={group.title} aria-label={group.title}>
               <h2 className="text-sm font-semibold text-foreground">

@@ -1,6 +1,7 @@
 import { BrowserProcessing } from "@/components/home/browser-processing";
 import { Features } from "@/components/home/features";
 import { Hero } from "@/components/home/hero";
+import { LearnAboutPdfs } from "@/components/home/learn-about-pdfs";
 import { PopularTools } from "@/components/home/popular-tools";
 import { RealToolPreview } from "@/components/home/real-tool-preview";
 import { siteConfig } from "@/config/site";
@@ -47,6 +48,7 @@ export default function HomePage() {
       <PopularTools />
       <BrowserProcessing />
       <RealToolPreview />
+      <LearnAboutPdfs />
       <Features />
     </>
   );

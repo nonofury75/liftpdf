@@ -4,6 +4,8 @@ import { tools } from "@/data/tools";
 import { extractPagesGuides } from "@/data/extract-pages-cluster";
 import { mergePdfGuides } from "@/data/merge-pdf-cluster";
 import { jpgToPdfGuides } from "@/data/jpg-to-pdf-cluster";
+import { foundationGuides } from "@/data/foundation-guides";
+import { learningTopics } from "@/data/learning-center";
 
 const releaseLastModified = new Date("2026-07-10");
 
@@ -22,6 +24,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/why-liftpdf", priority: 0.75 },
     { path: "/terms", priority: 0.55 },
     { path: "/contact", priority: 0.55 },
+    { path: "/learn", priority: 0.82 },
+    { path: "/guides", priority: 0.78 },
+    { path: "/pdf-glossary", priority: 0.72 },
+    { path: "/help", priority: 0.68 },
   ];
 
   const toolRoutes = tools
@@ -35,12 +41,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...extractPagesGuides,
     ...mergePdfGuides,
     ...jpgToPdfGuides,
+    ...foundationGuides,
   ].map((guide) => ({
     path: guide.canonical,
-    priority: guide.intent === "guide" ? 0.72 : 0.68,
+    priority: "intent" in guide && guide.intent === "guide" ? 0.72 : 0.68,
   }));
 
-  return [...staticRoutes, ...toolRoutes, ...guideRoutes].map((route) => ({
+  const learningRoutes = learningTopics.map((topic) => ({
+    path: topic.href,
+    priority: 0.74,
+  }));
+
+  return [...staticRoutes, ...learningRoutes, ...toolRoutes, ...guideRoutes].map((route) => ({
     url: `${siteConfig.url}${route.path}`,
     lastModified: releaseLastModified,
     changeFrequency: "weekly",

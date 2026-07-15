@@ -8,6 +8,7 @@ import {
 import { ToolFaq, type ToolFaqItem } from "@/components/tools/tool-faq";
 import { ToolAnalytics } from "@/components/tools/tool-analytics";
 import { ToolHero } from "@/components/tools/tool-hero";
+import { ToolLearningLinks } from "@/components/tools/tool-learning-links";
 import { ToolSeoBlock } from "@/components/tools/tool-seo-block";
 
 type ToolPageShellProps = {
@@ -146,6 +147,7 @@ export function ToolPageShell({
             <ToolSeoBlock title={seoTitle} text={seoText} />
             <ToolFaq items={faq} />
           </div>
+          {currentHref ? <ToolLearningLinks currentHref={currentHref} /> : null}
           {currentHref ? (
             <RelatedTools
               currentHref={currentHref}
