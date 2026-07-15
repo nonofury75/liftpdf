@@ -7,6 +7,7 @@ import {
 } from "@/data/extract-pages-cluster";
 import {
   getMergePdfGuide,
+  mergePdfOgImage,
   mergePdfGuides,
 } from "@/data/merge-pdf-cluster";
 import { ExtractPagesGuidePage } from "@/components/content/extract-pages-guide-page";
@@ -34,6 +35,8 @@ export async function generateMetadata({
     return {};
   }
 
+  const socialImage = getMergePdfGuide(slug) ? mergePdfOgImage : guide.image;
+
   return {
     title: { absolute: guide.title },
     description: guide.description,
@@ -44,10 +47,10 @@ export async function generateMetadata({
       url: `${siteConfig.url}${guide.canonical}`,
       images: [
         {
-          url: guide.image.src,
-          width: guide.image.width,
-          height: guide.image.height,
-          alt: guide.image.alt,
+          url: socialImage.src,
+          width: socialImage.width,
+          height: socialImage.height,
+          alt: socialImage.alt,
         },
       ],
     },
@@ -55,7 +58,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: guide.title,
       description: guide.description,
-      images: [guide.image.src],
+      images: [socialImage.src],
     },
   };
 }

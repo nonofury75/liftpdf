@@ -82,6 +82,13 @@ const afterImage = {
   height: 860,
 };
 
+export const mergePdfOgImage = {
+  src: "/images/seo/merge-pdf/merge-pdf-og.webp",
+  alt: "LiftPDF Merge PDF browser-based workflow preview",
+  width: 1200,
+  height: 630,
+};
+
 const privacySection = {
   heading: "Privacy and browser processing",
   body: [
