@@ -792,6 +792,55 @@ Object.assign(premiumToolContent, {
         ],
       },
     ],
+    commonProblems: [
+      {
+        title: "Why merging can fail",
+        paragraphs: [
+          "A merge can fail if one file is encrypted, damaged, invalid or too large for the device to process comfortably.",
+          "Open each PDF first and unlock protected files with the correct password before merging.",
+        ],
+      },
+      {
+        title: "Why the merged PDF is large",
+        paragraphs: [
+          "The final PDF contains the pages from every source file. Image-heavy scans and photos can make the output large.",
+          "Remove unnecessary pages before merging and use Compress PDF after merging if the result is too big.",
+        ],
+      },
+      {
+        title: "How to control the final order",
+        paragraphs: [
+          "The file list controls the final document sequence. Move PDFs up or down before exporting.",
+          "If pages inside one PDF are out of order, merge first and then use Reorder Pages on the combined document.",
+        ],
+      },
+      {
+        title: "How to merge images with PDFs",
+        paragraphs: [
+          "Merge PDF accepts PDF files. Convert JPG, PNG or WEBP images with Images to PDF first, then merge that PDF with other documents.",
+        ],
+      },
+    ],
+    workflowScreenshots: {
+      before: {
+        src: "/images/seo/merge-pdf/merge-pdf-before.webp",
+        alt: "Merge PDF page showing selected files before merging",
+        width: 1280,
+        height: 860,
+        label: "Before merging",
+        caption:
+          "The file list shows each PDF, page count and order before the final PDF is created.",
+      },
+      after: {
+        src: "/images/seo/merge-pdf/merge-pdf-after.webp",
+        alt: "Merge PDF success screen after creating a combined PDF",
+        width: 1280,
+        height: 860,
+        label: "After export",
+        caption:
+          "The merged PDF is generated in the browser and can be downloaded immediately.",
+      },
+    },
   }),
   splitPdf: makePdfWorkflowContent({
     slug: "split-pdf",

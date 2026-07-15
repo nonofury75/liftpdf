@@ -16,9 +16,9 @@ export const metadata: Metadata = {
     title,
     description,
     url: `${siteConfig.url}/merge-pdf`,
-    images: [{ url: "/images/seo/merge-pdf/og-image.webp", width: 1200, height: 630, alt: "LiftPDF Merge PDF" }],
+    images: [{ url: "/images/seo/merge-pdf/merge-pdf-og.webp", width: 1200, height: 630, alt: "LiftPDF Merge PDF" }],
   },
-  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/merge-pdf/og-image.webp"] },
+  twitter: { card: "summary_large_image", title, description, images: ["/images/seo/merge-pdf/merge-pdf-og.webp"] },
 };
 
 export default function MergePdfPage() {

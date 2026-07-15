@@ -115,6 +115,43 @@ test.describe("navigation and catalog", () => {
       ).toBeVisible();
     }
   });
+
+  test("Merge PDF guide cluster routes render and link back to tools", async ({
+    page,
+  }) => {
+    const guideRoutes = [
+      "/guides/how-to-merge-pdf",
+      "/guides/merge-pdf-online",
+      "/guides/merge-pdf-without-adobe",
+      "/guides/merge-two-pdf-files",
+      "/guides/merge-multiple-pdf-files",
+      "/guides/merge-pdf-on-windows",
+      "/guides/merge-pdf-on-mac",
+      "/guides/merge-pdf-on-iphone",
+      "/guides/merge-pdf-on-android",
+      "/guides/merge-pdf-free",
+      "/guides/why-cant-i-merge-pdf-files",
+      "/guides/why-is-my-merged-pdf-too-large",
+      "/guides/why-does-merge-pdf-fail",
+      "/guides/why-cant-i-merge-protected-pdfs",
+      "/guides/merge-pdf-vs-combine-pdf",
+      "/guides/merge-pdf-vs-adobe",
+      "/guides/merge-pdf-vs-smallpdf",
+      "/guides/merge-pdf-vs-ilovepdf",
+      "/guides/merge-pdf-faq",
+    ];
+
+    for (const route of guideRoutes) {
+      await page.goto(route);
+      await expect(page.getByRole("link", { name: /Merge/i }).first()).toBeVisible();
+      await expect(page.getByText("Questions about merging PDFs")).toBeVisible();
+      await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1);
+    }
+
+    const sitemap = await page.request.get("/sitemap.xml");
+    expect(await sitemap.text()).toContain("/guides/how-to-merge-pdf");
+    expect(await sitemap.text()).toContain("/guides/merge-pdf-vs-ilovepdf");
+  });
 });
 
 test.describe("critical PDF workflows", () => {

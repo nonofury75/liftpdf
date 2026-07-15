@@ -5,7 +5,12 @@ import {
   extractPagesGuides,
   getExtractPagesGuide,
 } from "@/data/extract-pages-cluster";
+import {
+  getMergePdfGuide,
+  mergePdfGuides,
+} from "@/data/merge-pdf-cluster";
 import { ExtractPagesGuidePage } from "@/components/content/extract-pages-guide-page";
+import { MergePdfGuidePage } from "@/components/content/merge-pdf-guide-page";
 
 type GuidePageProps = {
   params: Promise<{
@@ -14,14 +19,16 @@ type GuidePageProps = {
 };
 
 export function generateStaticParams() {
-  return extractPagesGuides.map((guide) => ({ slug: guide.slug }));
+  return [...extractPagesGuides, ...mergePdfGuides].map((guide) => ({
+    slug: guide.slug,
+  }));
 }
 
 export async function generateMetadata({
   params,
 }: GuidePageProps): Promise<Metadata> {
   const { slug } = await params;
-  const guide = getExtractPagesGuide(slug);
+  const guide = getExtractPagesGuide(slug) || getMergePdfGuide(slug);
 
   if (!guide) {
     return {};
@@ -55,11 +62,23 @@ export async function generateMetadata({
 
 export default async function GuidePage({ params }: GuidePageProps) {
   const { slug } = await params;
-  const guide = getExtractPagesGuide(slug);
+  const extractGuide = getExtractPagesGuide(slug);
+  const mergeGuide = getMergePdfGuide(slug);
+  const guide = extractGuide || mergeGuide;
 
   if (!guide) {
     notFound();
   }
+
+  const toolCrumb = mergeGuide
+    ? {
+        name: "Merge PDF",
+        url: `${siteConfig.url}/merge-pdf`,
+      }
+    : {
+        name: "Extract Pages",
+        url: `${siteConfig.url}/extract-pages`,
+      };
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -98,8 +117,8 @@ export default async function GuidePage({ params }: GuidePageProps) {
           {
             "@type": "ListItem",
             position: 3,
-            name: "Extract Pages",
-            item: `${siteConfig.url}/extract-pages`,
+            name: toolCrumb.name,
+            item: toolCrumb.url,
           },
           {
             "@type": "ListItem",
@@ -143,7 +162,10 @@ export default async function GuidePage({ params }: GuidePageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <ExtractPagesGuidePage guide={guide} />
+      {mergeGuide ? <MergePdfGuidePage guide={mergeGuide} /> : null}
+      {extractGuide ? (
+        <ExtractPagesGuidePage guide={extractGuide} />
+      ) : null}
     </>
   );
 }

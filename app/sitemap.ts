@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { siteConfig } from "@/config/site";
 import { tools } from "@/data/tools";
 import { extractPagesGuides } from "@/data/extract-pages-cluster";
+import { mergePdfGuides } from "@/data/merge-pdf-cluster";
 
 const releaseLastModified = new Date("2026-07-10");
 
@@ -29,7 +30,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     }));
 
-  const guideRoutes = extractPagesGuides.map((guide) => ({
+  const guideRoutes = [...extractPagesGuides, ...mergePdfGuides].map((guide) => ({
     path: guide.canonical,
     priority: guide.intent === "guide" ? 0.72 : 0.68,
   }));
