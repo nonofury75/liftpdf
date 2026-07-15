@@ -209,6 +209,7 @@ test.describe("navigation and catalog", () => {
       "/learn/comparisons",
       "/pdf-glossary",
       "/help",
+      "/cookies",
       "/guides/what-is-a-pdf",
       "/guides/jpg-vs-jpeg",
       "/guides/png-vs-pdf",
@@ -252,7 +253,27 @@ test.describe("navigation and catalog", () => {
     expect(sitemapText).toContain("/learn");
     expect(sitemapText).toContain("/learn/pdf-basics");
     expect(sitemapText).toContain("/pdf-glossary");
+    expect(sitemapText).toContain("/cookies");
     expect(sitemapText).toContain("/guides/what-is-a-pdf");
+  });
+
+  test("GA4 does not load locally without a measurement ID", async ({ page }) => {
+    const analyticsRequests: string[] = [];
+
+    page.on("request", (request) => {
+      const url = request.url();
+      if (
+        url.includes("googletagmanager.com/gtag/js") ||
+        url.includes("google-analytics.com/g/collect")
+      ) {
+        analyticsRequests.push(url);
+      }
+    });
+
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Every PDF Tool You Need" })).toBeVisible();
+    await expect(page.getByLabel("Analytics consent")).toHaveCount(0);
+    expect(analyticsRequests).toEqual([]);
   });
 });
 

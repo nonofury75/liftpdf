@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { GoogleAnalytics } from "@next/third-parties/google";
+import { AnalyticsConsent } from "@/components/analytics/analytics-consent";
 import { SiteShell } from "@/components/layout/site-shell";
 import { defaultMetadata } from "@/seo/metadata";
 import "./globals.css";
@@ -12,8 +12,6 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
-const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -23,8 +21,8 @@ export default function RootLayout({
     <html lang="en" translate="no" className="notranslate">
       <body translate="no" className="notranslate">
         <SiteShell>{children}</SiteShell>
+        <AnalyticsConsent />
       </body>
-      {gaMeasurementId ? <GoogleAnalytics gaId={gaMeasurementId} /> : null}
     </html>
   );
 }

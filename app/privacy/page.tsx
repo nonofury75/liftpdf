@@ -130,6 +130,25 @@ export default function PrivacyPage() {
           </p>
         </section>
 
+        <section className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
+          <h2 className="text-2xl font-bold tracking-normal text-foreground">
+            Optional analytics
+          </h2>
+          <p className="mt-4 leading-7 text-muted-foreground">
+            LiftPDF uses Google Analytics only after you accept analytics. Tool
+            events are limited to product usage signals such as tool name,
+            route, output format and coarse file-size buckets. LiftPDF does not
+            intentionally send file names, document contents, extracted text,
+            passwords or local file paths to analytics.
+          </p>
+          <Link
+            href="/cookies"
+            className="mt-4 inline-flex font-semibold text-primary hover:underline"
+          >
+            Read the Cookie Policy
+          </Link>
+        </section>
+
         <FaqSection items={faq} />
 
         <section className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
@@ -139,6 +158,7 @@ export default function PrivacyPage() {
           <div className="mt-4 grid gap-3 text-sm font-semibold text-primary sm:grid-cols-3">
             <Link href="/security">Security overview</Link>
             <Link href="/why-liftpdf">Why LiftPDF</Link>
+            <Link href="/cookies">Cookie Policy</Link>
             <Link href="/about">About LiftPDF</Link>
           </div>
         </section>

@@ -1,7 +1,5 @@
 "use client";
 
-import { sendGAEvent } from "@next/third-parties/google";
-
 export type ToolEventName =
   | "tool_open"
   | "upload_started"
@@ -24,17 +22,72 @@ export type ToolAnalyticsPayload = {
   fileSizeBucket?: string;
 };
 
-const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+export type AnalyticsConsent = "accepted" | "rejected";
+
+declare global {
+  interface Window {
+    dataLayer?: unknown[];
+    gtag?: (...args: unknown[]) => void;
+  }
+}
+
+export const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+export const analyticsConsentStorageKey = "liftpdf_analytics_consent";
+export const analyticsConsentChangedEvent = "liftpdf:analytics-consent-changed";
 
 export function trackToolEvent(
   eventName: ToolEventName,
   payload: ToolAnalyticsPayload,
 ) {
-  if (!gaMeasurementId || typeof window === "undefined") {
+  if (!canTrackAnalytics()) {
     return;
   }
 
-  sendGAEvent("event", eventName, sanitizePayload(payload));
+  window.gtag?.("event", eventName, {
+    send_to: gaMeasurementId,
+    ...sanitizePayload(payload),
+  });
+}
+
+export function trackPageView(url: string) {
+  if (!canTrackAnalytics()) {
+    return;
+  }
+
+  window.gtag?.("event", "page_view", {
+    send_to: gaMeasurementId,
+    page_location: window.location.origin + url,
+    page_path: url,
+  });
+}
+
+export function getStoredAnalyticsConsent(): AnalyticsConsent | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const value = window.localStorage.getItem(analyticsConsentStorageKey);
+  return value === "accepted" || value === "rejected" ? value : null;
+}
+
+export function setStoredAnalyticsConsent(consent: AnalyticsConsent) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(analyticsConsentStorageKey, consent);
+  window.dispatchEvent(
+    new CustomEvent(analyticsConsentChangedEvent, { detail: consent }),
+  );
+}
+
+export function canTrackAnalytics() {
+  return (
+    Boolean(gaMeasurementId) &&
+    typeof window !== "undefined" &&
+    getStoredAnalyticsConsent() === "accepted" &&
+    typeof window.gtag === "function"
+  );
 }
 
 export function getFileSizeBucket(bytes: number) {
@@ -70,4 +123,3 @@ function sanitizePayload(payload: ToolAnalyticsPayload) {
     file_size_bucket: payload.fileSizeBucket,
   };
 }
-
