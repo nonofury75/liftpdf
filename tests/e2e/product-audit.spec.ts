@@ -253,6 +253,16 @@ test.describe("navigation and catalog", () => {
       "/guides/add-confidential-watermark-to-pdf",
       "/guides/extract-text-from-pdf-without-ocr",
       "/guides/why-pdf-text-extraction-fails",
+      "/guides/split-pdf-into-separate-pages",
+      "/guides/split-pdf-by-page-range",
+      "/guides/save-selected-pages-from-pdf",
+      "/guides/delete-pages-from-pdf-before-sending",
+      "/guides/organize-pdf-before-printing",
+      "/guides/prepare-pdf-for-email",
+      "/guides/rotate-pdf-before-upload",
+      "/guides/watermark-pdf-before-sharing",
+      "/guides/add-page-numbers-before-sharing-pdf",
+      "/guides/extract-pdf-pages-for-email",
     ];
 
     for (const route of learningRoutes) {
@@ -298,6 +308,9 @@ test.describe("navigation and catalog", () => {
     expect(sitemapText).toContain("/guides/make-pdf-smaller-for-upload");
     expect(sitemapText).toContain("/guides/convert-receipts-to-pdf");
     expect(sitemapText).toContain("/guides/remove-blank-pages-from-pdf");
+    expect(sitemapText).toContain("/guides/split-pdf-into-separate-pages");
+    expect(sitemapText).toContain("/guides/prepare-pdf-for-email");
+    expect(sitemapText).toContain("/guides/watermark-pdf-before-sharing");
     expect(sitemapText).not.toContain("/guides/merge-pdf-on-windows");
     expect(sitemapText).not.toContain("/guides/jpg-to-pdf-on-iphone");
   });
@@ -345,6 +358,26 @@ test.describe("navigation and catalog", () => {
         route: "/guides/add-confidential-watermark-to-pdf",
         heading: "How to Add a Confidential Watermark to a PDF",
         image: /PDF report polish workflow/i,
+      },
+      {
+        route: "/guides/split-pdf-into-separate-pages",
+        heading: "How to Split a PDF Into Separate Pages",
+        image: /Split PDF workflow/i,
+      },
+      {
+        route: "/guides/save-selected-pages-from-pdf",
+        heading: "How to Save Selected Pages From a PDF",
+        image: /Selected PDF pages workflow/i,
+      },
+      {
+        route: "/guides/organize-pdf-before-printing",
+        heading: "How to Organize a PDF Before Printing",
+        image: /Final PDF checklist workflow/i,
+      },
+      {
+        route: "/guides/watermark-pdf-before-sharing",
+        heading: "Watermark PDF Before Sharing",
+        image: /PDF editing controls workflow/i,
       },
     ];
 

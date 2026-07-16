@@ -280,6 +280,66 @@ export const articleMetaBySlug: Record<string, ArticleMeta> = {
     publishedAt: "2026-07-17",
     updatedAt: "2026-07-17",
   },
+  "split-pdf-into-separate-pages": {
+    category: "Organize PDF",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "split-pdf-by-page-range": {
+    category: "Organize PDF",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "save-selected-pages-from-pdf": {
+    category: "Organize PDF",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "delete-pages-from-pdf-before-sending": {
+    category: "Organize PDF",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "organize-pdf-before-printing": {
+    category: "Organize PDF",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "prepare-pdf-for-email": {
+    category: "PDF Submission",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "rotate-pdf-before-upload": {
+    category: "Organize PDF",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "watermark-pdf-before-sharing": {
+    category: "PDF Security",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "add-page-numbers-before-sharing-pdf": {
+    category: "PDF Reports",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "extract-pdf-pages-for-email": {
+    category: "Organize PDF",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
 };
 
 const mergeFigures: ArticleFigure[] = [

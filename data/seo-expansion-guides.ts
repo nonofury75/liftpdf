@@ -1,5 +1,6 @@
 import type { FoundationGuide } from "@/data/foundation-guides";
 import { seoExpansionGuidesBatch2 } from "@/data/seo-expansion-guides-batch-2";
+import { seoExpansionGuidesBatch3 } from "@/data/seo-expansion-guides-batch-3";
 
 const compressionImage = {
   src: "/images/editorial/compress-pdf-without-quality-loss.svg",
@@ -835,4 +836,5 @@ export const seoExpansionGuides: FoundationGuide[] = [
     readingMinutes: 6,
   },
   ...seoExpansionGuidesBatch2,
+  ...seoExpansionGuidesBatch3,
 ];
