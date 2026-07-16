@@ -217,6 +217,16 @@ test.describe("navigation and catalog", () => {
       "/guides/what-is-a-password-protected-pdf",
       "/guides/what-is-browser-based-pdf-processing",
       "/guides/scanned-pdf-vs-searchable-pdf",
+      "/guides/how-to-reduce-pdf-file-size-for-email",
+      "/guides/how-to-combine-scanned-documents-into-one-pdf",
+      "/guides/how-to-prepare-a-pdf-for-online-submission",
+      "/guides/how-to-organize-pdf-pages-before-sending",
+      "/guides/how-to-turn-phone-photos-into-a-pdf",
+      "/guides/how-to-keep-pdf-images-sharp",
+      "/guides/why-pdf-opens-blank",
+      "/guides/why-a-pdf-is-password-protected",
+      "/guides/pdf-vs-jpg",
+      "/guides/pdf-vs-png",
     ];
 
     for (const route of learningRoutes) {
@@ -255,6 +265,50 @@ test.describe("navigation and catalog", () => {
     expect(sitemapText).toContain("/pdf-glossary");
     expect(sitemapText).toContain("/cookies");
     expect(sitemapText).toContain("/guides/what-is-a-pdf");
+    expect(sitemapText).toContain("/guides/pdf-vs-jpg");
+    expect(sitemapText).not.toContain("/guides/merge-pdf-on-windows");
+    expect(sitemapText).not.toContain("/guides/jpg-to-pdf-on-iphone");
+  });
+
+  test("editorial depth pages expose premium article structure and redirects", async ({
+    page,
+  }) => {
+    const pillarRoutes = [
+      "/guides/what-is-a-pdf",
+      "/guides/how-to-merge-pdf",
+      "/guides/how-to-convert-jpg-to-pdf",
+      "/guides/how-to-extract-pages-from-pdf",
+      "/guides/what-is-pdf-compression",
+      "/guides/scanned-pdf-vs-searchable-pdf",
+      "/guides/what-is-browser-based-pdf-processing",
+      "/guides/what-is-a-password-protected-pdf",
+      "/guides/jpg-vs-png",
+      "/guides/extract-pages-vs-split-pdf",
+      "/guides/why-is-my-pdf-too-large",
+      "/guides/why-is-my-jpg-blurry-after-pdf",
+    ];
+
+    for (const route of pillarRoutes) {
+      const response = await page.goto(route);
+      expect(response?.status()).toBe(200);
+      await expect(
+        page.getByRole("heading", { name: "LiftPDF Editorial Team" }),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Updated Jul 16, 2026", { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole("heading", { name: "What you need to know first" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Related resources" })).toBeVisible();
+      await expect(page.locator("img").first()).toHaveAttribute("alt", /.+/);
+    }
+
+    const mergeRedirect = await page.goto("/guides/merge-pdf-on-windows");
+    expect(mergeRedirect?.status()).toBeLessThan(400);
+    await expect(page).toHaveURL(/\/guides\/how-to-merge-pdf$/);
+
+    const jpgRedirect = await page.goto("/guides/jpg-to-pdf-on-android");
+    expect(jpgRedirect?.status()).toBeLessThan(400);
+    await expect(page).toHaveURL(/\/guides\/how-to-convert-jpg-to-pdf$/);
   });
 
   test("GA4 does not load locally without a measurement ID", async ({ page }) => {

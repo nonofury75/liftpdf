@@ -6,6 +6,7 @@ import { mergePdfGuides } from "@/data/merge-pdf-cluster";
 import { jpgToPdfGuides } from "@/data/jpg-to-pdf-cluster";
 import { foundationGuides } from "@/data/foundation-guides";
 import { learningTopics } from "@/data/learning-center";
+import { redirectedGuideSlugs } from "@/data/editorial-depth";
 
 const releaseLastModified = new Date("2026-07-10");
 
@@ -43,10 +44,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...mergePdfGuides,
     ...jpgToPdfGuides,
     ...foundationGuides,
-  ].map((guide) => ({
-    path: guide.canonical,
-    priority: "intent" in guide && guide.intent === "guide" ? 0.72 : 0.68,
-  }));
+  ]
+    .filter((guide) => !redirectedGuideSlugs.has(guide.slug))
+    .map((guide) => ({
+      path: guide.canonical,
+      priority: "intent" in guide && guide.intent === "guide" ? 0.72 : 0.68,
+    }));
 
   const learningRoutes = learningTopics.map((topic) => ({
     path: topic.href,

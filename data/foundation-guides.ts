@@ -3,13 +3,21 @@ import type {
   GuideLink,
   GuideSection,
 } from "@/data/extract-pages-cluster";
+import { additionalFoundationGuides } from "@/data/additional-foundation-guides";
 
 export type FoundationGuide = {
   slug: string;
   title: string;
   description: string;
   h1: string;
-  topic: "PDF Basics" | "Convert PDF" | "PDF Security" | "PDF and Images";
+  topic:
+    | "PDF Basics"
+    | "Convert PDF"
+    | "Organize PDF"
+    | "PDF Security"
+    | "PDF and Images"
+    | "Troubleshooting"
+    | "Comparisons";
   primaryKeyword: string;
   summary: string;
   ctaLabel: string;
@@ -482,6 +490,7 @@ export const foundationGuides = [
     publishedAt: "2026-07-15",
     readingMinutes: 5,
   }),
+  ...additionalFoundationGuides,
 ] satisfies FoundationGuide[];
 
 export function getFoundationGuide(slug: string) {

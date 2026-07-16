@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Why JPG looks blurry after PDF conversion</title>
+  <desc id="desc">A diagram showing low resolution, repeated resaving, stretching and heavy compression as causes of blurry JPG to PDF output.</desc>
+  <rect width="1200" height="720" fill="#f8fafc"/>
+  <text x="90" y="105" fill="#0f172a" font-family="Arial, sans-serif" font-size="42" font-weight="700">Why JPG output gets blurry</text>
+  <text x="90" y="145" fill="#64748b" font-family="Arial, sans-serif" font-size="22">PDF export preserves quality; it cannot restore detail that is already gone.</text>
+  <g font-family="Arial, sans-serif">
+    <rect x="100" y="240" width="220" height="260" rx="26" fill="#fff" stroke="#e2e8f0" stroke-width="3"/>
+    <rect x="145" y="295" width="130" height="90" rx="16" fill="#fecaca"/>
+    <text x="130" y="445" fill="#b91c1c" font-size="23" font-weight="700">Low resolution</text>
+    <rect x="365" y="240" width="220" height="260" rx="26" fill="#fff" stroke="#e2e8f0" stroke-width="3"/>
+    <rect x="425" y="285" width="100" height="115" rx="16" fill="#fed7aa"/>
+    <rect x="445" y="305" width="100" height="115" rx="16" fill="#fdba74" opacity=".75"/>
+    <text x="405" y="445" fill="#9a3412" font-size="23" font-weight="700">Resaved JPG</text>
+    <rect x="630" y="240" width="220" height="260" rx="26" fill="#fff" stroke="#e2e8f0" stroke-width="3"/>
+    <rect x="670" y="315" width="140" height="60" rx="16" fill="#bfdbfe"/>
+    <path d="M665 345h-30M815 345h30" stroke="#2563eb" stroke-width="8" stroke-linecap="round"/>
+    <text x="690" y="445" fill="#1d4ed8" font-size="23" font-weight="700">Stretched</text>
+    <rect x="895" y="240" width="220" height="260" rx="26" fill="#fff" stroke="#e2e8f0" stroke-width="3"/>
+    <circle cx="1005" cy="340" r="55" fill="#ddd6fe"/>
+    <path d="M960 340h90" stroke="#7c3aed" stroke-width="10" stroke-linecap="round"/>
+    <text x="930" y="445" fill="#6d28d9" font-size="23" font-weight="700">Compressed</text>
+  </g>
+</svg>

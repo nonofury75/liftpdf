@@ -1,5 +1,6 @@
 import { extractPagesGuides } from "@/data/extract-pages-cluster";
 import type { GuideFaqItem, GuideLink } from "@/data/extract-pages-cluster";
+import { redirectedGuideSlugs } from "@/data/editorial-depth";
 import { foundationGuides } from "@/data/foundation-guides";
 import { jpgToPdfGuides } from "@/data/jpg-to-pdf-cluster";
 import { mergePdfGuides } from "@/data/merge-pdf-cluster";
@@ -175,8 +176,10 @@ export const learningTopics = [
     guideSlugs: [
       "what-is-a-pdf",
       "what-is-pdf-compression",
+      "why-is-my-pdf-too-large",
       "scanned-pdf-vs-searchable-pdf",
       "what-is-browser-based-pdf-processing",
+      "how-to-prepare-a-pdf-for-online-submission",
     ],
     toolLinks: [
       { label: "All PDF Tools", href: "/pdf-tools", text: "Browse the full LiftPDF tool suite." },
@@ -221,6 +224,7 @@ export const learningTopics = [
       "how-to-convert-jpg-to-pdf",
       "jpg-to-pdf-online",
       "how-to-convert-jpg-to-pdf-without-losing-quality",
+      "how-to-turn-phone-photos-into-a-pdf",
       "what-is-browser-based-pdf-processing",
     ],
     toolLinks: [
@@ -266,6 +270,8 @@ export const learningTopics = [
     guideSlugs: [
       "how-to-merge-pdf",
       "merge-multiple-pdf-files",
+      "how-to-combine-scanned-documents-into-one-pdf",
+      "how-to-organize-pdf-pages-before-sending",
       "how-to-extract-pages-from-pdf",
       "extract-multiple-pages-from-pdf",
       "merge-pdf-vs-combine-pdf",
@@ -309,7 +315,9 @@ export const learningTopics = [
     startGuideSlug: "what-is-pdf-compression",
     guideSlugs: [
       "what-is-pdf-compression",
+      "how-to-reduce-pdf-file-size-for-email",
       "why-is-my-merged-pdf-too-large",
+      "why-is-my-pdf-too-large",
       "how-to-keep-original-image-quality",
     ],
     toolLinks: [
@@ -356,6 +364,7 @@ export const learningTopics = [
     startGuideSlug: "what-is-a-password-protected-pdf",
     guideSlugs: [
       "what-is-a-password-protected-pdf",
+      "why-a-pdf-is-password-protected",
       "what-is-browser-based-pdf-processing",
       "extract-pages-from-password-protected-pdf",
     ],
@@ -404,7 +413,10 @@ export const learningTopics = [
       "jpg-vs-png",
       "jpg-vs-jpeg",
       "png-vs-pdf",
+      "pdf-vs-jpg",
+      "pdf-vs-png",
       "how-to-convert-multiple-jpg-to-pdf",
+      "how-to-keep-pdf-images-sharp",
       "why-is-my-jpg-blurry-after-pdf",
     ],
     toolLinks: imageToolLinks,
@@ -448,6 +460,8 @@ export const learningTopics = [
       "why-does-merge-pdf-fail",
       "why-cant-i-merge-protected-pdfs",
       "why-cant-i-convert-jpg-to-pdf",
+      "why-pdf-opens-blank",
+      "why-is-my-pdf-too-large",
       "scanned-pdf-vs-searchable-pdf",
     ],
     toolLinks: [
@@ -494,6 +508,8 @@ export const learningTopics = [
       "jpg-vs-png",
       "jpg-vs-jpeg",
       "png-vs-pdf",
+      "pdf-vs-jpg",
+      "pdf-vs-png",
       "merge-pdf-vs-combine-pdf",
       "jpg-to-pdf-vs-word",
     ],
@@ -605,9 +621,15 @@ export const learningGuides = [
         ? "pdf-basics"
         : guide.topic === "Convert PDF"
           ? "convert-pdf"
+          : guide.topic === "Organize PDF"
+            ? "organize-pdf"
           : guide.topic === "PDF Security"
             ? "pdf-security"
-            : "pdf-images"
+            : guide.topic === "Troubleshooting"
+              ? "troubleshooting"
+              : guide.topic === "Comparisons"
+                ? "comparisons"
+                : "pdf-images"
     ) satisfies LearningTopicKey;
 
     return {
@@ -633,7 +655,9 @@ export const learningGuides = [
   ...jpgToPdfGuides.map((guide) =>
     toGuide(guide, { label: "JPG to PDF", href: "/jpg-to-pdf" }),
   ),
-].sort((a, b) => a.title.localeCompare(b.title));
+]
+  .filter((guide) => !redirectedGuideSlugs.has(guide.slug))
+  .sort((a, b) => a.title.localeCompare(b.title));
 
 export const featuredLearningGuides = [
   "how-to-extract-pages-from-pdf",
@@ -647,7 +671,9 @@ export const featuredLearningGuides = [
 export const popularHowToGuides = [
   "how-to-merge-pdf",
   "merge-multiple-pdf-files",
+  "how-to-prepare-a-pdf-for-online-submission",
   "how-to-convert-multiple-jpg-to-pdf",
+  "how-to-turn-phone-photos-into-a-pdf",
   "extract-multiple-pages-from-pdf",
   "what-is-a-password-protected-pdf",
 ]
@@ -657,7 +683,9 @@ export const popularHowToGuides = [
 export const commonProblemGuides = [
   "why-cant-i-merge-pdf-files",
   "why-cant-i-merge-protected-pdfs",
+  "why-is-my-pdf-too-large",
   "why-is-my-jpg-blurry-after-pdf",
+  "why-pdf-opens-blank",
   "why-is-my-pdf-too-large-after-converting-jpg",
   "scanned-pdf-vs-searchable-pdf",
 ]

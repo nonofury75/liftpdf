@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">PDF document structure diagram</title>
+  <desc id="desc">A diagram showing a PDF as a portable container for pages, text, images, fonts, metadata and links.</desc>
+  <rect width="1200" height="720" fill="#f8fafc"/>
+  <rect x="70" y="70" width="1060" height="580" rx="32" fill="#fff" stroke="#e2e8f0" stroke-width="3"/>
+  <text x="110" y="130" fill="#0f172a" font-family="Arial, sans-serif" font-size="42" font-weight="700">PDF file</text>
+  <text x="110" y="170" fill="#64748b" font-family="Arial, sans-serif" font-size="22">A portable document container, not just a screenshot</text>
+  <g transform="translate(120 230)">
+    <rect width="250" height="320" rx="18" fill="#fff7ed" stroke="#fb923c" stroke-width="3"/>
+    <rect x="35" y="48" width="180" height="20" rx="10" fill="#fb923c"/>
+    <rect x="35" y="92" width="135" height="14" rx="7" fill="#fdba74"/>
+    <rect x="35" y="126" width="176" height="14" rx="7" fill="#fdba74"/>
+    <rect x="35" y="176" width="180" height="86" rx="14" fill="#fed7aa"/>
+    <text x="64" y="300" fill="#9a3412" font-family="Arial, sans-serif" font-size="24" font-weight="700">Pages</text>
+  </g>
+  <g transform="translate(455 230)" font-family="Arial, sans-serif">
+    <rect width="270" height="105" rx="18" fill="#eff6ff" stroke="#60a5fa" stroke-width="3"/>
+    <text x="30" y="64" fill="#1d4ed8" font-size="26" font-weight="700">Selectable text</text>
+    <rect y="130" width="270" height="105" rx="18" fill="#f0fdf4" stroke="#4ade80" stroke-width="3"/>
+    <text x="30" y="194" fill="#15803d" font-size="26" font-weight="700">Images</text>
+    <rect y="260" width="270" height="105" rx="18" fill="#fdf2f8" stroke="#f472b6" stroke-width="3"/>
+    <text x="30" y="324" fill="#be185d" font-size="26" font-weight="700">Fonts</text>
+  </g>
+  <g transform="translate(805 230)" font-family="Arial, sans-serif">
+    <rect width="270" height="105" rx="18" fill="#f5f3ff" stroke="#a78bfa" stroke-width="3"/>
+    <text x="30" y="64" fill="#6d28d9" font-size="26" font-weight="700">Metadata</text>
+    <rect y="130" width="270" height="105" rx="18" fill="#ecfeff" stroke="#22d3ee" stroke-width="3"/>
+    <text x="30" y="194" fill="#0e7490" font-size="26" font-weight="700">Links & forms</text>
+    <rect y="260" width="270" height="105" rx="18" fill="#fef2f2" stroke="#f87171" stroke-width="3"/>
+    <text x="30" y="324" fill="#b91c1c" font-size="26" font-weight="700">Permissions</text>
+  </g>
+</svg>

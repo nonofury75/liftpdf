@@ -7,6 +7,7 @@ import {
   FileQuestion,
   Library,
   ShieldCheck,
+  Workflow,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LearningResourceCard } from "@/components/learn/learning-resource-card";
@@ -116,6 +117,49 @@ export default function LearnPage() {
                 priority
                 className="h-auto w-full rounded-2xl"
                 sizes="(min-width: 1024px) 620px, 100vw"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="py-14" aria-labelledby="learning-paths">
+          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+            <p className="text-sm font-semibold uppercase tracking-normal text-primary">
+              Guided paths
+            </p>
+            <h2 id="learning-paths" className="mt-2 text-3xl font-bold">
+              Follow a path instead of guessing the next article
+            </h2>
+            <div className="mt-8 grid gap-5 lg:grid-cols-3">
+              <LearningPath
+                title="New to PDF"
+                description="Start with the format, then learn how scans, images and tools fit together."
+                links={[
+                  { label: "What Is a PDF?", href: "/guides/what-is-a-pdf" },
+                  { label: "Scanned vs Searchable PDF", href: "/guides/scanned-pdf-vs-searchable-pdf" },
+                  { label: "JPG vs PNG", href: "/guides/jpg-vs-png" },
+                  { label: "PDF Glossary", href: "/pdf-glossary" },
+                ]}
+              />
+              <LearningPath
+                title="Working with documents"
+                description="Prepare files for sending, submission or review without changing more than needed."
+                links={[
+                  { label: "How to Merge PDF Files", href: "/guides/how-to-merge-pdf" },
+                  { label: "Extract Pages From a PDF", href: "/guides/how-to-extract-pages-from-pdf" },
+                  { label: "Reduce PDF Size for Email", href: "/guides/how-to-reduce-pdf-file-size-for-email" },
+                  { label: "Organize Pages Before Sending", href: "/guides/how-to-organize-pdf-pages-before-sending" },
+                ]}
+              />
+              <LearningPath
+                title="Sensitive files"
+                description="Understand browser processing, passwords and what LiftPDF can honestly do."
+                links={[
+                  { label: "Browser-Based Processing", href: "/guides/what-is-browser-based-pdf-processing" },
+                  { label: "Password-Protected PDFs", href: "/guides/what-is-a-password-protected-pdf" },
+                  { label: "Why a PDF Is Password Protected", href: "/guides/why-a-pdf-is-password-protected" },
+                  { label: "PDF Security Hub", href: "/learn/pdf-security" },
+                ]}
               />
             </div>
           </div>
@@ -255,6 +299,43 @@ export default function LearnPage() {
         </section>
       </main>
     </>
+  );
+}
+
+function LearningPath({
+  title,
+  description,
+  links,
+}: {
+  title: string;
+  description: string;
+  links: { label: string; href: string }[];
+}) {
+  return (
+    <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+      <div className="flex items-center gap-2">
+        <Workflow className="size-5 text-primary" aria-hidden="true" />
+        <h3 className="text-xl font-bold">{title}</h3>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+        {description}
+      </p>
+      <ol className="mt-5 grid gap-3">
+        {links.map((link, index) => (
+          <li key={link.href} className="flex gap-3">
+            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+              {index + 1}
+            </span>
+            <Link
+              href={link.href}
+              className="pt-1 text-sm font-semibold text-foreground hover:text-primary"
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

@@ -19,6 +19,11 @@ import {
   foundationGuides,
   getFoundationGuide,
 } from "@/data/foundation-guides";
+import {
+  articleMetaBySlug,
+  editorialAuthor,
+  redirectedGuideSlugs,
+} from "@/data/editorial-depth";
 import { ExtractPagesGuidePage } from "@/components/content/extract-pages-guide-page";
 import { MergePdfGuidePage } from "@/components/content/merge-pdf-guide-page";
 import { JpgToPdfGuidePage } from "@/components/content/jpg-to-pdf-guide-page";
@@ -36,9 +41,11 @@ export function generateStaticParams() {
     ...mergePdfGuides,
     ...jpgToPdfGuides,
     ...foundationGuides,
-  ].map((guide) => ({
-    slug: guide.slug,
-  }));
+  ]
+    .filter((guide) => !redirectedGuideSlugs.has(guide.slug))
+    .map((guide) => ({
+      slug: guide.slug,
+    }));
 }
 
 export async function generateMetadata({
@@ -118,6 +125,7 @@ export default async function GuidePage({ params }: GuidePageProps) {
         name: "Extract Pages",
         url: `${siteConfig.url}/extract-pages`,
       };
+  const articleMeta = articleMetaBySlug[guide.slug];
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -128,9 +136,12 @@ export default async function GuidePage({ params }: GuidePageProps) {
         description: guide.description,
         image: `${siteConfig.url}${guide.image.src}`,
         mainEntityOfPage: `${siteConfig.url}${guide.canonical}`,
+        datePublished: articleMeta?.publishedAt,
+        dateModified: articleMeta?.updatedAt,
         author: {
           "@type": "Organization",
-          name: siteConfig.name,
+          name: editorialAuthor.name,
+          url: siteConfig.url,
         },
         publisher: {
           "@type": "Organization",

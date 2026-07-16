@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Extract Pages versus Split PDF workflow</title>
+  <desc id="desc">A comparison diagram showing Extract Pages as one selected output PDF and Split PDF as multiple files or ranges.</desc>
+  <rect width="1200" height="720" fill="#f8fafc"/>
+  <text x="90" y="105" fill="#0f172a" font-family="Arial, sans-serif" font-size="42" font-weight="700">Extract Pages vs Split PDF</text>
+  <g font-family="Arial, sans-serif">
+    <rect x="90" y="185" width="440" height="430" rx="30" fill="#fff" stroke="#e2e8f0" stroke-width="3"/>
+    <text x="130" y="245" fill="#0f172a" font-size="30" font-weight="700">Extract Pages</text>
+    <text x="130" y="285" fill="#64748b" font-size="20">Selected pages become one new PDF.</text>
+    <rect x="140" y="340" width="60" height="82" rx="10" fill="#fee2e2"/>
+    <rect x="220" y="340" width="60" height="82" rx="10" fill="#bbf7d0"/>
+    <rect x="300" y="340" width="60" height="82" rx="10" fill="#bbf7d0"/>
+    <rect x="380" y="340" width="60" height="82" rx="10" fill="#fee2e2"/>
+    <path d="M245 470h110" stroke="#22c55e" stroke-width="7" stroke-linecap="round"/>
+    <path d="M335 445l35 25-35 25" fill="none" stroke="#22c55e" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="270" y="515" width="95" height="70" rx="12" fill="#dcfce7" stroke="#22c55e" stroke-width="3"/>
+    <text x="288" y="558" fill="#15803d" font-size="20" font-weight="700">1 PDF</text>
+    <rect x="670" y="185" width="440" height="430" rx="30" fill="#fff" stroke="#e2e8f0" stroke-width="3"/>
+    <text x="710" y="245" fill="#0f172a" font-size="30" font-weight="700">Split PDF</text>
+    <text x="710" y="285" fill="#64748b" font-size="20">Ranges or pages become separate files.</text>
+    <rect x="720" y="340" width="60" height="82" rx="10" fill="#dbeafe"/>
+    <rect x="800" y="340" width="60" height="82" rx="10" fill="#dbeafe"/>
+    <rect x="880" y="340" width="60" height="82" rx="10" fill="#dbeafe"/>
+    <rect x="960" y="340" width="60" height="82" rx="10" fill="#dbeafe"/>
+    <rect x="760" y="515" width="72" height="58" rx="10" fill="#eff6ff" stroke="#60a5fa" stroke-width="3"/>
+    <rect x="870" y="515" width="72" height="58" rx="10" fill="#eff6ff" stroke="#60a5fa" stroke-width="3"/>
+    <rect x="980" y="515" width="72" height="58" rx="10" fill="#eff6ff" stroke="#60a5fa" stroke-width="3"/>
+  </g>
+</svg>
