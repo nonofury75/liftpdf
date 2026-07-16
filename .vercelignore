@@ -1,0 +1,20 @@
+.git
+.next
+.vercel
+node_modules
+
+# Local validation output
+artifacts
+test-results
+playwright-report
+tests/e2e/.fixtures-*
+
+# Local TypeScript cache
+tsconfig.tsbuildinfo
+
+# Internal reports not served by the app
+docs
+
+# Environment files
+.env*
+!.env.example
