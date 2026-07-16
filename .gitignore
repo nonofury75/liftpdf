@@ -21,7 +21,9 @@ dev.log
 dev.err
 test-results/
 playwright-report/
+artifacts/
 tests/e2e/.fixtures/
+tests/e2e/.fixtures-*/
 
 # env
 .env*
