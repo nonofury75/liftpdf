@@ -1,4 +1,5 @@
 import type { FoundationGuide } from "@/data/foundation-guides";
+import { seoExpansionGuides } from "@/data/seo-expansion-guides";
 
 const basicsImage = {
   src: "/images/learn/pdf-basics.webp",
@@ -633,4 +634,5 @@ export const additionalFoundationGuides: FoundationGuide[] = [
     publishedAt: "2026-07-16",
     readingMinutes: 6,
   },
+  ...seoExpansionGuides,
 ];

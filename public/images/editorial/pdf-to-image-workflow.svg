@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">PDF to JPG and PNG workflow</title>
+  <desc id="desc">A diagram showing PDF pages exported as JPG or PNG image files.</desc>
+  <rect width="1200" height="720" fill="#f8fafc"/>
+  <rect x="72" y="72" width="1056" height="576" rx="34" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>
+  <text x="120" y="142" fill="#0f172a" font-family="Arial, sans-serif" font-size="42" font-weight="700">Convert PDF pages to images</text>
+  <text x="120" y="180" fill="#64748b" font-family="Arial, sans-serif" font-size="20">Choose JPG for smaller previews or PNG for sharper graphics.</text>
+
+  <g transform="translate(130 248)">
+    <rect x="0" y="22" width="150" height="205" rx="16" fill="#fee2e2" stroke="#ef4444" stroke-width="4"/>
+    <rect x="26" y="54" width="98" height="30" rx="8" fill="#ffffff"/>
+    <rect x="26" y="102" width="98" height="74" rx="10" fill="#fecaca"/>
+    <text x="42" y="262" fill="#0f172a" font-family="Arial, sans-serif" font-size="28" font-weight="700">PDF</text>
+  </g>
+  <g transform="translate(350 340)">
+    <path d="M0 0h155" stroke="#94a3b8" stroke-width="7" stroke-linecap="round"/>
+    <path d="m136-23 34 23-34 23" fill="none" stroke="#94a3b8" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g transform="translate(560 230)">
+    <rect width="210" height="260" rx="24" fill="#eff6ff" stroke="#bfdbfe" stroke-width="2"/>
+    <rect x="42" y="45" width="126" height="84" rx="12" fill="#ffffff" stroke="#2563eb" stroke-width="4"/>
+    <circle cx="78" cy="78" r="14" fill="#93c5fd"/>
+    <path d="m50 120 38-34 31 26 20-17 29 25" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="69" y="176" fill="#0f172a" font-family="Arial, sans-serif" font-size="30" font-weight="700">JPG</text>
+    <text x="44" y="214" fill="#64748b" font-family="Arial, sans-serif" font-size="18">Smaller previews</text>
+  </g>
+  <g transform="translate(830 230)">
+    <rect width="210" height="260" rx="24" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="2"/>
+    <rect x="42" y="45" width="126" height="84" rx="12" fill="#ffffff" stroke="#16a34a" stroke-width="4"/>
+    <path d="M58 109h94M58 83h94" stroke="#16a34a" stroke-width="8" stroke-linecap="round"/>
+    <path d="M79 62v70M131 62v70" stroke="#86efac" stroke-width="6" stroke-linecap="round"/>
+    <text x="67" y="176" fill="#0f172a" font-family="Arial, sans-serif" font-size="30" font-weight="700">PNG</text>
+    <text x="40" y="214" fill="#64748b" font-family="Arial, sans-serif" font-size="18">Sharper graphics</text>
+  </g>
+</svg>

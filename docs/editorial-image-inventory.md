@@ -22,6 +22,10 @@ This inventory tracks the new and reused visual assets introduced or promoted du
 | `/images/learn/scanned-vs-searchable-pdf.webp` | Scanned/searchable and troubleshooting content | Scanned PDF compared with searchable PDF | 1200x720 | Comparison visual | Yes |
 | `/images/learn/browser-processing-diagram.svg` | Browser processing content | Browser processing diagram showing a PDF staying on the device | 1200x720 | Privacy workflow | Yes |
 | `/images/learn/jpg-vs-png.webp` | Image comparison content | Comparison visual with image and PDF format cards | 1200x720 | Comparison visual | Yes |
+| `/images/editorial/compress-pdf-without-quality-loss.svg` | Compression expansion guides | PDF compression workflow showing file size reduction while checking readability | 1200x720 | SEO workflow visual | Yes |
+| `/images/editorial/pdf-to-image-workflow.svg` | PDF to JPG / PDF to PNG expansion guides | PDF to image workflow showing PDF pages exported as JPG or PNG files | 1200x720 | SEO workflow visual | Yes |
+| `/images/editorial/selectable-text-vs-scanned-text.svg` | PDF to Text and scanned PDF expansion guides | Selectable PDF text compared with scanned image-only PDF text | 1200x720 | SEO comparison visual | Yes |
+| `/images/editorial/pdf-password-workflow.svg` | Protect PDF / Unlock PDF expansion guides | PDF password workflow showing protected file, known password and unlocked result | 1200x720 | SEO workflow visual | Yes |
 
 ## Notes
 

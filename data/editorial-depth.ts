@@ -124,6 +124,90 @@ export const articleMetaBySlug: Record<string, ArticleMeta> = {
     updatedAt: "2026-07-16",
     cornerstone: true,
   },
+  "how-to-compress-pdf-without-losing-quality": {
+    category: "Compression",
+    readingMinutes: 7,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "compress-pdf-for-email": {
+    category: "Compression",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "reduce-scanned-pdf-size": {
+    category: "Troubleshooting",
+    readingMinutes: 7,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "pdf-compression-vs-optimization": {
+    category: "Comparisons",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "how-to-convert-pdf-to-jpg": {
+    category: "Convert PDF",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "how-to-convert-pdf-to-png": {
+    category: "Convert PDF",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "pdf-to-jpg-vs-pdf-to-png": {
+    category: "Comparisons",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "why-are-pdf-to-jpg-images-blurry": {
+    category: "Troubleshooting",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "how-to-copy-text-from-pdf": {
+    category: "PDF to Text",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "why-cant-i-copy-text-from-pdf": {
+    category: "Troubleshooting",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "how-to-tell-if-pdf-is-scanned": {
+    category: "PDF Basics",
+    readingMinutes: 5,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "protect-pdf-before-sending": {
+    category: "PDF Security",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "unlock-pdf-with-known-password": {
+    category: "PDF Security",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "password-protected-pdf-not-opening": {
+    category: "Troubleshooting",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
 };
 
 const mergeFigures: ArticleFigure[] = [
@@ -280,6 +364,181 @@ export const articleFiguresBySlug: Record<string, ArticleFigure[]> = {
       caption: "Blurriness usually starts before export: low source resolution, resaving or stretching.",
     },
     ...jpgFigures.slice(0, 2),
+  ],
+  "how-to-compress-pdf-without-losing-quality": [
+    {
+      src: "/images/editorial/compress-pdf-without-quality-loss.svg",
+      alt: "PDF compression workflow showing size reduction with readability checks",
+      width: 1200,
+      height: 720,
+      caption: "Safe compression is a workflow: clean pages first, compress once, then inspect readability.",
+    },
+    {
+      src: "/images/seo/compress-pdf/hero.webp",
+      alt: "LiftPDF Compress PDF tool preview",
+      width: 1200,
+      height: 720,
+      caption: "Use the Compress PDF tool after the document structure is final.",
+    },
+  ],
+  "compress-pdf-for-email": [
+    {
+      src: "/images/editorial/compress-pdf-without-quality-loss.svg",
+      alt: "Email PDF compression checklist with file size and readability checks",
+      width: 1200,
+      height: 720,
+      caption: "For email, the output must be small enough to attach and clear enough to read.",
+    },
+  ],
+  "reduce-scanned-pdf-size": [
+    {
+      src: "/images/editorial/compress-pdf-without-quality-loss.svg",
+      alt: "Scanned PDF compression visual showing image-heavy pages becoming smaller",
+      width: 1200,
+      height: 720,
+      caption: "Scanned PDFs are usually large because the page content is stored as images.",
+    },
+    {
+      src: "/images/editorial/selectable-text-vs-scanned-text.svg",
+      alt: "Scanned PDF page compared with selectable text PDF page",
+      width: 1200,
+      height: 720,
+      caption: "Compression and OCR solve different problems.",
+    },
+  ],
+  "pdf-compression-vs-optimization": [
+    {
+      src: "/images/editorial/compress-pdf-without-quality-loss.svg",
+      alt: "PDF compression and optimization comparison workflow",
+      width: 1200,
+      height: 720,
+      caption: "Optimization can include cleanup; compression focuses on reducing stored data.",
+    },
+  ],
+  "how-to-convert-pdf-to-jpg": [
+    {
+      src: "/images/editorial/pdf-to-image-workflow.svg",
+      alt: "PDF to JPG workflow showing PDF pages exported as JPG files",
+      width: 1200,
+      height: 720,
+      caption: "PDF to JPG turns each selected PDF page into an image file.",
+    },
+    {
+      src: "/images/seo/pdf-to-jpg/hero.webp",
+      alt: "LiftPDF PDF to JPG converter preview",
+      width: 1200,
+      height: 720,
+      caption: "A single selected page downloads as JPG; multiple pages download as ZIP.",
+    },
+  ],
+  "how-to-convert-pdf-to-png": [
+    {
+      src: "/images/editorial/pdf-to-image-workflow.svg",
+      alt: "PDF to PNG workflow showing sharp page image export",
+      width: 1200,
+      height: 720,
+      caption: "PNG is useful when crisp text, screenshots or diagrams matter.",
+    },
+    {
+      src: "/images/seo/pdf-to-png/hero.webp",
+      alt: "LiftPDF PDF to PNG converter preview",
+      width: 1200,
+      height: 720,
+      caption: "PDF to PNG exports selected pages as image files.",
+    },
+  ],
+  "pdf-to-jpg-vs-pdf-to-png": [
+    {
+      src: "/images/editorial/pdf-to-image-workflow.svg",
+      alt: "PDF to JPG compared with PDF to PNG output choices",
+      width: 1200,
+      height: 720,
+      caption: "Choose JPG for lighter previews and PNG for sharper graphics.",
+    },
+  ],
+  "why-are-pdf-to-jpg-images-blurry": [
+    {
+      src: "/images/editorial/pdf-to-image-workflow.svg",
+      alt: "PDF to JPG quality troubleshooting showing source page render quality and output image",
+      width: 1200,
+      height: 720,
+      caption: "Blurry exports usually come from source quality, render settings or enlarging the result.",
+    },
+  ],
+  "how-to-copy-text-from-pdf": [
+    {
+      src: "/images/editorial/selectable-text-vs-scanned-text.svg",
+      alt: "Selectable text PDF compared with scanned PDF for text copying",
+      width: 1200,
+      height: 720,
+      caption: "Text extraction only works when the PDF contains selectable text.",
+    },
+    {
+      src: "/images/seo/pdf-to-text/hero.webp",
+      alt: "LiftPDF PDF to Text tool preview",
+      width: 1200,
+      height: 720,
+      caption: "PDF to Text extracts readable text already present in the file.",
+    },
+  ],
+  "why-cant-i-copy-text-from-pdf": [
+    {
+      src: "/images/editorial/selectable-text-vs-scanned-text.svg",
+      alt: "Image-only PDF page compared with selectable PDF text layer",
+      width: 1200,
+      height: 720,
+      caption: "If the PDF has no text layer, normal copy and extraction tools need OCR first.",
+    },
+  ],
+  "how-to-tell-if-pdf-is-scanned": [
+    {
+      src: "/images/editorial/selectable-text-vs-scanned-text.svg",
+      alt: "Visual test for scanned PDF versus searchable PDF",
+      width: 1200,
+      height: 720,
+      caption: "Try selecting a word: searchable PDFs behave differently from image-only scans.",
+    },
+  ],
+  "protect-pdf-before-sending": [
+    {
+      src: "/images/editorial/pdf-password-workflow.svg",
+      alt: "Protect PDF before sending workflow with password and encrypted output",
+      width: 1200,
+      height: 720,
+      caption: "A protected PDF should be tested before it is sent.",
+    },
+    {
+      src: "/images/seo/protect-pdf/hero.webp",
+      alt: "LiftPDF Protect PDF tool preview",
+      width: 1200,
+      height: 720,
+      caption: "Protect PDF creates a new encrypted download.",
+    },
+  ],
+  "unlock-pdf-with-known-password": [
+    {
+      src: "/images/editorial/pdf-password-workflow.svg",
+      alt: "Unlock PDF workflow requiring a known password",
+      width: 1200,
+      height: 720,
+      caption: "Unlocking requires the correct password and permission to process the file.",
+    },
+    {
+      src: "/images/seo/unlock-pdf/hero.webp",
+      alt: "LiftPDF Unlock PDF tool preview",
+      width: 1200,
+      height: 720,
+      caption: "Unlock PDF creates a new copy without the password prompt.",
+    },
+  ],
+  "password-protected-pdf-not-opening": [
+    {
+      src: "/images/editorial/pdf-password-workflow.svg",
+      alt: "Troubleshooting password-protected PDF that will not open",
+      width: 1200,
+      height: 720,
+      caption: "Check the password, file integrity and viewer before processing a protected PDF.",
+    },
   ],
 };
 
@@ -504,6 +763,42 @@ export const decisionTablesBySlug: Record<string, DecisionTable> = {
       ["Scanned pages", "Compress once and check readability.", "Repeated compression."],
       ["Unneeded pages", "Delete or extract before compressing.", "Compressing irrelevant pages."],
       ["Many source files", "Merge only the final set.", "Merging duplicates."],
+    ],
+  },
+  "how-to-compress-pdf-without-losing-quality": {
+    heading: "Compression safety checklist",
+    columns: ["Situation", "Best action", "Why"],
+    rows: [
+      ["Text-heavy PDF", "Compress once and compare.", "Text PDFs may shrink without visible change."],
+      ["Scan-heavy PDF", "Check small text after compression.", "Image recompression can affect readability."],
+      ["Unneeded pages", "Delete or extract first.", "Fewer pages reduce size without quality loss."],
+    ],
+  },
+  "pdf-compression-vs-optimization": {
+    heading: "Compression or optimization?",
+    columns: ["Goal", "Use", "Reason"],
+    rows: [
+      ["Smaller attachment", "Compression", "The main target is file size."],
+      ["Cleaner file structure", "Optimization", "The file may contain unused data or inefficient objects."],
+      ["Fewer pages", "Organize tools", "Page removal is not a compression problem."],
+    ],
+  },
+  "pdf-to-jpg-vs-pdf-to-png": {
+    heading: "JPG or PNG output?",
+    columns: ["PDF page type", "Best output", "Why"],
+    rows: [
+      ["Photo or scan", "JPG", "Usually smaller for photographic content."],
+      ["Screenshot or diagram", "PNG", "Cleaner edges and less text artifacting."],
+      ["Need selectable text", "Neither", "Use PDF to Text or keep the PDF."],
+    ],
+  },
+  "how-to-copy-text-from-pdf": {
+    heading: "Can the text be copied?",
+    columns: ["What you see", "Likely file type", "Next step"],
+    rows: [
+      ["Words highlight individually", "Searchable PDF", "Use PDF to Text or copy normally."],
+      ["Whole page selects as an image", "Scanned PDF", "OCR is required."],
+      ["Password prompt appears", "Protected PDF", "Unlock with the known password first."],
     ],
   },
 };

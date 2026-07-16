@@ -227,6 +227,20 @@ test.describe("navigation and catalog", () => {
       "/guides/why-a-pdf-is-password-protected",
       "/guides/pdf-vs-jpg",
       "/guides/pdf-vs-png",
+      "/guides/how-to-compress-pdf-without-losing-quality",
+      "/guides/compress-pdf-for-email",
+      "/guides/reduce-scanned-pdf-size",
+      "/guides/pdf-compression-vs-optimization",
+      "/guides/how-to-convert-pdf-to-jpg",
+      "/guides/how-to-convert-pdf-to-png",
+      "/guides/pdf-to-jpg-vs-pdf-to-png",
+      "/guides/why-are-pdf-to-jpg-images-blurry",
+      "/guides/how-to-copy-text-from-pdf",
+      "/guides/why-cant-i-copy-text-from-pdf",
+      "/guides/how-to-tell-if-pdf-is-scanned",
+      "/guides/protect-pdf-before-sending",
+      "/guides/unlock-pdf-with-known-password",
+      "/guides/password-protected-pdf-not-opening",
     ];
 
     for (const route of learningRoutes) {
@@ -266,8 +280,54 @@ test.describe("navigation and catalog", () => {
     expect(sitemapText).toContain("/cookies");
     expect(sitemapText).toContain("/guides/what-is-a-pdf");
     expect(sitemapText).toContain("/guides/pdf-vs-jpg");
+    expect(sitemapText).toContain("/guides/how-to-compress-pdf-without-losing-quality");
+    expect(sitemapText).toContain("/guides/how-to-copy-text-from-pdf");
+    expect(sitemapText).toContain("/guides/protect-pdf-before-sending");
     expect(sitemapText).not.toContain("/guides/merge-pdf-on-windows");
     expect(sitemapText).not.toContain("/guides/jpg-to-pdf-on-iphone");
+  });
+
+  test("SEO expansion guides expose unique search intent and SEO images", async ({
+    page,
+  }) => {
+    const expansionRoutes = [
+      {
+        route: "/guides/how-to-compress-pdf-without-losing-quality",
+        heading: "How to Compress a PDF Without Losing Quality",
+        image: /compression workflow/i,
+      },
+      {
+        route: "/guides/how-to-convert-pdf-to-jpg",
+        heading: "How to Convert PDF to JPG",
+        image: /PDF to image workflow/i,
+      },
+      {
+        route: "/guides/how-to-copy-text-from-pdf",
+        heading: "How to Copy Text From a PDF",
+        image: /Selectable PDF text/i,
+      },
+      {
+        route: "/guides/protect-pdf-before-sending",
+        heading: "How to Protect a PDF Before Sending It",
+        image: /PDF password workflow/i,
+      },
+    ];
+
+    for (const item of expansionRoutes) {
+      const response = await page.goto(item.route);
+      expect(response?.status()).toBe(200);
+      await expect(
+        page.getByRole("heading", { name: item.heading, exact: true }),
+      ).toBeVisible();
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+        "href",
+        new RegExp(`${item.route}$`),
+      );
+      await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(1);
+      await expect(page.locator("img").first()).toHaveAttribute("alt", item.image);
+      await expect(page.getByRole("heading", { name: "What you need to know first" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Related resources" })).toBeVisible();
+    }
   });
 
   test("editorial depth pages expose premium article structure and redirects", async ({
