@@ -241,6 +241,18 @@ test.describe("navigation and catalog", () => {
       "/guides/protect-pdf-before-sending",
       "/guides/unlock-pdf-with-known-password",
       "/guides/password-protected-pdf-not-opening",
+      "/guides/make-pdf-smaller-for-upload",
+      "/guides/pdf-file-size-limit-explained",
+      "/guides/convert-receipts-to-pdf",
+      "/guides/combine-screenshots-into-pdf",
+      "/guides/turn-school-assignment-photos-into-pdf",
+      "/guides/remove-blank-pages-from-pdf",
+      "/guides/fix-pdf-pages-out-of-order",
+      "/guides/rotate-scanned-pdf-pages",
+      "/guides/add-page-numbers-to-pdf-report",
+      "/guides/add-confidential-watermark-to-pdf",
+      "/guides/extract-text-from-pdf-without-ocr",
+      "/guides/why-pdf-text-extraction-fails",
     ];
 
     for (const route of learningRoutes) {
@@ -283,6 +295,9 @@ test.describe("navigation and catalog", () => {
     expect(sitemapText).toContain("/guides/how-to-compress-pdf-without-losing-quality");
     expect(sitemapText).toContain("/guides/how-to-copy-text-from-pdf");
     expect(sitemapText).toContain("/guides/protect-pdf-before-sending");
+    expect(sitemapText).toContain("/guides/make-pdf-smaller-for-upload");
+    expect(sitemapText).toContain("/guides/convert-receipts-to-pdf");
+    expect(sitemapText).toContain("/guides/remove-blank-pages-from-pdf");
     expect(sitemapText).not.toContain("/guides/merge-pdf-on-windows");
     expect(sitemapText).not.toContain("/guides/jpg-to-pdf-on-iphone");
   });
@@ -310,6 +325,26 @@ test.describe("navigation and catalog", () => {
         route: "/guides/protect-pdf-before-sending",
         heading: "How to Protect a PDF Before Sending It",
         image: /PDF password workflow/i,
+      },
+      {
+        route: "/guides/make-pdf-smaller-for-upload",
+        heading: "How to Make a PDF Smaller for Upload",
+        image: /Online PDF submission workflow/i,
+      },
+      {
+        route: "/guides/convert-receipts-to-pdf",
+        heading: "How to Convert Receipts to PDF",
+        image: /Phone photos to PDF workflow/i,
+      },
+      {
+        route: "/guides/remove-blank-pages-from-pdf",
+        heading: "How to Remove Blank Pages From a PDF",
+        image: /PDF page cleanup workflow/i,
+      },
+      {
+        route: "/guides/add-confidential-watermark-to-pdf",
+        heading: "How to Add a Confidential Watermark to a PDF",
+        image: /PDF report polish workflow/i,
       },
     ];
 

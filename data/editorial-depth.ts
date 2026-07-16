@@ -208,6 +208,78 @@ export const articleMetaBySlug: Record<string, ArticleMeta> = {
     publishedAt: "2026-07-17",
     updatedAt: "2026-07-17",
   },
+  "make-pdf-smaller-for-upload": {
+    category: "PDF Submission",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "pdf-file-size-limit-explained": {
+    category: "PDF Basics",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "convert-receipts-to-pdf": {
+    category: "PDF and Images",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "combine-screenshots-into-pdf": {
+    category: "PDF and Images",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "turn-school-assignment-photos-into-pdf": {
+    category: "Students",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "remove-blank-pages-from-pdf": {
+    category: "Organize PDF",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "fix-pdf-pages-out-of-order": {
+    category: "Organize PDF",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "rotate-scanned-pdf-pages": {
+    category: "Organize PDF",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "add-page-numbers-to-pdf-report": {
+    category: "PDF Reports",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "add-confidential-watermark-to-pdf": {
+    category: "PDF Security",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "extract-text-from-pdf-without-ocr": {
+    category: "PDF to Text",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
+  "why-pdf-text-extraction-fails": {
+    category: "Troubleshooting",
+    readingMinutes: 6,
+    publishedAt: "2026-07-17",
+    updatedAt: "2026-07-17",
+  },
 };
 
 const mergeFigures: ArticleFigure[] = [

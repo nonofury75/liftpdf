@@ -26,6 +26,10 @@ This inventory tracks the new and reused visual assets introduced or promoted du
 | `/images/editorial/pdf-to-image-workflow.svg` | PDF to JPG / PDF to PNG expansion guides | PDF to image workflow showing PDF pages exported as JPG or PNG files | 1200x720 | SEO workflow visual | Yes |
 | `/images/editorial/selectable-text-vs-scanned-text.svg` | PDF to Text and scanned PDF expansion guides | Selectable PDF text compared with scanned image-only PDF text | 1200x720 | SEO comparison visual | Yes |
 | `/images/editorial/pdf-password-workflow.svg` | Protect PDF / Unlock PDF expansion guides | PDF password workflow showing protected file, known password and unlocked result | 1200x720 | SEO workflow visual | Yes |
+| `/images/editorial/online-pdf-submission-workflow.svg` | Upload, submission and file size guides | Online PDF submission workflow with file size, page order and upload checks | 1200x720 | SEO workflow visual | Yes |
+| `/images/editorial/phone-photos-to-pdf-workflow.svg` | Receipts, screenshots and student photo guides | Phone photos to PDF workflow with receipts screenshots and school documents | 1200x720 | SEO workflow visual | Yes |
+| `/images/editorial/pdf-page-cleanup-workflow.svg` | Blank page, page order and scanned rotation guides | PDF page cleanup workflow showing blank pages removal, rotation and page order | 1200x720 | SEO workflow visual | Yes |
+| `/images/editorial/pdf-report-polish-workflow.svg` | Page numbers and watermark guides | PDF report polish workflow with page numbers, watermark and final download | 1200x720 | SEO workflow visual | Yes |
 
 ## Notes
 
