@@ -677,24 +677,154 @@ test.describe("critical PDF workflows", () => {
     const fixtures = await ensureFixtures();
 
     await page.goto("/pdf-to-text");
-    await uploadFirstFile(page, fixtures.text100);
+    await uploadFirstFile(page, fixtures.phase41Markers);
     const textBytes = await downloadBytes(
       page,
       /^Extract Text$/,
       "extracted-text.txt",
     );
     const text = Buffer.from(textBytes).toString("utf8");
-    expect(text).toContain("Page 100");
-    expect(text).toContain("selectable text for page 100");
+    expect(text).toContain("Page 1");
+    expect(text).toContain("PHASE41-PAGE-1");
+    expect(text).toContain("Page 4");
+    expect(text).toContain("PHASE41-PAGE-4");
+
+    await page.goto("/pdf-to-text");
+    await uploadFirstFile(page, fixtures.phase41Markers);
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("2");
+    const singlePageBytes = await downloadBytes(
+      page,
+      /^Extract Text$/,
+      "extracted-text.txt",
+    );
+    const singlePageText = Buffer.from(singlePageBytes).toString("utf8");
+    expect(singlePageText).toContain("Page 2");
+    expect(singlePageText).toContain("PHASE41-PAGE-2");
+    expect(singlePageText).not.toContain("PHASE41-PAGE-1");
+    expect(singlePageText).not.toContain("PHASE41-PAGE-3");
+
+    await page.goto("/pdf-to-text");
+    await uploadFirstFile(page, fixtures.phase41Markers);
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("2-3");
+    const rangeBytes = await downloadBytes(
+      page,
+      /^Extract Text$/,
+      "extracted-text.txt",
+    );
+    const rangeText = Buffer.from(rangeBytes).toString("utf8");
+    expect(rangeText).toContain("Page 2");
+    expect(rangeText).toContain("PHASE41-PAGE-2");
+    expect(rangeText).toContain("Page 3");
+    expect(rangeText).toContain("PHASE41-PAGE-3");
+    expect(rangeText).not.toContain("PHASE41-PAGE-1");
+    expect(rangeText).not.toContain("PHASE41-PAGE-4");
+
+    await page.goto("/pdf-to-text");
+    await uploadFirstFile(page, fixtures.phase41Markers);
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("1,3");
+    const disjointBytes = await downloadBytes(
+      page,
+      /^Extract Text$/,
+      "extracted-text.txt",
+    );
+    const disjointText = Buffer.from(disjointBytes).toString("utf8");
+    expect(disjointText).toContain("PHASE41-PAGE-1");
+    expect(disjointText).toContain("PHASE41-PAGE-3");
+    expect(disjointText).not.toContain("PHASE41-PAGE-2");
+    expect(disjointText).not.toContain("PHASE41-PAGE-4");
+
+    await page.goto("/pdf-to-text");
+    await uploadFirstFile(page, fixtures.phase41Markers);
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("1-2,4");
+    const multiRangeBytes = await downloadBytes(
+      page,
+      /^Extract Text$/,
+      "extracted-text.txt",
+    );
+    const multiRangeText = Buffer.from(multiRangeBytes).toString("utf8");
+    expect(multiRangeText).toContain("PHASE41-PAGE-1");
+    expect(multiRangeText).toContain("PHASE41-PAGE-2");
+    expect(multiRangeText).toContain("PHASE41-PAGE-4");
+    expect(multiRangeText).not.toContain("PHASE41-PAGE-3");
+
+    await page.goto("/pdf-to-text");
+    await uploadFirstFile(page, fixtures.phase41Markers);
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("1,1,2-3,3");
+    const dedupedBytes = await downloadBytes(
+      page,
+      /^Extract Text$/,
+      "extracted-text.txt",
+    );
+    const dedupedText = Buffer.from(dedupedBytes).toString("utf8");
+    expect(dedupedText.match(/Page 1/g)?.length).toBe(1);
+    expect(dedupedText.match(/Page 3/g)?.length).toBe(1);
+    expect(dedupedText).not.toContain("PHASE41-PAGE-4");
+
+    await page.goto("/pdf-to-text");
+    await uploadFirstFile(page, fixtures.phase41Markers);
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("0");
+    await expect(
+      page.getByText(/This PDF has 4 pages. Enter pages between 1 and 4/i),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Extract Text$/ })).toBeDisabled();
+
+    await page.getByLabel("Page range").fill("2-");
+    await expect(
+      page.getByRole("alert").getByText(/for example 1-3, 5, 8-10/i),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Extract Text$/ })).toBeDisabled();
+
+    await page.goto("/pdf-to-text");
+    await uploadFirstFile(page, fixtures.text100);
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("95-100");
+    const lateRangeBytes = await downloadBytes(
+      page,
+      /^Extract Text$/,
+      "extracted-text.txt",
+    );
+    const lateRangeText = Buffer.from(lateRangeBytes).toString("utf8");
+    expect(lateRangeText).toContain("Page 95");
+    expect(lateRangeText).toContain("LiftPDF QA page 95");
+    expect(lateRangeText).toContain("Page 100");
+    expect(lateRangeText).not.toContain("LiftPDF QA page 94");
 
     await page.goto("/pdf-to-text");
     await uploadFirstFile(page, fixtures.imageOnly);
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("1");
     await page.getByRole("button", { name: /^Extract Text$/ }).click();
-    await expect(page.getByText(/No selectable text was found/i)).toBeVisible();
+    await expect(
+      page.getByText(/No selectable text was found in the selected pages/i),
+    ).toBeVisible();
 
     await page.goto("/pdf-to-text");
     await uploadFirstFile(page, fixtures.invalidPdf);
     await expect(page.getByText(/could not be read/i)).toBeVisible();
+
+    await page.goto("/protect-pdf");
+    await uploadFirstFile(page, fixtures.text1);
+    await page.getByLabel("Password", { exact: true }).fill("RangePass123");
+    await page
+      .getByLabel("Confirm password", { exact: true })
+      .fill("RangePass123");
+    const protectedBytes = await downloadBytes(
+      page,
+      /^Protect PDF$/,
+      "protected.pdf",
+    );
+    const protectedPath = path.join(fixturesDir, "pdf-to-text-protected.pdf");
+    fs.writeFileSync(protectedPath, protectedBytes);
+
+    await page.goto("/pdf-to-text");
+    await uploadFirstFile(page, protectedPath);
+    await expect(page.getByText(/password protected/i)).toBeVisible();
   });
 
   test("image and PDF export tools generate downloads", async ({ page }) => {

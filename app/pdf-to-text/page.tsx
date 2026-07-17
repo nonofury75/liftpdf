@@ -6,7 +6,7 @@ import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "PDF to Text Online Free | Extract Text from PDF | LiftPDF";
 const description =
-  "Extract text from PDF files online for free. Convert PDF content to plain text directly in your browser without uploading your file.";
+  "Extract all pages or selected page ranges from PDF files as plain text directly in your browser without uploading your file.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
@@ -25,7 +25,7 @@ export default function PdfToTextPage() {
   return (
     <ToolPageShell
       title="PDF to Text"
-      description="Extract selectable text from PDF files and download it as a plain TXT file in your browser."
+      description="Extract selectable text from all pages or selected page ranges and download it as a plain TXT file in your browser."
       seoTitle="Extract readable text from PDF files"
       seoText="LiftPDF converts selectable PDF text into a clean plain text file locally in your browser. It does not perform OCR, so scanned or image-only PDFs need a dedicated OCR tool."
       currentHref="/pdf-to-text"
@@ -50,6 +50,11 @@ export default function PdfToTextPage() {
           question: "Can I copy the extracted text?",
           answer:
             "Yes. After extraction, you can copy the text or download it as a TXT file.",
+        },
+        {
+          question: "Can I extract text from selected pages only?",
+          answer:
+            "Yes. Choose Page range and enter values like 2, 2-5 or 1,3,7 to process only those pages.",
         },
         {
           question: "Is the text formatting preserved?",

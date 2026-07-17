@@ -1342,9 +1342,9 @@ Object.assign(premiumToolContent, {
     left: "a PDF",
     right: "plain text",
     purpose:
-      "Extract selectable text from digital PDFs for copying, searching, notes and plain-text archives.",
+      "Extract selectable text from all PDF pages or selected page ranges for copying, searching, notes and plain-text archives.",
     action: "Extract text",
-    output: "Copy the text or download a UTF-8 TXT file with page separators.",
+    output: "Copy the text or download a UTF-8 TXT file with original page separators.",
     related: [
       { label: "Unlock PDF", href: "/unlock-pdf", text: "Unlock protected PDFs before text extraction." },
       { label: "PDF to JPG", href: "/pdf-to-jpg", text: "Export pages as images when the PDF is visual." },
@@ -1356,7 +1356,7 @@ Object.assign(premiumToolContent, {
         title: "Text extraction is not OCR",
         paragraphs: [
           "PDF to Text extracts text that already exists inside the PDF. If the document is scanned or image-only, there may be no selectable text to extract.",
-          "For digital PDFs, the tool separates content by page so the output is easier to read, copy or save as a text file.",
+          "For digital PDFs, the tool can process every page or only selected ranges such as 2-5 or 1,3,7. The TXT output keeps the original PDF page numbers.",
         ],
       },
     ],

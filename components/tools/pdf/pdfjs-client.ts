@@ -71,12 +71,21 @@ export type PdfPageText = {
 
 export async function extractPdfText(
   pdf: PDFDocumentProxy,
-  onProgress?: (pageNumber: number, pageCount: number) => void,
+  onProgress?: (
+    pageNumber: number,
+    pageCount: number,
+    processedIndex: number,
+  ) => void,
+  pageNumbers?: number[],
 ) {
   const pages: PdfPageText[] = [];
+  const pagesToExtract =
+    pageNumbers && pageNumbers.length > 0
+      ? pageNumbers
+      : Array.from({ length: pdf.numPages }, (_, index) => index + 1);
 
-  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-    onProgress?.(pageNumber, pdf.numPages);
+  for (const [index, pageNumber] of pagesToExtract.entries()) {
+    onProgress?.(pageNumber, pagesToExtract.length, index + 1);
 
     const page = await pdf.getPage(pageNumber);
     const textContent = await page.getTextContent();

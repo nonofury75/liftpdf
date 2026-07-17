@@ -24,6 +24,10 @@ import {
   summarizeFilesForAnalytics,
   useToolAnalytics,
 } from "@/hooks/use-tool-analytics";
+import {
+  formatSelectedPagesSummary,
+  parsePageRangeInput,
+} from "@/lib/page-ranges";
 import { cn } from "@/lib/utils";
 
 type SelectedPdf = {
@@ -36,9 +40,11 @@ type GeneratedFile = {
   fileName: string;
 };
 
+type PageSelectionMode = "all" | "range";
+
 const outputFileName = "extracted-text.txt";
 const noTextMessage =
-  "No selectable text was found. This PDF may be scanned or image-based. OCR is required.";
+  "No selectable text was found in the selected pages. This PDF may be scanned or image-based. OCR is required.";
 
 export function PdfToTextTool() {
   const [selectedPdf, setSelectedPdf] = useState<SelectedPdf | null>(null);
@@ -49,6 +55,9 @@ export function PdfToTextTool() {
   const [isReadingPdf, setIsReadingPdf] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [generatedFile, setGeneratedFile] = useState<GeneratedFile | null>(null);
+  const [pageSelectionMode, setPageSelectionMode] =
+    useState<PageSelectionMode>("all");
+  const [pageRange, setPageRange] = useState("");
 
   const generatedFileRef = useRef<GeneratedFile | null>(null);
   const analytics = useToolAnalytics({
@@ -70,6 +79,48 @@ export function PdfToTextTool() {
 
   const characterCount = extractedText.length;
   const wordCount = useMemo(() => countWords(extractedText), [extractedText]);
+  const pageSelection = useMemo(() => {
+    if (!selectedPdf) {
+      return {
+        pageNumbers: [] as number[],
+        error: null as string | null,
+      };
+    }
+
+    if (pageSelectionMode === "all") {
+      return {
+        pageNumbers: Array.from(
+          { length: selectedPdf.pageCount },
+          (_, index) => index + 1,
+        ),
+        error: null,
+      };
+    }
+
+    try {
+      return {
+        pageNumbers: parsePageRangeInput(pageRange, selectedPdf.pageCount),
+        error: null,
+      };
+    } catch (rangeError) {
+      return {
+        pageNumbers: [] as number[],
+        error:
+          rangeError instanceof Error
+            ? rangeError.message
+            : "Enter a valid page range.",
+      };
+    }
+  }, [pageRange, pageSelectionMode, selectedPdf]);
+  const selectedPagesSummary = formatSelectedPagesSummary(
+    pageSelection.pageNumbers,
+  );
+  const canExtract =
+    Boolean(selectedPdf) &&
+    !isReadingPdf &&
+    !isExtracting &&
+    pageSelection.pageNumbers.length > 0 &&
+    !pageSelection.error;
   const extractionState = getExtractionState({
     selectedPdf,
     isReadingPdf,
@@ -85,6 +136,13 @@ export function PdfToTextTool() {
 
       return null;
     });
+  }
+
+  function clearExtractionResult() {
+    clearGeneratedFile();
+    setExtractedText("");
+    setProcessedPages(0);
+    setStatusMessage(null);
   }
 
   async function handleFilesSelected(files: File[]) {
@@ -119,6 +177,8 @@ export function PdfToTextTool() {
     setProcessedPages(0);
     setStatusMessage(null);
     setError(null);
+    setPageSelectionMode("all");
+    setPageRange("");
     setIsReadingPdf(true);
 
     try {
@@ -155,6 +215,16 @@ export function PdfToTextTool() {
       return;
     }
 
+    if (pageSelection.error || pageSelection.pageNumbers.length === 0) {
+      setError(pageSelection.error ?? "Choose at least one page to extract.");
+      analytics.trackError({ errorCode: "invalid_page_range" });
+      return;
+    }
+
+    const selectedPageNumbers = pageSelection.pageNumbers;
+    const analyticsMode =
+      pageSelectionMode === "all" ? "all_pages" : "page_range";
+
     clearGeneratedFile();
     setExtractedText("");
     setProcessedPages(0);
@@ -162,21 +232,25 @@ export function PdfToTextTool() {
     setStatusMessage("Preparing PDF...");
     setIsExtracting(true);
     analytics.trackConversionStarted({
-      mode: "extract_text",
+      mode: analyticsMode,
       outputFormat: "txt",
-      pageCount: selectedPdf.pageCount,
+      pageCount: selectedPageNumbers.length,
     });
 
     let pdfDocument: Awaited<ReturnType<typeof loadPdfDocument>> | null = null;
 
     try {
       pdfDocument = await loadPdfDocument(selectedPdf.file);
-      const pages = await extractPdfText(pdfDocument, (pageNumber) => {
-        setProcessedPages(pageNumber);
-        setStatusMessage(
-          `Extracting text page ${pageNumber} of ${selectedPdf.pageCount}...`,
-        );
-      });
+      const pages = await extractPdfText(
+        pdfDocument,
+        (_pageNumber, _pageCount, processedIndex) => {
+          setProcessedPages(processedIndex);
+          setStatusMessage(
+            `Extracting text page ${processedIndex} of ${selectedPageNumbers.length}...`,
+          );
+        },
+        selectedPageNumbers,
+      );
       const text = pages
         .map((page) => `Page ${page.pageNumber}\n\n${page.text}`)
         .join("\n\n");
@@ -195,9 +269,9 @@ export function PdfToTextTool() {
       const nextFile = createTextDownload(text);
       setGeneratedFile(nextFile);
       analytics.trackConversionCompleted({
-        mode: "extract_text",
+        mode: analyticsMode,
         outputFormat: "txt",
-        pageCount: selectedPdf.pageCount,
+        pageCount: selectedPageNumbers.length,
         status: "success",
       });
       analytics.trackDownloadStarted({ outputFormat: "txt" });
@@ -237,6 +311,8 @@ export function PdfToTextTool() {
     setStatusMessage(null);
     setIsReadingPdf(false);
     setIsExtracting(false);
+    setPageSelectionMode("all");
+    setPageRange("");
     clearGeneratedFile();
   }
 
@@ -359,14 +435,88 @@ export function PdfToTextTool() {
           </div>
         </div>
 
+        <div className="mt-5 rounded-xl border border-border bg-background p-4">
+          <h3 className="text-sm font-semibold text-foreground">
+            Pages to extract
+          </h3>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {[
+              { label: "All pages", value: "all" },
+              { label: "Page range", value: "range" },
+            ].map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                variant={
+                  pageSelectionMode === option.value ? "default" : "outline"
+                }
+                aria-pressed={pageSelectionMode === option.value}
+                disabled={!selectedPdf || isExtracting}
+                onClick={() => {
+                  setPageSelectionMode(option.value as PageSelectionMode);
+                  clearExtractionResult();
+                  setError(null);
+                }}
+                className="justify-center"
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+
+          {pageSelectionMode === "range" ? (
+            <div className="mt-4">
+              <label
+                htmlFor="pdf-to-text-page-range"
+                className="text-sm font-semibold text-foreground"
+              >
+                Page range
+              </label>
+              <input
+                id="pdf-to-text-page-range"
+                value={pageRange}
+                onChange={(event) => {
+                  setPageRange(event.target.value);
+                  clearExtractionResult();
+                  setError(null);
+                }}
+                disabled={!selectedPdf || isExtracting}
+                placeholder="1-3, 5, 8-10"
+                aria-invalid={Boolean(pageSelection.error)}
+                aria-describedby="pdf-to-text-page-range-help pdf-to-text-page-range-error"
+                className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+              <p
+                id="pdf-to-text-page-range-help"
+                className="mt-2 text-xs leading-5 text-muted-foreground"
+              >
+                Enter page numbers or ranges separated by commas.
+              </p>
+              {pageSelection.error ? (
+                <p
+                  id="pdf-to-text-page-range-error"
+                  className="mt-2 text-xs font-medium leading-5 text-red-600"
+                  role="alert"
+                >
+                  {pageSelection.error}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
         <div className="mt-5 space-y-3 text-sm">
           <PdfSummaryRow
             label="File"
             value={selectedPdf ? selectedPdf.file.name : "None"}
           />
           <PdfSummaryRow
-            label="Pages"
+            label="Total pages"
             value={selectedPdf ? String(selectedPdf.pageCount) : "-"}
+          />
+          <PdfSummaryRow
+            label="Selected pages"
+            value={selectedPdf ? selectedPagesSummary : "-"}
           />
           <PdfSummaryRow
             label="File size"
@@ -383,7 +533,7 @@ export function PdfToTextTool() {
           <Button
             type="button"
             onClick={handleExtractText}
-            disabled={!selectedPdf || isReadingPdf || isExtracting}
+            disabled={!canExtract}
             className="shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
           >
             {isExtracting ? (
