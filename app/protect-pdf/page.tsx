@@ -6,7 +6,7 @@ import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Protect PDF Online Free | Add Password to PDF | LiftPDF";
 const description =
-  "Protect a PDF with a password online for free. Encrypt your PDF locally in your browser without uploading your file.";
+  "Protect a PDF with AES-256 encryption, an open password and optional PDF permissions directly in your browser.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
@@ -25,9 +25,9 @@ export default function ProtectPdfPage() {
   return (
     <ToolPageShell
       title="Protect PDF"
-      description="Add a real password to a PDF with local browser encryption and no file upload."
+      description="Add a real password to a PDF with local browser encryption, plus optional permissions for compatible PDF readers."
       seoTitle="Protect a PDF with a password online"
-      seoText="LiftPDF uses QPDF compiled to WebAssembly to apply real PDF password encryption locally in your browser. Your file and password are never uploaded to a server."
+      seoText="LiftPDF uses QPDF compiled to WebAssembly to apply real PDF password encryption locally in your browser. Your file, passwords and permission settings are never uploaded to a server."
       currentHref="/protect-pdf"
       premiumContent={premiumToolContent.protectPdf}
       faq={[
@@ -55,6 +55,11 @@ export default function ProtectPdfPage() {
           question: "Does this encrypt the PDF?",
           answer:
             "Yes. The exported file uses real PDF password encryption and requires the password when opened in PDF viewers.",
+        },
+        {
+          question: "Can I restrict printing, copying or editing?",
+          answer:
+            "Yes. Advanced permissions can request printing, copying and editing restrictions for compatible PDF readers. These permissions are not absolute DRM protection.",
         },
       ]}
     >

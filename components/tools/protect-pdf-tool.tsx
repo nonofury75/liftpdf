@@ -23,6 +23,9 @@ import { loadPdfDocument } from "@/components/tools/pdf/pdfjs-client";
 import {
   encryptPdfWithPassword,
   hasPdfEncryptionDictionary,
+  protectPdfWithOptions,
+  type PdfModificationPermission,
+  type PdfPrintingPermission,
 } from "@/components/tools/pdf/qpdf-client";
 import {
   summarizeFilesForAnalytics,
@@ -41,14 +44,37 @@ type GeneratedFile = {
 };
 
 type PasswordStrength = "Weak" | "Medium" | "Strong";
+type CopyingPermission = "allowed" | "not_allowed";
 
 const outputFileName = "protected.pdf";
+const printingOptions = [
+  { value: "full", label: "Full quality" },
+  { value: "low", label: "Low resolution only" },
+  { value: "none", label: "Not allowed" },
+] satisfies Array<{ value: PdfPrintingPermission; label: string }>;
+const editingOptions = [
+  { value: "all", label: "Full editing" },
+  { value: "annotate", label: "Comments and form filling" },
+  { value: "form", label: "Form filling and signing" },
+  { value: "assembly", label: "Page assembly only" },
+  { value: "none", label: "No editing" },
+] satisfies Array<{ value: PdfModificationPermission; label: string }>;
 
 export function ProtectPdfTool() {
   const [selectedPdf, setSelectedPdf] = useState<SelectedPdf | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [advancedPermissionsEnabled, setAdvancedPermissionsEnabled] =
+    useState(false);
+  const [ownerPassword, setOwnerPassword] = useState("");
+  const [confirmOwnerPassword, setConfirmOwnerPassword] = useState("");
+  const [printingPermission, setPrintingPermission] =
+    useState<PdfPrintingPermission>("full");
+  const [copyingPermission, setCopyingPermission] =
+    useState<CopyingPermission>("allowed");
+  const [editingPermission, setEditingPermission] =
+    useState<PdfModificationPermission>("all");
   const [error, setError] = useState<string | null>(null);
   const [isReadingPdf, setIsReadingPdf] = useState(false);
   const [isProtecting, setIsProtecting] = useState(false);
@@ -77,6 +103,15 @@ export function ProtectPdfTool() {
     () => getPasswordStrength(password),
     [password],
   );
+  const effectivePrinting = advancedPermissionsEnabled
+    ? printingPermission
+    : "full";
+  const effectiveCopying = advancedPermissionsEnabled
+    ? copyingPermission
+    : "allowed";
+  const effectiveEditing = advancedPermissionsEnabled
+    ? editingPermission
+    : "all";
 
   function clearGeneratedFile() {
     setGeneratedFile((currentFile) => {
@@ -160,7 +195,13 @@ export function ProtectPdfTool() {
       return;
     }
 
-    const validationError = validatePassword(password, confirmPassword);
+    const validationError = validatePassword({
+      password,
+      confirmPassword,
+      advancedPermissionsEnabled,
+      ownerPassword,
+      confirmOwnerPassword,
+    });
 
     if (validationError) {
       setError(validationError);
@@ -181,18 +222,27 @@ export function ProtectPdfTool() {
     setProgress("Preparing PDF...");
     clearGeneratedFile();
     analytics.trackConversionStarted({
-      mode: "encrypt",
+      mode: advancedPermissionsEnabled ? "encrypt_with_permissions" : "encrypt",
       outputFormat: "pdf",
       pageCount: selectedPdf.pageCount,
+      advancedPermissionsEnabled,
+      printingMode: effectivePrinting,
+      copyingAllowed: effectiveCopying === "allowed",
+      editingPreset: effectiveEditing,
     });
 
     try {
       const fileBuffer = await selectedPdf.file.arrayBuffer();
       setProgress("Encrypting PDF...");
-      const encryptedBytes = await encryptPdfWithPassword(
-        new Uint8Array(fileBuffer),
-        password,
-      );
+      const encryptedBytes = advancedPermissionsEnabled
+        ? await protectPdfWithOptions(new Uint8Array(fileBuffer), {
+            userPassword: password,
+            ownerPassword,
+            printing: printingPermission,
+            allowExtraction: copyingPermission === "allowed",
+            modification: editingPermission,
+          })
+        : await encryptPdfWithPassword(new Uint8Array(fileBuffer), password);
 
       if (!hasPdfEncryptionDictionary(encryptedBytes)) {
         throw new Error("The exported PDF was not encrypted.");
@@ -210,16 +260,24 @@ export function ProtectPdfTool() {
       setGeneratedFile(nextFile);
       setProgress("PDF protected successfully.");
       analytics.trackConversionCompleted({
-        mode: "encrypt",
+        mode: advancedPermissionsEnabled
+          ? "encrypt_with_permissions"
+          : "encrypt",
         outputFormat: "pdf",
         pageCount: selectedPdf.pageCount,
+        advancedPermissionsEnabled,
+        printingMode: effectivePrinting,
+        copyingAllowed: effectiveCopying === "allowed",
+        editingPreset: effectiveEditing,
         status: "success",
       });
       analytics.trackDownloadStarted({ outputFormat: "pdf" });
       triggerDownload(nextFile.url, nextFile.fileName);
       analytics.trackDownloadCompleted({ outputFormat: "pdf" });
     } catch {
-      setError("The PDF could not be encrypted. Please try another file.");
+      setError(
+        "The PDF was not downloaded because the requested permissions could not be verified.",
+      );
       analytics.trackError({ errorCode: "encryption_failed" });
       setProgress(null);
     } finally {
@@ -231,7 +289,13 @@ export function ProtectPdfTool() {
     setSelectedPdf(null);
     setPassword("");
     setConfirmPassword("");
+    setOwnerPassword("");
+    setConfirmOwnerPassword("");
     setShowPassword(false);
+    setAdvancedPermissionsEnabled(false);
+    setPrintingPermission("full");
+    setCopyingPermission("allowed");
+    setEditingPermission("all");
     setError(null);
     setIsReadingPdf(false);
     setIsProtecting(false);
@@ -354,6 +418,128 @@ export function ProtectPdfTool() {
                 lowercase, numbers and symbols.
               </p>
             </div>
+
+            <details
+              className="rounded-2xl border border-border bg-background p-4"
+              open={advancedPermissionsEnabled}
+              onToggle={(event) => {
+                const isOpen = event.currentTarget.open;
+                clearGeneratedFile();
+                setError(null);
+                setAdvancedPermissionsEnabled(isOpen);
+              }}
+            >
+              <summary className="cursor-pointer text-sm font-semibold text-foreground">
+                Advanced permissions
+              </summary>
+              <div className="mt-4 space-y-5">
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
+                  PDF permissions are respected by compatible PDF readers, but
+                  they are not absolute DRM protection. AES-256 encryption and
+                  the open password provide the real protection.
+                </p>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <PasswordField
+                    id="protect-owner-password"
+                    label="Owner password"
+                    value={ownerPassword}
+                    showPassword={showPassword}
+                    describedBy="protect-owner-password-help protect-pdf-error"
+                    onChange={(value) => {
+                      clearGeneratedFile();
+                      setError(null);
+                      setOwnerPassword(value);
+                    }}
+                    onToggleShow={() => setShowPassword((current) => !current)}
+                  />
+                  <PasswordField
+                    id="protect-confirm-owner-password"
+                    label="Confirm owner password"
+                    value={confirmOwnerPassword}
+                    showPassword={showPassword}
+                    describedBy="protect-owner-password-help protect-pdf-error"
+                    onChange={(value) => {
+                      clearGeneratedFile();
+                      setError(null);
+                      setConfirmOwnerPassword(value);
+                    }}
+                    onToggleShow={() => setShowPassword((current) => !current)}
+                  />
+                </div>
+                <p
+                  id="protect-owner-password-help"
+                  className="text-sm leading-6 text-muted-foreground"
+                >
+                  Use a separate owner password to change permissions later.
+                  Keep it somewhere safe; LiftPDF does not store it.
+                </p>
+
+                <fieldset className="space-y-3">
+                  <legend className="text-sm font-semibold text-foreground">
+                    Printing
+                  </legend>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {printingOptions.map((option) => (
+                      <PermissionOption
+                        key={option.value}
+                        label={option.label}
+                        selected={printingPermission === option.value}
+                        onClick={() => {
+                          clearGeneratedFile();
+                          setPrintingPermission(option.value);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </fieldset>
+
+                <fieldset className="space-y-3">
+                  <legend className="text-sm font-semibold text-foreground">
+                    Copying text and images
+                  </legend>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      { value: "allowed", label: "Allowed" },
+                      { value: "not_allowed", label: "Not allowed" },
+                    ].map((option) => (
+                      <PermissionOption
+                        key={option.value}
+                        label={option.label}
+                        selected={copyingPermission === option.value}
+                        onClick={() => {
+                          clearGeneratedFile();
+                          setCopyingPermission(option.value as CopyingPermission);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </fieldset>
+
+                <fieldset className="space-y-3">
+                  <legend className="text-sm font-semibold text-foreground">
+                    Editing
+                  </legend>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {editingOptions.map((option) => (
+                      <PermissionOption
+                        key={option.value}
+                        label={option.label}
+                        selected={editingPermission === option.value}
+                        onClick={() => {
+                          clearGeneratedFile();
+                          setEditingPermission(option.value);
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Page assembly includes actions such as rotating or
+                    reordering pages in compatible readers.
+                  </p>
+                </fieldset>
+              </div>
+            </details>
           </div>
         </section>
       </div>
@@ -380,9 +566,9 @@ export function ProtectPdfTool() {
               <p className="text-sm font-semibold text-foreground">
                 Private by design
               </p>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                Encryption runs locally. The PDF and password are not sent to a
-                LiftPDF server.
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                Your file, passwords and permission settings remain in your
+                browser.
               </p>
             </div>
           </div>
@@ -403,6 +589,18 @@ export function ProtectPdfTool() {
           />
           <PdfSummaryRow label="Encryption" value="AES 256-bit" />
           <PdfSummaryRow label="Password strength" value={passwordStrength} />
+          <PdfSummaryRow
+            label="Printing"
+            value={formatPrintingPermission(effectivePrinting)}
+          />
+          <PdfSummaryRow
+            label="Copying"
+            value={effectiveCopying === "allowed" ? "Allowed" : "Not allowed"}
+          />
+          <PdfSummaryRow
+            label="Editing"
+            value={formatModificationPermission(effectiveEditing)}
+          />
           <PdfSummaryRow label="Output" value={outputFileName} />
         </div>
 
@@ -477,7 +675,19 @@ export function ProtectPdfTool() {
   );
 }
 
-function validatePassword(password: string, confirmPassword: string) {
+function validatePassword({
+  advancedPermissionsEnabled,
+  confirmOwnerPassword,
+  confirmPassword,
+  ownerPassword,
+  password,
+}: {
+  password: string;
+  confirmPassword: string;
+  advancedPermissionsEnabled: boolean;
+  ownerPassword: string;
+  confirmOwnerPassword: string;
+}) {
   if (password.length < 6) {
     return "Password must be at least 6 characters.";
   }
@@ -486,7 +696,33 @@ function validatePassword(password: string, confirmPassword: string) {
     return "Passwords do not match.";
   }
 
+  if (!advancedPermissionsEnabled) {
+    return null;
+  }
+
+  if (ownerPassword.length < 6) {
+    return "Owner password must be at least 6 characters.";
+  }
+
+  if (ownerPassword !== confirmOwnerPassword) {
+    return "Owner passwords do not match.";
+  }
+
+  if (ownerPassword === password) {
+    return "Owner password must be different from the open password when advanced permissions are enabled.";
+  }
+
   return null;
+}
+
+function formatPrintingPermission(value: PdfPrintingPermission) {
+  return (
+    printingOptions.find((option) => option.value === value)?.label ?? "Allowed"
+  );
+}
+
+function formatModificationPermission(value: PdfModificationPermission) {
+  return editingOptions.find((option) => option.value === value)?.label ?? "Allowed";
 }
 
 function getPasswordStrength(password: string): PasswordStrength {
@@ -528,6 +764,32 @@ function triggerDownload(url: string, fileName: string) {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
+}
+
+function PermissionOption({
+  label,
+  onClick,
+  selected,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      className={cn(
+        "rounded-xl border px-3 py-2 text-left text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        selected
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground",
+      )}
+    >
+      {label}
+    </button>
+  );
 }
 
 function StatusNotice({

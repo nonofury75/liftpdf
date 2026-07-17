@@ -20,6 +20,10 @@ export type ToolAnalyticsPayload = {
   status?: string;
   errorCode?: string;
   fileSizeBucket?: string;
+  advancedPermissionsEnabled?: boolean;
+  printingMode?: string;
+  copyingAllowed?: boolean;
+  editingPreset?: string;
 };
 
 export type AnalyticsConsent = "accepted" | "rejected";
@@ -121,5 +125,9 @@ function sanitizePayload(payload: ToolAnalyticsPayload) {
     status: payload.status,
     error_code: payload.errorCode,
     file_size_bucket: payload.fileSizeBucket,
+    advanced_permissions_enabled: payload.advancedPermissionsEnabled,
+    printing_mode: payload.printingMode,
+    copying_allowed: payload.copyingAllowed,
+    editing_preset: payload.editingPreset,
   };
 }

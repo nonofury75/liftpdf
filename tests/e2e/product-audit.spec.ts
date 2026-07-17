@@ -5,6 +5,12 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import JSZip from "jszip";
 import { PDFDocument } from "pdf-lib";
 import { ensureFixtures, fixturesDir } from "./fixtures";
+import {
+  getExpectedQpdfPermissionValue,
+  inspectQpdfEncryption,
+  type PdfModificationPermission,
+  type PdfPrintingPermission,
+} from "../../components/tools/pdf/qpdf-client";
 
 const toolPages = [
   { href: "/jpg-to-pdf", title: "JPG to PDF Converter" },
@@ -1088,6 +1094,149 @@ test.describe("critical PDF workflows", () => {
     expect((await PDFDocument.load(unlockedBytes)).getPageCount()).toBe(1);
   });
 
+  test("protect PDF writes verified owner password permission flags", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "Deep QPDF permission checks run once.");
+    const fixtures = await ensureFixtures();
+    const cases: Array<{
+      name: string;
+      printing: PdfPrintingPermission;
+      copying: "Allowed" | "Not allowed";
+      modification: PdfModificationPermission;
+      modificationLabel: string;
+    }> = [
+      {
+        name: "permissive",
+        printing: "full",
+        copying: "Allowed",
+        modification: "all",
+        modificationLabel: "Full editing",
+      },
+      {
+        name: "restricted",
+        printing: "none",
+        copying: "Not allowed",
+        modification: "none",
+        modificationLabel: "No editing",
+      },
+      {
+        name: "low assembly",
+        printing: "low",
+        copying: "Allowed",
+        modification: "assembly",
+        modificationLabel: "Page assembly only",
+      },
+      {
+        name: "form filling",
+        printing: "full",
+        copying: "Not allowed",
+        modification: "form",
+        modificationLabel: "Form filling and signing",
+      },
+      {
+        name: "annotate",
+        printing: "full",
+        copying: "Allowed",
+        modification: "annotate",
+        modificationLabel: "Comments and form filling",
+      },
+    ];
+
+    for (const testCase of cases) {
+      await page.goto("/protect-pdf");
+      await uploadFirstFile(page, fixtures.formPdf);
+      await expect(page.getByText(/1 page/i).first()).toBeVisible();
+      await page.getByLabel("Password", { exact: true }).fill("UserPass123!");
+      await page
+        .getByLabel("Confirm password", { exact: true })
+        .fill("UserPass123!");
+      await page.locator("summary", { hasText: "Advanced permissions" }).click();
+      await page
+        .getByLabel("Owner password", { exact: true })
+        .fill("OwnerPass123!");
+      await page
+        .getByLabel("Confirm owner password", { exact: true })
+        .fill("OwnerPass123!");
+      await page
+        .getByRole("group", { name: /^Printing$/ })
+        .getByRole("button", {
+          name: new RegExp(`^${escapeRegExp(formatTestPrinting(testCase.printing))}$`),
+        })
+        .click();
+      await page
+        .getByRole("group", { name: /^Copying text and images$/ })
+        .getByRole("button", { name: new RegExp(`^${testCase.copying}$`) })
+        .click();
+      await page
+        .getByRole("group", { name: /^Editing$/ })
+        .getByRole("button", { name: new RegExp(`^${testCase.modificationLabel}$`) })
+        .click();
+
+      const protectedBytes = await downloadBytes(
+        page,
+        /^Protect PDF$/,
+        "protected.pdf",
+      );
+      const inspection = inspectQpdfEncryption(protectedBytes);
+
+      expect(inspection.encrypted).toBe(true);
+      expect(inspection.aes256).toBe(true);
+      expect(inspection.permissions.rawP).toBe(
+        getExpectedQpdfPermissionValue({
+          printing: testCase.printing,
+          allowExtraction: testCase.copying === "Allowed",
+          modification: testCase.modification,
+        }),
+      );
+      expect(inspection.permissions.printing).toBe(testCase.printing);
+      expect(inspection.permissions.allowExtraction).toBe(
+        testCase.copying === "Allowed",
+      );
+      expect(inspection.permissions.modification).toBe(testCase.modification);
+      expect(inspection.permissions.accessibility).toBe(true);
+
+      if (testCase.name === "restricted") {
+        const protectedPath = path.join(fixturesDir, "owner-restricted.pdf");
+        fs.writeFileSync(protectedPath, protectedBytes);
+        await page.goto("/unlock-pdf");
+        await uploadFirstFile(page, protectedPath);
+        await page
+          .getByLabel("PDF password", { exact: true })
+          .fill("OwnerPass123!");
+        const unlockedBytes = await downloadBytes(
+          page,
+          /^Unlock PDF$/,
+          "unlocked.pdf",
+        );
+        expect(inspectQpdfEncryption(unlockedBytes).encrypted).toBe(false);
+        expect((await PDFDocument.load(unlockedBytes)).getPageCount()).toBe(1);
+      }
+    }
+
+    await page.goto("/protect-pdf");
+    await uploadFirstFile(page, fixtures.text1);
+    await page.getByLabel("Password", { exact: true }).fill("SamePass123!");
+    await page
+      .getByLabel("Confirm password", { exact: true })
+      .fill("SamePass123!");
+    await page.locator("summary", { hasText: "Advanced permissions" }).click();
+    await page
+      .getByLabel("Owner password", { exact: true })
+      .fill("SamePass123!");
+    await page
+      .getByLabel("Confirm owner password", { exact: true })
+      .fill("SamePass123!");
+    await page.getByRole("button", { name: /^Protect PDF$/ }).click();
+    await expect(
+      page.getByText(/Owner password must be different/i),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/PDF permissions are respected by compatible PDF readers/i),
+    ).toBeVisible();
+  });
+
   test("PDF to Text handles text, scanned, protected and invalid files", async ({
     page,
   }) => {
@@ -1871,6 +2020,22 @@ async function expectPageRotations(
 
 function normalizeTestRotation(rotation: number) {
   return ((rotation % 360) + 360) % 360;
+}
+
+function formatTestPrinting(value: PdfPrintingPermission) {
+  if (value === "full") {
+    return "Full quality";
+  }
+
+  if (value === "low") {
+    return "Low resolution only";
+  }
+
+  return "Not allowed";
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function pageOrientation({ height, width }: { height: number; width: number }) {

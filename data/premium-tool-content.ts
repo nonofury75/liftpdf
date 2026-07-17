@@ -1290,9 +1290,9 @@ Object.assign(premiumToolContent, {
     left: "a PDF",
     right: "an encrypted PDF",
     purpose:
-      "Add real password encryption to PDFs that should not open without the password.",
+      "Add real password encryption and optional compatible-reader permissions to sensitive PDFs.",
     action: "Encrypt PDF",
-    output: "Download a password-protected PDF that requires the password when opened.",
+    output: "Download a password-protected PDF with AES-256 encryption and verified permission flags.",
     emphasis: "security",
     related: [
       { label: "Unlock PDF", href: "/unlock-pdf", text: "Remove password protection later if you know the password." },
@@ -1305,7 +1305,14 @@ Object.assign(premiumToolContent, {
         title: "Use a strong password",
         paragraphs: [
           "PDF encryption is only as useful as the password protecting it. Use a password that is long, unique and not reused from another account.",
-          "LiftPDF uses QPDF WASM locally for real PDF encryption. Your password and file are not uploaded to a server during the process.",
+          "LiftPDF uses QPDF WASM locally for real PDF encryption. Your password, owner password and permission settings are not uploaded to a server during the process.",
+        ],
+      },
+      {
+        title: "Understand PDF permissions",
+        paragraphs: [
+          "Advanced permissions can request restrictions such as no printing, no copying or limited editing in compatible PDF readers.",
+          "These permissions are useful for professional workflows, but they are not absolute DRM protection. The open password and AES-256 encryption are the real access control.",
         ],
       },
     ],
