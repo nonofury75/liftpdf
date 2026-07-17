@@ -142,6 +142,17 @@ Full validation:
 - `npm run test:e2e`: OK, 60 passed, 6 skipped mobile-heavy workflow tests
 - Firefox production-local workflow: OK, `numbered.pdf` downloaded and `%PDF` magic bytes verified
 
+Production validation:
+
+- Commit: `5c83070`
+- Vercel deployment: `https://liftpdf-qha862ujs-rachator75010-5712s-projects.vercel.app`
+- Vercel status: READY
+- Production URL: `https://liftpdf.com/add-page-numbers`
+- Production workflow: OK
+- Production output: `numbered.pdf`
+- Production output magic bytes: `%PDF`
+- Production page errors / console errors / critical failed requests: none detected during smoke test
+
 ## Performance and Mobile
 
 No new dependency was added. The feature reuses the existing preview render and `pdf-lib` draw loop.
@@ -183,5 +194,5 @@ Lint: OK
 Typecheck: OK  
 Build: OK  
 E2E: OK  
-Production deployed: PENDING  
+Production deployed: YES  
 Remaining limitations: margin offsets, even/odd targeting, roman numerals and multi-schema numbering remain out of scope.
