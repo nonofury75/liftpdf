@@ -265,7 +265,16 @@ Local validation:
 
 Production validation:
 
-- Vercel production: Pending
+- Vercel production: READY
+- Production URL: `https://liftpdf.com/images-to-pdf`
+- HTTP 200: OK
+- Rotate buttons visible: OK
+- Mobile viewport production check: OK
+- Preview `data-preview-image-rotation`: OK
+- Export PDF: OK
+- Final PDF page count: OK
+- Final PDF orientation after rotation: OK
+- Critical console/page/request errors: none observed
 
 ## Remaining Limits
 
@@ -301,5 +310,5 @@ Lint: OK
 Typecheck: OK  
 Build: OK  
 E2E: OK  
-Production deployed: Pending  
+Production deployed: Yes  
 Next remaining P1: Protect PDF permission toggles if verified, Unlock PDF restriction-only handling, Merge PDF protected-file diagnostics/editable filename, PDF image conversion memory guard.
