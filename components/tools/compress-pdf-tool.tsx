@@ -13,13 +13,16 @@ import {
   RotateCcw,
   ShieldCheck,
 } from "lucide-react";
-import { PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
 import { PdfUploadZone } from "@/components/tools/pdf-upload-zone";
 import {
   loadPdfDocument,
   renderPdfPageThumbnail,
 } from "@/components/tools/pdf/pdfjs-client";
+import {
+  compressPdfWithQpdf,
+  type QpdfCompressionMode,
+} from "@/components/tools/pdf/qpdf-client";
 import {
   summarizeFilesForAnalytics,
   useToolAnalytics,
@@ -39,9 +42,38 @@ type CompressionResult = {
   fileName: string;
   originalSize: number;
   finalSize: number;
+  mode: QpdfCompressionMode;
 };
 
 const compressedFileName = "compressed.pdf";
+const compressionModes: Array<{
+  value: QpdfCompressionMode;
+  label: string;
+  description: string;
+  detail: string;
+}> = [
+  {
+    value: "preserve",
+    label: "Preserve quality",
+    description: "Lossless PDF optimization",
+    detail:
+      "Recompresses safe streams and rebuilds object streams without intentionally lowering image quality.",
+  },
+  {
+    value: "balanced",
+    label: "Balanced",
+    description: "Image-aware optimization",
+    detail:
+      "Also asks QPDF to optimize large images with moderate JPEG quality when it can reduce size.",
+  },
+  {
+    value: "strong",
+    label: "Strong",
+    description: "Smallest browser-side file",
+    detail:
+      "Uses stronger image optimization and removes PDF metadata. Visual quality can change on image-heavy files.",
+  },
+];
 
 export function CompressPdfTool() {
   const [selectedPdf, setSelectedPdf] = useState<SelectedPdf | null>(null);
@@ -49,6 +81,8 @@ export function CompressPdfTool() {
   const [isReadingPdf, setIsReadingPdf] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionStep, setCompressionStep] = useState<string | null>(null);
+  const [compressionMode, setCompressionMode] =
+    useState<QpdfCompressionMode>("balanced");
   const [result, setResult] = useState<CompressionResult | null>(null);
   const resultRef = useRef<CompressionResult | null>(null);
   const previewUrlRef = useRef<string | null>(null);
@@ -140,34 +174,17 @@ export function CompressPdfTool() {
     setCompressionStep("Preparing PDF...");
     clearResult();
     analytics.trackConversionStarted({
-      mode: "basic",
+      mode: compressionMode,
       outputFormat: "pdf",
       pageCount: selectedPdf.pageCount,
     });
 
     try {
-      const sourcePdf = await PDFDocument.load(
-        await selectedPdf.file.arrayBuffer(),
-        {
-          updateMetadata: false,
-        },
+      setCompressionStep(getCompressionProgressLabel(compressionMode));
+      const compressedBytes = await compressPdfWithQpdf(
+        new Uint8Array(await selectedPdf.file.arrayBuffer()),
+        compressionMode,
       );
-
-      setCompressionStep("Rebuilding pages safely...");
-      const compressedPdf = await PDFDocument.create();
-      const copiedPages = await compressedPdf.copyPages(
-        sourcePdf,
-        sourcePdf.getPageIndices(),
-      );
-
-      copiedPages.forEach((page) => compressedPdf.addPage(page));
-      applyMinimalMetadata(compressedPdf);
-
-      setCompressionStep("Generating compressed PDF...");
-      const compressedBytes = await compressedPdf.save({
-        useObjectStreams: true,
-        addDefaultPage: false,
-      });
       const compressedBuffer = new ArrayBuffer(compressedBytes.byteLength);
       new Uint8Array(compressedBuffer).set(compressedBytes);
       const blob = new Blob([compressedBuffer], { type: "application/pdf" });
@@ -177,10 +194,11 @@ export function CompressPdfTool() {
         fileName: compressedFileName,
         originalSize: selectedPdf.file.size,
         finalSize: blob.size,
+        mode: compressionMode,
       });
       setCompressionStep("Compressed PDF created successfully.");
       analytics.trackConversionCompleted({
-        mode: "basic",
+        mode: compressionMode,
         outputFormat: "pdf",
         pageCount: selectedPdf.pageCount,
         status: "success",
@@ -200,6 +218,7 @@ export function CompressPdfTool() {
     setSelectedPdf(null);
     setError(null);
     setCompressionStep(null);
+    setCompressionMode("balanced");
     clearResult();
     clearPreview();
   }
@@ -264,37 +283,55 @@ export function CompressPdfTool() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold text-foreground">
-                Compression mode
+                Compression strength
               </h2>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                LiftPDF uses one safe browser compression mode. It rebuilds the
-                PDF, keeps every page and avoids destructive image quality loss.
+                Choose a real QPDF compression mode. The result depends on how
+                the PDF is built: image-heavy files usually shrink more than
+                already optimized text PDFs.
               </p>
             </div>
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-              Basic
+              QPDF WASM
             </span>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <CompressionFact
-              title="Preserves pages"
-              text="All pages are copied into a clean PDF."
-            />
-            <CompressionFact
-              title="Private"
-              text="Your PDF stays in this browser."
-            />
-            <CompressionFact
-              title="No fake levels"
-              text="No low, balanced or max labels unless the engine truly changes output."
-            />
+          <div className="mt-5 grid gap-3">
+            {compressionModes.map((mode) => (
+              <button
+                key={mode.value}
+                type="button"
+                aria-pressed={compressionMode === mode.value}
+                onClick={() => {
+                  clearResult();
+                  setCompressionStep(null);
+                  setCompressionMode(mode.value);
+                }}
+                className={`rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  compressionMode === mode.value
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-muted/30"
+                }`}
+              >
+                <span className="flex items-center justify-between gap-3">
+                  <span className="font-semibold text-foreground">
+                    {mode.label}
+                  </span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+                    {mode.description}
+                  </span>
+                </span>
+                <span className="mt-2 block text-sm leading-6 text-muted-foreground">
+                  {mode.detail}
+                </span>
+              </button>
+            ))}
           </div>
 
           <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-            This first version does not downsample images or recompress scanned
-            PDFs. Image-heavy files may need a future advanced compression
-            engine for larger reductions.
+            These modes do not promise an exact target size and do not perform
+            DPI-based downsampling. For exact 1 MB / 2 MB targets, LiftPDF would
+            need a heavier rendering or image recompression engine.
           </div>
         </section>
       </div>
@@ -337,6 +374,10 @@ export function CompressPdfTool() {
           <SummaryRow
             label="Original size"
             value={selectedPdf ? formatFileSize(selectedPdf.file.size) : "-"}
+          />
+          <SummaryRow
+            label="Mode"
+            value={getCompressionModeLabel(compressionMode)}
           />
           <SummaryRow
             label="Final size"
@@ -402,8 +443,9 @@ export function CompressPdfTool() {
             </div>
             {!isSmaller ? (
               <p className="rounded-xl bg-muted px-3 py-3 text-sm font-medium text-muted-foreground">
-                This PDF is already optimized. We rebuilt it with safe
-                compression.
+                This PDF did not get smaller with this mode. It may already be
+                optimized, or its content may require a heavier compression
+                engine to reduce further.
               </p>
             ) : null}
           </div>
@@ -493,20 +535,6 @@ function InfoTile({ label, value }: InfoTileProps) {
   );
 }
 
-type CompressionFactProps = {
-  title: string;
-  text: string;
-};
-
-function CompressionFact({ title, text }: CompressionFactProps) {
-  return (
-    <div className="rounded-xl border border-border bg-muted/30 p-4">
-      <p className="text-sm font-semibold text-foreground">{title}</p>
-      <p className="mt-1 text-sm leading-6 text-muted-foreground">{text}</p>
-    </div>
-  );
-}
-
 type StatusNoticeProps = {
   tone: "neutral" | "error";
   icon: ReactNode;
@@ -545,19 +573,24 @@ function SummaryRow({ label, value }: SummaryRowProps) {
   );
 }
 
-function applyMinimalMetadata(pdf: PDFDocument) {
-  pdf.setTitle("");
-  pdf.setAuthor("");
-  pdf.setSubject("");
-  pdf.setKeywords([]);
-  pdf.setProducer("LiftPDF");
-  pdf.setCreator("LiftPDF");
-  pdf.setCreationDate(new Date(0));
-  pdf.setModificationDate(new Date(0));
-}
-
 function isPdfFile(file: File) {
   return (
     file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
   );
+}
+
+function getCompressionModeLabel(mode: QpdfCompressionMode) {
+  return compressionModes.find((option) => option.value === mode)?.label ?? mode;
+}
+
+function getCompressionProgressLabel(mode: QpdfCompressionMode) {
+  if (mode === "preserve") {
+    return "Optimizing PDF streams without quality loss...";
+  }
+
+  if (mode === "balanced") {
+    return "Optimizing large images and PDF streams...";
+  }
+
+  return "Applying strong image and metadata optimization...";
 }

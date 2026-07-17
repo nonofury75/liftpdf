@@ -25,21 +25,21 @@ export default function CompressPdfPage() {
   return (
     <ToolPageShell
       title="Compress PDF Online"
-      description="Rebuild a PDF with safe client-side compression and download a clean optimized copy."
+      description="Compress a PDF locally with QPDF WASM modes for lossless optimization, balanced compression or stronger image-aware reduction."
       seoTitle="Compress PDF files online"
-      seoText="LiftPDF provides a safe first-step PDF compression tool that runs in your browser. It rebuilds the document, keeps every page and removes or minimizes metadata where possible."
+      seoText="LiftPDF compresses PDFs in your browser with QPDF WASM. Choose Preserve quality, Balanced or Strong compression, then compare the original and final file size before downloading."
       currentHref="/compress-pdf"
       premiumContent={premiumToolContent.compressPdf}
       faq={[
         {
-          question: "Is this advanced PDF compression?",
+          question: "What compression modes are available?",
           answer:
-            "No. This is safe client-side compression that rebuilds the PDF and minimizes metadata. It does not aggressively recompress images.",
+            "LiftPDF provides Preserve quality, Balanced and Strong modes. Preserve quality focuses on lossless PDF optimization, while Balanced and Strong can optimize large images when QPDF can do so safely.",
         },
         {
-          question: "Why are there no Low, Balanced or Maximum levels?",
+          question: "Does LiftPDF guarantee a target size like 1 MB?",
           answer:
-            "LiftPDF only shows options that change the output honestly. The current browser compression engine uses one safe mode, so fake compression levels are not displayed.",
+            "No. The current browser engine does not guarantee exact target sizes. It reports the real output size after compression instead of promising a fixed number.",
         },
         {
           question: "Will every PDF become smaller?",
@@ -49,12 +49,12 @@ export default function CompressPdfPage() {
         {
           question: "Does Compress PDF reduce image quality?",
           answer:
-            "No. This version preserves page content and does not downsample images. That keeps quality stable, but image-heavy PDFs may not shrink as much as they would with server-side image recompression.",
+            "Preserve quality avoids intentional quality loss. Balanced and Strong may change image compression on image-heavy PDFs to reduce file size.",
         },
         {
           question: "Are my PDFs uploaded to a server?",
           answer:
-            "No. Compression runs client-side in your browser with pdf-lib.",
+            "No. Compression runs client-side in your browser with QPDF compiled to WebAssembly.",
         },
         {
           question: "Can I compress a password-protected PDF?",

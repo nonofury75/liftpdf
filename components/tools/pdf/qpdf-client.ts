@@ -12,12 +12,13 @@ type QpdfModule = {
 type QpdfFactory = {
   default: (options: {
     locateFile: (fileName: string) => string;
-    print: () => void;
-    printErr: () => void;
+    print: (message?: unknown) => void;
+    printErr: (message?: unknown) => void;
   }) => Promise<QpdfModule>;
 };
 
 let qpdfPromise: Promise<QpdfModule> | null = null;
+let qpdfLastMessages: string[] = [];
 
 export class QpdfPasswordError extends Error {
   constructor() {
@@ -25,6 +26,8 @@ export class QpdfPasswordError extends Error {
     this.name = "QpdfPasswordError";
   }
 }
+
+export type QpdfCompressionMode = "preserve" | "balanced" | "strong";
 
 // pdf-lib and PDF.js do not write encrypted PDFs. QPDF WASM is used here
 // because it applies real PDF password encryption in the browser.
@@ -38,6 +41,7 @@ export async function encryptPdfWithPassword(
   const outputPath = `/protected-${fileId}.pdf`;
 
   try {
+    qpdfLastMessages = [];
     qpdf.FS.writeFile(inputPath, bytes);
     const exitCode = qpdf.callMain([
       "--encrypt",
@@ -92,6 +96,37 @@ export async function unlockPdfWithPassword(bytes: Uint8Array, password: string)
   }
 }
 
+export async function compressPdfWithQpdf(
+  bytes: Uint8Array,
+  mode: QpdfCompressionMode,
+) {
+  const qpdf = await loadQpdf();
+  const fileId = createFileId();
+  const inputPath = `/compress-input-${fileId}.pdf`;
+  const outputPath = `/compress-output-${fileId}.pdf`;
+
+  try {
+    qpdf.FS.writeFile(inputPath, bytes);
+    const exitCode = qpdf.callMain([
+      ...getCompressionArgs(mode),
+      "--",
+      inputPath,
+      outputPath,
+    ]);
+
+    if (exitCode !== 0) {
+      throw new Error(
+        `QPDF compression failed.${formatQpdfMessages(qpdfLastMessages)}`,
+      );
+    }
+
+    return qpdf.FS.readFile(outputPath);
+  } finally {
+    removeQpdfFile(qpdf, inputPath);
+    removeQpdfFile(qpdf, outputPath);
+  }
+}
+
 export function hasPdfEncryptionDictionary(bytes: Uint8Array) {
   return new TextDecoder("latin1").decode(bytes).includes("/Encrypt");
 }
@@ -106,11 +141,21 @@ async function loadQpdf() {
     qpdfPromise = qpdfModule.default({
       locateFile: (fileName) => `/qpdf/${fileName}`,
       print: () => undefined,
-      printErr: () => undefined,
+      printErr: (message) => {
+        qpdfLastMessages.push(String(message));
+      },
     });
   }
 
   return qpdfPromise;
+}
+
+function formatQpdfMessages(messages: string[]) {
+  if (!messages.length) {
+    return "";
+  }
+
+  return ` ${messages.slice(-3).join(" ")}`;
 }
 
 function removeQpdfFile(qpdf: QpdfModule, path: string) {
@@ -119,6 +164,40 @@ function removeQpdfFile(qpdf: QpdfModule, path: string) {
   } catch {
     // QPDF may fail before creating the output file; cleanup is best-effort.
   }
+}
+
+function getCompressionArgs(mode: QpdfCompressionMode) {
+  const sharedArgs = [
+    "--object-streams=generate",
+    "--compress-streams=y",
+    "--recompress-flate",
+    "--compression-level=9",
+    "--deterministic-id",
+  ];
+
+  if (mode === "preserve") {
+    return sharedArgs;
+  }
+
+  if (mode === "balanced") {
+    return [
+      ...sharedArgs,
+      "--optimize-images",
+      "--jpeg-quality=68",
+      "--oi-min-width=240",
+      "--oi-min-height=240",
+    ];
+  }
+
+  return [
+    ...sharedArgs,
+    "--optimize-images",
+    "--jpeg-quality=58",
+    "--oi-min-width=120",
+    "--oi-min-height=120",
+    "--remove-metadata",
+    "--remove-info",
+  ];
 }
 
 function createFileId() {

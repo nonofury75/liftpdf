@@ -923,9 +923,9 @@ Object.assign(premiumToolContent, {
     left: "a PDF",
     right: "a compressed PDF",
     purpose:
-      "Rebuild a PDF with safe client-side optimization when you need a cleaner or sometimes smaller file.",
-    action: "Compress safely",
-    output: "Download the rebuilt PDF and compare original and final file sizes.",
+      "Optimize a PDF locally with QPDF WASM when you need a smaller browser-generated file.",
+    action: "Choose compression strength",
+    output: "Download the compressed PDF and compare original and final file sizes.",
     emphasis: "edit",
     related: [
       { label: "Merge PDF", href: "/merge-pdf", text: "Combine files before optimizing the final document." },
@@ -935,10 +935,10 @@ Object.assign(premiumToolContent, {
     ],
     guide: [
       {
-        title: "What safe compression means",
+        title: "What browser compression can do",
         paragraphs: [
-          "Client-side PDF compression is intentionally conservative. LiftPDF rebuilds the document and removes metadata where possible, but it does not pretend to perform heavy server-side image recompression.",
-          "If the output is not smaller, the tool explains that the file was already optimized. That honesty is better than fake compression levels that produce the same file.",
+          "LiftPDF uses QPDF WASM to optimize streams, object structure and, in stronger modes, image compression where the engine can do so. The file still stays in the browser.",
+          "The tool reports the real output size after compression. It does not promise an exact 1 MB or 2 MB target because that would require a heavier downsampling loop.",
         ],
       },
       {

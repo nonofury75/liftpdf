@@ -101,7 +101,7 @@ export default function PdfEditorPage() {
           },
           {
             title: "Reduce file size safely",
-            text: "Rebuild the PDF and minimize metadata without fake compression levels.",
+            text: "Use QPDF WASM compression modes and compare the real output size.",
             href: "/compress-pdf",
           },
         ],

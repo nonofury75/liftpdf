@@ -594,6 +594,41 @@ test.describe("critical PDF workflows", () => {
     expect((await PDFDocument.load(compressedBytes)).getPageCount()).toBe(10);
   });
 
+  test("compress PDF exposes real QPDF modes with measurable outputs", async ({
+    page,
+  }) => {
+    const fixtures = await ensureFixtures();
+
+    await page.goto("/compress-pdf");
+    await uploadFirstFile(page, fixtures.imageHeavy);
+    await expect(page.getByText(/6 pages/i).first()).toBeVisible();
+
+    const outputs: Record<string, Buffer> = {};
+
+    for (const mode of ["Preserve quality", "Balanced", "Strong"]) {
+      await page.getByRole("button", { name: new RegExp(mode, "i") }).click();
+      const bytes = await generateThenDownloadBytes(
+        page,
+        /^Compress PDF$/,
+        /^Download compressed PDF$/,
+        "compressed.pdf",
+      );
+      outputs[mode] = bytes;
+      expect((await PDFDocument.load(bytes)).getPageCount()).toBe(6);
+    }
+
+    expect(outputs["Preserve quality"].byteLength).not.toBe(
+      outputs.Balanced.byteLength,
+    );
+    expect(outputs.Strong.byteLength).not.toBe(outputs.Balanced.byteLength);
+    expect(outputs.Balanced.byteLength).toBeLessThanOrEqual(
+      outputs["Preserve quality"].byteLength,
+    );
+    expect(outputs.Strong.byteLength).toBeLessThanOrEqual(
+      outputs.Balanced.byteLength,
+    );
+  });
+
   test("protect and unlock use real PDF encryption", async ({ page }) => {
     const fixtures = await ensureFixtures();
     const password = "StrongPass123";
