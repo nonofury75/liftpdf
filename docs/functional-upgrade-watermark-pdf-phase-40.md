@@ -173,7 +173,15 @@ Expected impact:
 - `npm run test:e2e`: OK, 60 passed, 6 skipped mobile-heavy workflow tests
 - Local production start: OK
 - Firefox verification: OK, `watermarked.pdf` downloaded and `%PDF` magic bytes verified
-- Production deployment: PENDING
+- Production deployment: OK
+- Commit: `7afe932`
+- Vercel deployment: `https://liftpdf-2pdrtkj79-rachator75010-5712s-projects.vercel.app`
+- Vercel status: READY
+- Production URL: `https://liftpdf.com/watermark-pdf`
+- Production workflow: OK
+- Production output: `watermarked.pdf`
+- Production output magic bytes: `%PDF`
+- Production page errors / console errors / critical failed requests: none detected during smoke test
 
 ## Summary
 
@@ -193,5 +201,5 @@ Lint: OK
 Typecheck: OK  
 Build: OK  
 E2E: OK  
-Production deployed: PENDING  
+Production deployed: YES  
 Next remaining P1: Image-to-PDF output filename/per-image rotation or PDF to Text page range, to be selected in a later phase.
