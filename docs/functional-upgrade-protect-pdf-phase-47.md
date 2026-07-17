@@ -291,11 +291,14 @@ Analytics additions are aggregate only:
 Commit deployed:
 
 - `20862f2 Upgrade Protect PDF permission controls`
+- `38ef66b Document Protect PDF production validation`
 
 Vercel:
 
 - deployment URL: `https://liftpdf-2zn0wtujb-rachator75010-5712s-projects.vercel.app`
+- final deployment URL: `https://liftpdf-8r95idw97-rachator75010-5712s-projects.vercel.app`
 - status: READY
+- production alias: `https://liftpdf.com`
 
 Production route:
 
