@@ -938,7 +938,7 @@ Object.assign(premiumToolContent, {
         title: "What browser compression can do",
         paragraphs: [
           "LiftPDF uses QPDF WASM to optimize streams, object structure and, in stronger modes, image compression where the engine can do so. The file still stays in the browser.",
-          "The tool reports the real output size after compression. It does not promise an exact 1 MB or 2 MB target because that would require a heavier downsampling loop.",
+          "You can also remove standard PDF metadata during compression when privacy matters. The tool reports the real output size after compression and does not promise an exact 1 MB or 2 MB target because that would require a heavier downsampling loop.",
         ],
       },
       {

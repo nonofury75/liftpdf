@@ -630,6 +630,60 @@ test.describe("critical PDF workflows", () => {
     );
   });
 
+  test("compress PDF can remove metadata without changing page count", async ({
+    page,
+  }) => {
+    const fixtures = await ensureFixtures();
+
+    await page.goto("/compress-pdf");
+    await uploadFirstFile(page, fixtures.metadataRich);
+    await expect(page.getByText(/1 page/i).first()).toBeVisible();
+    const metadataToggle = page.getByLabel(/Remove document metadata/i);
+    await expect(metadataToggle).not.toBeChecked();
+
+    await page.getByRole("button", { name: /Preserve quality/i }).click();
+    const keptBytes = await generateThenDownloadBytes(
+      page,
+      /^Compress PDF$/,
+      /^Download compressed PDF$/,
+      "compressed.pdf",
+    );
+    expect((await PDFDocument.load(keptBytes)).getPageCount()).toBe(1);
+    expect(await readPdfMetadata(keptBytes)).toMatchObject({
+      title: "LiftPDF Metadata Rich Fixture",
+      author: "LiftPDF QA",
+      subject: "Compression and metadata test",
+      creator: "LiftPDF Test Fixture Creator",
+    });
+
+    await page.goto("/compress-pdf");
+    await uploadFirstFile(page, fixtures.metadataRich);
+    await page.getByRole("button", { name: /Preserve quality/i }).click();
+    await page.getByLabel(/Remove document metadata/i).check();
+    const cleanedBytes = await generateThenDownloadBytes(
+      page,
+      /^Compress PDF$/,
+      /^Download compressed PDF$/,
+      "compressed.pdf",
+    );
+    expect((await PDFDocument.load(cleanedBytes)).getPageCount()).toBe(1);
+    const cleanedMetadata = await readPdfMetadata(cleanedBytes);
+    expect(cleanedMetadata.title ?? "").toBe("");
+    expect(cleanedMetadata.author ?? "").toBe("");
+    expect(cleanedMetadata.subject ?? "").toBe("");
+    expect(cleanedMetadata.creator ?? "").not.toBe(
+      "LiftPDF Test Fixture Creator",
+    );
+    expect(
+      cleanedBytes.includes(Buffer.from("LiftPDF Metadata Rich Fixture")),
+    ).toBe(false);
+
+    await page.goto("/compress-pdf");
+    await uploadFirstFile(page, fixtures.metadataRich);
+    await page.getByRole("button", { name: /Strong/i }).click();
+    await expect(page.getByLabel(/Remove document metadata/i)).toBeChecked();
+  });
+
   test("protect and unlock use real PDF encryption", async ({ page }) => {
     const fixtures = await ensureFixtures();
     const password = "StrongPass123";
@@ -1371,6 +1425,19 @@ async function generateThenDownloadBytes(
 async function getFirstPageOrientation(pdfBytes: Buffer) {
   const pdf = await PDFDocument.load(pdfBytes);
   return pageOrientation(pdf.getPage(0).getSize());
+}
+
+async function readPdfMetadata(pdfBytes: Buffer) {
+  const pdf = await PDFDocument.load(pdfBytes, { updateMetadata: false });
+
+  return {
+    title: pdf.getTitle(),
+    author: pdf.getAuthor(),
+    subject: pdf.getSubject(),
+    keywords: pdf.getKeywords(),
+    creator: pdf.getCreator(),
+    producer: pdf.getProducer(),
+  };
 }
 
 function pageOrientation({ height, width }: { height: number; width: number }) {

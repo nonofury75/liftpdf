@@ -99,6 +99,7 @@ export async function unlockPdfWithPassword(bytes: Uint8Array, password: string)
 export async function compressPdfWithQpdf(
   bytes: Uint8Array,
   mode: QpdfCompressionMode,
+  options: { removeMetadata?: boolean } = {},
 ) {
   const qpdf = await loadQpdf();
   const fileId = createFileId();
@@ -108,7 +109,7 @@ export async function compressPdfWithQpdf(
   try {
     qpdf.FS.writeFile(inputPath, bytes);
     const exitCode = qpdf.callMain([
-      ...getCompressionArgs(mode),
+      ...getCompressionArgs(mode, options),
       "--",
       inputPath,
       outputPath,
@@ -166,7 +167,10 @@ function removeQpdfFile(qpdf: QpdfModule, path: string) {
   }
 }
 
-function getCompressionArgs(mode: QpdfCompressionMode) {
+function getCompressionArgs(
+  mode: QpdfCompressionMode,
+  options: { removeMetadata?: boolean },
+) {
   const sharedArgs = [
     "--object-streams=generate",
     "--compress-streams=y",
@@ -176,25 +180,38 @@ function getCompressionArgs(mode: QpdfCompressionMode) {
   ];
 
   if (mode === "preserve") {
-    return sharedArgs;
+    return withOptionalMetadataRemoval(sharedArgs, options);
   }
 
   if (mode === "balanced") {
-    return [
+    return withOptionalMetadataRemoval([
       ...sharedArgs,
       "--optimize-images",
       "--jpeg-quality=68",
       "--oi-min-width=240",
       "--oi-min-height=240",
-    ];
+    ], options);
   }
 
-  return [
+  return withOptionalMetadataRemoval([
     ...sharedArgs,
     "--optimize-images",
     "--jpeg-quality=58",
     "--oi-min-width=120",
     "--oi-min-height=120",
+  ], options);
+}
+
+function withOptionalMetadataRemoval(
+  args: string[],
+  options: { removeMetadata?: boolean },
+) {
+  if (!options.removeMetadata) {
+    return args;
+  }
+
+  return [
+    ...args,
     "--remove-metadata",
     "--remove-info",
   ];

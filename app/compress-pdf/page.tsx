@@ -6,7 +6,7 @@ import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Compress PDF Online - Free PDF Compressor | LiftPDF";
 const description =
-  "Compress PDF files online for free. Reduce PDF file size quickly and securely with LiftPDF.";
+  "Compress PDF files online for free. Reduce file size and optionally remove document metadata locally in your browser.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
@@ -27,7 +27,7 @@ export default function CompressPdfPage() {
       title="Compress PDF Online"
       description="Compress a PDF locally with QPDF WASM modes for lossless optimization, balanced compression or stronger image-aware reduction."
       seoTitle="Compress PDF files online"
-      seoText="LiftPDF compresses PDFs in your browser with QPDF WASM. Choose Preserve quality, Balanced or Strong compression, then compare the original and final file size before downloading."
+      seoText="LiftPDF compresses PDFs in your browser with QPDF WASM. Choose Preserve quality, Balanced or Strong compression, optionally remove document metadata, then compare the original and final file size before downloading."
       currentHref="/compress-pdf"
       premiumContent={premiumToolContent.compressPdf}
       faq={[
@@ -50,6 +50,11 @@ export default function CompressPdfPage() {
           question: "Does Compress PDF reduce image quality?",
           answer:
             "Preserve quality avoids intentional quality loss. Balanced and Strong may change image compression on image-heavy PDFs to reduce file size.",
+        },
+        {
+          question: "Can I remove PDF metadata while compressing?",
+          answer:
+            "Yes. Enable Remove document metadata to ask QPDF to remove standard PDF info and XMP metadata such as title, author, subject, keywords, creator and producer when it can do so safely.",
         },
         {
           question: "Are my PDFs uploaded to a server?",

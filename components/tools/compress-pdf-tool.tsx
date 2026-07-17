@@ -43,6 +43,7 @@ type CompressionResult = {
   originalSize: number;
   finalSize: number;
   mode: QpdfCompressionMode;
+  removeMetadata: boolean;
 };
 
 const compressedFileName = "compressed.pdf";
@@ -71,7 +72,7 @@ const compressionModes: Array<{
     label: "Strong",
     description: "Smallest browser-side file",
     detail:
-      "Uses stronger image optimization and removes PDF metadata. Visual quality can change on image-heavy files.",
+      "Uses stronger image optimization. Visual quality can change on image-heavy files.",
   },
 ];
 
@@ -83,6 +84,7 @@ export function CompressPdfTool() {
   const [compressionStep, setCompressionStep] = useState<string | null>(null);
   const [compressionMode, setCompressionMode] =
     useState<QpdfCompressionMode>("balanced");
+  const [removeMetadata, setRemoveMetadata] = useState(false);
   const [result, setResult] = useState<CompressionResult | null>(null);
   const resultRef = useRef<CompressionResult | null>(null);
   const previewUrlRef = useRef<string | null>(null);
@@ -173,8 +175,9 @@ export function CompressPdfTool() {
     setIsCompressing(true);
     setCompressionStep("Preparing PDF...");
     clearResult();
+    const analyticsMode = `${compressionMode}_${removeMetadata ? "metadata_removed" : "metadata_kept"}`;
     analytics.trackConversionStarted({
-      mode: compressionMode,
+      mode: analyticsMode,
       outputFormat: "pdf",
       pageCount: selectedPdf.pageCount,
     });
@@ -184,6 +187,7 @@ export function CompressPdfTool() {
       const compressedBytes = await compressPdfWithQpdf(
         new Uint8Array(await selectedPdf.file.arrayBuffer()),
         compressionMode,
+        { removeMetadata },
       );
       const compressedBuffer = new ArrayBuffer(compressedBytes.byteLength);
       new Uint8Array(compressedBuffer).set(compressedBytes);
@@ -195,10 +199,11 @@ export function CompressPdfTool() {
         originalSize: selectedPdf.file.size,
         finalSize: blob.size,
         mode: compressionMode,
+        removeMetadata,
       });
       setCompressionStep("Compressed PDF created successfully.");
       analytics.trackConversionCompleted({
-        mode: compressionMode,
+        mode: analyticsMode,
         outputFormat: "pdf",
         pageCount: selectedPdf.pageCount,
         status: "success",
@@ -219,6 +224,7 @@ export function CompressPdfTool() {
     setError(null);
     setCompressionStep(null);
     setCompressionMode("balanced");
+    setRemoveMetadata(false);
     clearResult();
     clearPreview();
   }
@@ -306,6 +312,7 @@ export function CompressPdfTool() {
                   clearResult();
                   setCompressionStep(null);
                   setCompressionMode(mode.value);
+                  setRemoveMetadata(mode.value === "strong");
                 }}
                 className={`rounded-xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   compressionMode === mode.value
@@ -327,6 +334,29 @@ export function CompressPdfTool() {
               </button>
             ))}
           </div>
+
+          <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-muted/30 p-4 transition hover:-translate-y-0.5 hover:shadow-sm">
+            <input
+              type="checkbox"
+              checked={removeMetadata}
+              onChange={(event) => {
+                clearResult();
+                setCompressionStep(null);
+                setRemoveMetadata(event.target.checked);
+              }}
+              className="mt-1 size-4 rounded border-border text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-foreground">
+                Remove document metadata
+              </span>
+              <span className="mt-1 block text-sm leading-6 text-muted-foreground">
+                Removes standard PDF metadata such as title, author, subject,
+                keywords, creator and XMP metadata when QPDF can safely remove
+                them.
+              </span>
+            </span>
+          </label>
 
           <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
             These modes do not promise an exact target size and do not perform
@@ -378,6 +408,10 @@ export function CompressPdfTool() {
           <SummaryRow
             label="Mode"
             value={getCompressionModeLabel(compressionMode)}
+          />
+          <SummaryRow
+            label="Metadata"
+            value={removeMetadata ? "Remove" : "Keep"}
           />
           <SummaryRow
             label="Final size"
@@ -592,5 +626,5 @@ function getCompressionProgressLabel(mode: QpdfCompressionMode) {
     return "Optimizing large images and PDF streams...";
   }
 
-  return "Applying strong image and metadata optimization...";
+  return "Applying strong image optimization...";
 }
