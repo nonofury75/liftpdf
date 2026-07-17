@@ -42,6 +42,7 @@ export type FixturePaths = {
   png: string;
   transparentPng: string;
   pngNoTransparency: string;
+  rotationMarkerPng: string;
   widePng: string;
   squarePng: string;
   largePng: string;
@@ -74,6 +75,7 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     png: path.join(fixturesDir, "sample.png"),
     transparentPng: path.join(fixturesDir, "transparent.png"),
     pngNoTransparency: path.join(fixturesDir, "no-transparency.png"),
+    rotationMarkerPng: path.join(fixturesDir, "rotation-marker.png"),
     widePng: path.join(fixturesDir, "wide-2x1.png"),
     squarePng: path.join(fixturesDir, "square.png"),
     largePng: path.join(fixturesDir, "large.png"),
@@ -99,6 +101,7 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     writeFileAtomic(paths.png, Buffer.from(onePixelPng, "base64")),
     writeFileAtomic(paths.transparentPng, Buffer.from(transparentPng, "base64")),
     writeFileAtomic(paths.pngNoTransparency, createSolidPng(240, 320)),
+    writeFileAtomic(paths.rotationMarkerPng, createDirectionalPng(320, 180)),
     writeFileAtomic(paths.widePng, createSolidPng(300, 150)),
     writeFileAtomic(paths.squarePng, createSolidPng(300, 300)),
     writeFileAtomic(paths.largePng, createSolidPng(1600, 1200)),
@@ -379,6 +382,52 @@ function createSolidPng(width: number, height: number) {
       raw[pixelOffset] = 220;
       raw[pixelOffset + 1] = 40;
       raw[pixelOffset + 2] = 80;
+      raw[pixelOffset + 3] = 255;
+    }
+  }
+
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    createPngChunk("IHDR", Buffer.concat([
+      uint32(width),
+      uint32(height),
+      Buffer.from([8, 6, 0, 0, 0]),
+    ])),
+    createPngChunk("IDAT", deflateSync(raw)),
+    createPngChunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+function createDirectionalPng(width: number, height: number) {
+  const bytesPerPixel = 4;
+  const scanlineLength = 1 + width * bytesPerPixel;
+  const raw = Buffer.alloc(scanlineLength * height);
+
+  for (let y = 0; y < height; y += 1) {
+    const rowOffset = y * scanlineLength;
+    raw[rowOffset] = 0;
+
+    for (let x = 0; x < width; x += 1) {
+      const pixelOffset = rowOffset + 1 + x * bytesPerPixel;
+      const isTop = y < height * 0.22;
+      const isRight = x > width * 0.78;
+      const isBottom = y > height * 0.78;
+      const isLeft = x < width * 0.22;
+      let color = [245, 245, 245];
+
+      if (isTop) {
+        color = [220, 30, 50];
+      } else if (isRight) {
+        color = [30, 120, 220];
+      } else if (isBottom) {
+        color = [30, 170, 80];
+      } else if (isLeft) {
+        color = [245, 190, 30];
+      }
+
+      raw[pixelOffset] = color[0];
+      raw[pixelOffset + 1] = color[1];
+      raw[pixelOffset + 2] = color[2];
       raw[pixelOffset + 3] = 255;
     }
   }

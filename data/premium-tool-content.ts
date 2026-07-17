@@ -347,7 +347,7 @@ export const premiumToolContent: Record<string, PremiumToolContentData> = {
       },
       {
         title: "Arrange pages",
-        text: "Move images into the correct order and remove anything you do not want.",
+        text: "Move images into the correct order, rotate individual files and remove anything you do not want.",
         icon: "settings",
       },
       {
@@ -392,7 +392,7 @@ export const premiumToolContent: Record<string, PremiumToolContentData> = {
         title: "Preparing the best result",
         paragraphs: [
           "Start by checking the order of every image. The first image becomes the first PDF page. Use Auto page size when image proportions vary and you want each page to feel natural. Use A4 or Letter when the final document needs consistent paper size.",
-          "If the PDF will be printed, Fit is usually safer because no image content is cropped. Fill creates a stronger edge-to-edge result but should be used only when cropping is acceptable.",
+          "Rotate any sideways image before export so the final PDF does not need a separate correction step. If the PDF will be printed, Fit is usually safer because no image content is cropped. Fill creates a stronger edge-to-edge result but should be used only when cropping is acceptable.",
         ],
       },
       {

@@ -9,9 +9,10 @@ import {
   Loader2,
   RotateCcw,
 } from "lucide-react";
-import { PDFDocument } from "pdf-lib";
+import { degrees, PDFDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
 import {
+  ImageRotation,
   ImagePreviewList,
   UploadedImage,
 } from "@/components/tools/image-preview-list";
@@ -28,6 +29,7 @@ type ImageToPdfToolProps = {
   downloadFileName: string;
   acceptedImageTypes?: string[];
   addMoreAriaLabel?: string;
+  allowIndividualRotation?: boolean;
   invalidFileMessage?: string;
   presentation?: "standard" | "showcase";
   uploadButtonLabel?: string;
@@ -81,6 +83,7 @@ export function ImageToPdfTool({
   downloadFileName,
   acceptedImageTypes = defaultAcceptedImageTypes,
   addMoreAriaLabel = "Add more images",
+  allowIndividualRotation = false,
   invalidFileMessage = "Only JPG, JPEG, PNG and WEBP files are supported.",
   presentation = "standard",
   uploadButtonLabel = "Choose files",
@@ -240,6 +243,24 @@ export function ImageToPdfTool({
     });
   }
 
+  function handleRotate(id: string, direction: "left" | "right") {
+    clearPdfUrl();
+    setImages((currentImages) =>
+      currentImages.map((image) => {
+        if (image.id !== id) {
+          return image;
+        }
+
+        return {
+          ...image,
+          rotation: normalizeImageRotation(
+            image.rotation + (direction === "right" ? 90 : -90),
+          ),
+        };
+      }),
+    );
+  }
+
   async function handleConvert() {
     if (!images.length) {
       setError("Please choose at least one image before converting.");
@@ -261,15 +282,34 @@ export function ImageToPdfTool({
       const pdfDocument = await PDFDocument.create();
 
       for (const image of images) {
-        const imageBytes = await getEmbeddableImageBytes(image.file);
-        const embeddedImage =
+        let imageBytes = await getEmbeddableImageBytes(image.file);
+        let embeddedImage =
           imageBytes.type === "jpg"
             ? await pdfDocument.embedJpg(imageBytes.bytes)
             : await pdfDocument.embedPng(imageBytes.bytes);
+
+        if (
+          allowIndividualRotation &&
+          imageBytes.type === "jpg" &&
+          (embeddedImage.width !== image.width ||
+            embeddedImage.height !== image.height)
+        ) {
+          imageBytes = {
+            type: "png",
+            bytes: await convertImageToPngBytes(image.file),
+          };
+          embeddedImage = await pdfDocument.embedPng(imageBytes.bytes);
+        }
+
+        const rotatedDimensions = getRotatedImageDimensions({
+          height: embeddedImage.height,
+          rotation: image.rotation,
+          width: embeddedImage.width,
+        });
         const placement = calculateImagePlacement({
           fitMode: effectiveFitMode,
-          imageWidth: embeddedImage.width,
-          imageHeight: embeddedImage.height,
+          imageWidth: rotatedDimensions.width,
+          imageHeight: rotatedDimensions.height,
           margin: effectiveMargin,
           orientation: effectiveOrientation,
           pageSize: effectivePageSize,
@@ -279,12 +319,13 @@ export function ImageToPdfTool({
           placement.pageWidth,
           placement.pageHeight,
         ]);
-        page.drawImage(embeddedImage, {
-          x: placement.drawX,
-          y: placement.drawY,
-          width: placement.drawWidth,
-          height: placement.drawHeight,
-        });
+        page.drawImage(
+          embeddedImage,
+          getRotatedImageDrawOptions({
+            placement,
+            rotation: image.rotation,
+          }),
+        );
       }
 
       const pdfBytes = await pdfDocument.save();
@@ -295,6 +336,9 @@ export function ImageToPdfTool({
       setPdfUrl(URL.createObjectURL(blob));
       analytics.trackConversionCompleted({
         fileCount: images.length,
+        mode: images.some((image) => image.rotation !== 0)
+          ? "images_rotated"
+          : "no_image_rotation",
         outputFormat: "pdf",
         status: "success",
       });
@@ -498,9 +542,11 @@ export function ImageToPdfTool({
       {images.length ? (
         <div className="order-3 xl:col-start-1 xl:row-start-2">
           <ImagePreviewList
+            allowIndividualRotation={allowIndividualRotation}
             images={images}
             onRemove={handleRemove}
             onMove={handleMove}
+            onRotate={handleRotate}
             onAddMore={() => addMoreInputRef.current?.click()}
             presentation={presentation}
           />
@@ -631,6 +677,7 @@ function PdfLivePreview({
           data-preview-image-top={model.imageTopPercent.toFixed(3)}
           data-preview-image-width={model.imageWidthPercent.toFixed(3)}
           data-preview-image-height={model.imageHeightPercent.toFixed(3)}
+          data-preview-image-rotation={model.imageRotation}
           className={cn(
             "relative bg-white ring-1 ring-black/10 transition-[aspect-ratio,width,max-height,transform,box-shadow] ease-out",
             isShowcase
@@ -672,17 +719,22 @@ function PdfLivePreview({
               height: `${model.imageHeightPercent}%`,
             }}
           >
-            <NextImage
-              src={image.previewUrl}
-              alt=""
-              fill
-              sizes="520px"
+            <div
               className={cn(
-                "object-fill transition-transform ease-out",
+                "absolute left-1/2 top-1/2 transition-[width,height,transform] ease-out",
                 isShowcase ? "duration-[180ms]" : "duration-200",
               )}
-              unoptimized
-            />
+              style={getLivePreviewImageFrameStyle(model)}
+            >
+              <NextImage
+                src={image.previewUrl}
+                alt=""
+                fill
+                sizes="520px"
+                className="object-fill"
+                unoptimized
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -694,6 +746,9 @@ type PreviewModel = {
   fitMode: ImageFitMode;
   imageHeightPercent: number;
   imageLeftPercent: number;
+  imageRotation: ImageRotation;
+  imageRotationFrameHeightPercent: number;
+  imageRotationFrameWidthPercent: number;
   imageTopPercent: number;
   imageWidthPercent: number;
   isLandscape: boolean;
@@ -716,8 +771,13 @@ function createPreviewModel({
   orientation: ImagePdfOrientation;
   pageSize: ImagePdfPageSize;
 }): PreviewModel {
-  const imageWidth = image?.width ?? 595;
-  const imageHeight = image?.height ?? 842;
+  const rotatedDimensions = getRotatedImageDimensions({
+    height: image?.height ?? 842,
+    rotation: image?.rotation ?? 0,
+    width: image?.width ?? 595,
+  });
+  const imageWidth = rotatedDimensions.width;
+  const imageHeight = rotatedDimensions.height;
   const placement = calculateImagePlacement({
     fitMode,
     imageHeight,
@@ -726,9 +786,17 @@ function createPreviewModel({
     orientation,
     pageSize,
   });
+  const isSideways = (image?.rotation ?? 0) === 90 || (image?.rotation ?? 0) === 270;
 
   return {
     fitMode,
+    imageRotation: image?.rotation ?? 0,
+    imageRotationFrameHeightPercent: isSideways
+      ? (placement.drawWidth / placement.drawHeight) * 100
+      : 100,
+    imageRotationFrameWidthPercent: isSideways
+      ? (placement.drawHeight / placement.drawWidth) * 100
+      : 100,
     imageHeightPercent:
       (placement.drawHeight / placement.pageHeight) * 100,
     imageLeftPercent: (placement.drawX / placement.pageWidth) * 100,
@@ -774,6 +842,7 @@ async function createUploadedImage(file: File): Promise<UploadedImage> {
       previewUrl,
       width: dimensions.width,
       height: dimensions.height,
+      rotation: 0,
     };
   } catch (error) {
     URL.revokeObjectURL(previewUrl);
@@ -859,6 +928,83 @@ type ImagePlacement = {
   pageWidth: number;
 };
 
+function getRotatedImageDimensions({
+  height,
+  rotation,
+  width,
+}: {
+  height: number;
+  rotation: ImageRotation;
+  width: number;
+}) {
+  return rotation === 90 || rotation === 270
+    ? { height: width, width: height }
+    : { height, width };
+}
+
+function getRotatedImageDrawOptions({
+  placement,
+  rotation,
+}: {
+  placement: ImagePlacement;
+  rotation: ImageRotation;
+}) {
+  const originalDrawWidth =
+    rotation === 90 || rotation === 270
+      ? placement.drawHeight
+      : placement.drawWidth;
+  const originalDrawHeight =
+    rotation === 90 || rotation === 270
+      ? placement.drawWidth
+      : placement.drawHeight;
+
+  if (rotation === 90) {
+    return {
+      height: originalDrawHeight,
+      rotate: degrees(270),
+      width: originalDrawWidth,
+      x: placement.drawX,
+      y: placement.drawY + originalDrawWidth,
+    };
+  }
+
+  if (rotation === 180) {
+    return {
+      height: originalDrawHeight,
+      rotate: degrees(180),
+      width: originalDrawWidth,
+      x: placement.drawX + originalDrawWidth,
+      y: placement.drawY + originalDrawHeight,
+    };
+  }
+
+  if (rotation === 270) {
+    return {
+      height: originalDrawHeight,
+      rotate: degrees(90),
+      width: originalDrawWidth,
+      x: placement.drawX + originalDrawHeight,
+      y: placement.drawY,
+    };
+  }
+
+  return {
+    height: originalDrawHeight,
+    rotate: degrees(0),
+    width: originalDrawWidth,
+    x: placement.drawX,
+    y: placement.drawY,
+  };
+}
+
+function getLivePreviewImageFrameStyle(model: PreviewModel) {
+  return {
+    height: `${model.imageRotationFrameHeightPercent}%`,
+    transform: `translate(-50%, -50%) rotate(${model.imageRotation}deg)`,
+    width: `${model.imageRotationFrameWidthPercent}%`,
+  };
+}
+
 function calculateImagePlacement({
   fitMode,
   imageWidth,
@@ -901,6 +1047,10 @@ function calculateImagePlacement({
     pageHeight: pageBox.height,
     pageWidth: pageBox.width,
   };
+}
+
+function normalizeImageRotation(rotation: number): ImageRotation {
+  return (((rotation % 360) + 360) % 360) as ImageRotation;
 }
 
 function orientPageBox(

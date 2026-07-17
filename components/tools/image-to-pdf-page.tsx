@@ -16,6 +16,7 @@ type ImageToPdfPageProps = {
   currentHref: string;
   acceptedImageTypes?: string[];
   addMoreAriaLabel?: string;
+  allowIndividualRotation?: boolean;
   compactHero?: boolean;
   compactRelatedTools?: boolean;
   invalidFileMessage?: string;
@@ -35,6 +36,7 @@ export function ImageToPdfPage({
   currentHref,
   acceptedImageTypes,
   addMoreAriaLabel,
+  allowIndividualRotation,
   compactHero,
   compactRelatedTools,
   invalidFileMessage,
@@ -59,6 +61,7 @@ export function ImageToPdfPage({
       <ImageToPdfTool
         acceptedImageTypes={acceptedImageTypes}
         addMoreAriaLabel={addMoreAriaLabel}
+        allowIndividualRotation={allowIndividualRotation}
         downloadFileName={downloadFileName}
         invalidFileMessage={invalidFileMessage}
         presentation={presentation}

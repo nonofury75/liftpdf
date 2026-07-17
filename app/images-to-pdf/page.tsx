@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     absolute: "Images to PDF Converter - Free Online Tool | LiftPDF",
   },
   description:
-    "Convert JPG, PNG and WEBP images to PDF online. Upload multiple images, reorder them and download one PDF file.",
+    "Convert JPG, PNG and WEBP images to PDF online. Upload multiple images, rotate or reorder them and download one PDF file.",
   alternates: {
     canonical: "/images-to-pdf",
   },
@@ -37,11 +37,12 @@ export default function ImagesToPdfPage() {
   return (
     <ImageToPdfPage
       title="Images to PDF Converter"
-      intro="Combine JPG, JPEG, PNG and WEBP images into one PDF file in a few clicks."
-      seoText="The LiftPDF images to PDF converter creates a PDF from common image formats on your device. Add images, remove files you do not need, reorder pages and download the final PDF."
+      intro="Combine JPG, JPEG, PNG and WEBP images into one PDF file, with per-image rotation before export."
+      seoText="The LiftPDF images to PDF converter creates a PDF from common image formats on your device. Add images, rotate individual files, remove files you do not need, reorder pages and download the final PDF."
       downloadFileName="images.pdf"
       currentHref="/images-to-pdf"
       premiumContent={premiumToolContent.imagesToPdf}
+      allowIndividualRotation
       compactHero
       compactRelatedTools
       presentation="showcase"
@@ -65,6 +66,11 @@ export default function ImagesToPdfPage() {
           question: "Can I remove or reorder images?",
           answer:
             "Yes. You can delete images and move them before generating the PDF.",
+        },
+        {
+          question: "Can I rotate one image without rotating the others?",
+          answer:
+            "Yes. Images to PDF lets you rotate each selected image left or right before creating the PDF.",
         },
         {
           question: "Can I use Auto page size?",

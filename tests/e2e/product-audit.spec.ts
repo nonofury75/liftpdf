@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { inflateSync } from "node:zlib";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import JSZip from "jszip";
 import { PDFDocument } from "pdf-lib";
@@ -833,6 +834,7 @@ test.describe("critical PDF workflows", () => {
     await page.goto("/jpg-to-pdf");
     await uploadFirstFile(page, fixtures.jpg);
     await expect(page.getByText(/sample.jpg/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Rotate .* right/i })).toHaveCount(0);
     const livePreview = page.getByLabel("Live PDF page preview");
     await expect(livePreview).toBeVisible();
     await expect(page.locator('button[aria-pressed="true"]')).toHaveCount(0);
@@ -874,6 +876,7 @@ test.describe("critical PDF workflows", () => {
     await expect(page.getByText(/Only PNG files are supported/i)).toBeVisible();
     await uploadFirstFile(page, fixtures.png);
     await expect(page.getByText(/sample.png/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Rotate .* right/i })).toHaveCount(0);
     const pngLivePreview = page.getByLabel("Live PDF page preview");
     await expect(pngLivePreview).toBeVisible();
     await expect(page.locator('button[aria-pressed="true"]')).toHaveCount(0);
@@ -991,6 +994,85 @@ test.describe("critical PDF workflows", () => {
       "images.pdf",
     );
     expect((await PDFDocument.load(imagesPdf)).getPageCount()).toBe(2);
+
+    await page.goto("/images-to-pdf");
+    await uploadFirstFile(page, fixtures.rotationMarkerPng);
+    await expect(page.getByText(/rotation-marker.png/i)).toBeVisible();
+    const rotationPreview = page.getByLabel("Live PDF page preview");
+    await expect(rotationPreview).toHaveAttribute("data-preview-image-rotation", "0");
+    const rotation0Pdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "images.pdf",
+    );
+    expect(await getFirstPageOrientation(rotation0Pdf)).toBe("landscape");
+
+    await page.getByRole("button", { name: /Rotate rotation-marker.png right/i }).click();
+    await expect(rotationPreview).toHaveAttribute("data-preview-image-rotation", "90");
+    const rotation90Pdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "images.pdf",
+    );
+    expect(await getFirstPageOrientation(rotation90Pdf)).toBe("portrait");
+
+    await page.getByRole("button", { name: /Rotate rotation-marker.png right/i }).click();
+    await expect(rotationPreview).toHaveAttribute("data-preview-image-rotation", "180");
+    const rotation180Pdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "images.pdf",
+    );
+    expect(await getFirstPageOrientation(rotation180Pdf)).toBe("landscape");
+    expect(extractPdfStreamText(rotation180Pdf)).not.toBe(
+      extractPdfStreamText(rotation0Pdf),
+    );
+
+    await page.getByRole("button", { name: /Rotate rotation-marker.png right/i }).click();
+    await expect(rotationPreview).toHaveAttribute("data-preview-image-rotation", "270");
+    const rotation270Pdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "images.pdf",
+    );
+    expect(await getFirstPageOrientation(rotation270Pdf)).toBe("portrait");
+    expect(extractPdfStreamText(rotation270Pdf)).not.toBe(
+      extractPdfStreamText(rotation90Pdf),
+    );
+
+    await page.getByRole("button", { name: /Rotate rotation-marker.png right/i }).click();
+    await expect(rotationPreview).toHaveAttribute("data-preview-image-rotation", "0");
+
+    await page.goto("/images-to-pdf");
+    await uploadFirstFile(page, [
+      fixtures.pngNoTransparency,
+      fixtures.widePng,
+      fixtures.rotationMarkerPng,
+    ]);
+    await page.getByRole("button", { name: /Rotate wide-2x1.png right/i }).click();
+    await page.getByRole("button", { name: /Rotate rotation-marker.png right/i }).click();
+    await page.getByRole("button", { name: /Rotate rotation-marker.png right/i }).click();
+    await page.getByRole("button", { name: /Move rotation-marker.png up/i }).click();
+    await page.getByRole("button", { name: /Move rotation-marker.png up/i }).click();
+    await page.getByRole("button", { name: /Remove no-transparency.png/i }).click();
+    const reorderedRotatedPdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "images.pdf",
+    );
+    const reorderedRotatedDoc = await PDFDocument.load(reorderedRotatedPdf);
+    expect(reorderedRotatedDoc.getPageCount()).toBe(2);
+    expect(pageOrientation(reorderedRotatedDoc.getPage(0).getSize())).toBe(
+      "landscape",
+    );
+    expect(pageOrientation(reorderedRotatedDoc.getPage(1).getSize())).toBe(
+      "portrait",
+    );
 
     await page.goto("/pdf-to-jpg");
     await uploadFirstFile(page, fixtures.text1);
@@ -1284,6 +1366,33 @@ async function generateThenDownloadBytes(
   }
 
   return fs.readFileSync(filePath);
+}
+
+async function getFirstPageOrientation(pdfBytes: Buffer) {
+  const pdf = await PDFDocument.load(pdfBytes);
+  return pageOrientation(pdf.getPage(0).getSize());
+}
+
+function pageOrientation({ height, width }: { height: number; width: number }) {
+  return width >= height ? "landscape" : "portrait";
+}
+
+function extractPdfStreamText(pdfBytes: Buffer) {
+  const source = pdfBytes.toString("latin1");
+  const streams: string[] = [];
+  const streamPattern = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+
+  for (const match of source.matchAll(streamPattern)) {
+    const streamBytes = Buffer.from(match[1], "latin1");
+
+    try {
+      streams.push(inflateSync(streamBytes).toString("latin1"));
+    } catch {
+      streams.push(streamBytes.toString("latin1"));
+    }
+  }
+
+  return streams.join("\n");
 }
 
 async function extractPdfPageText(pdfBytes: Buffer, pageNumber: number) {
