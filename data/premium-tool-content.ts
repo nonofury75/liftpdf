@@ -1112,9 +1112,9 @@ Object.assign(premiumToolContent, {
     left: "a PDF",
     right: "an extracted PDF",
     purpose:
-      "Select important pages visually and save them into a new PDF without keeping the rest.",
+      "Select important pages visually and save them into one PDF or separate PDFs without keeping the rest.",
     action: "Extract selected pages",
-    output: "Download a new PDF containing only the selected pages in original order.",
+    output: "Download one PDF containing the selected pages, or a ZIP with one PDF per selected page.",
     emphasis: "pages",
     related: [
       {
@@ -1147,13 +1147,13 @@ Object.assign(premiumToolContent, {
         title: "Extract only what matters",
         paragraphs: [
           "Extract Pages is useful when you need to send a few pages from a longer PDF. Selecting pages visually reduces mistakes compared with typing ranges from memory.",
-          "The exported PDF keeps the selected pages in their original order, which is usually what recipients expect.",
+          "Use one combined PDF when the pages belong together, or separate PDFs in a ZIP when each selected page needs to become its own file.",
         ],
       },
       {
         title: "Extract one page, several pages or an excerpt",
         paragraphs: [
-          "For a single page, select only that page and download a one-page PDF. For multiple pages, select each thumbnail you need and LiftPDF creates one clean PDF in the original order.",
+          "For a single page, select only that page and download a one-page PDF. For multiple pages, select each thumbnail you need, then choose one combined PDF or separate PDF files in a ZIP.",
           "This workflow is useful for reports, books, contracts and scanned packets where the page numbers are known but the surrounding pages should not be shared.",
         ],
       },

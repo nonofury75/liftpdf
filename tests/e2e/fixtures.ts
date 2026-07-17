@@ -27,6 +27,7 @@ export type FixturePaths = {
   phase41Markers: string;
   phase44Markers: string;
   phase45Markers: string;
+  phase46Markers: string;
   imageHeavy: string;
   imageOnly: string;
   transparentPdf: string;
@@ -62,6 +63,7 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     phase41Markers: path.join(fixturesDir, "phase41-markers.pdf"),
     phase44Markers: path.join(fixturesDir, "phase44-markers.pdf"),
     phase45Markers: path.join(fixturesDir, "phase45-markers.pdf"),
+    phase46Markers: path.join(fixturesDir, "phase46-markers.pdf"),
     imageHeavy: path.join(fixturesDir, "image-heavy.pdf"),
     imageOnly: path.join(fixturesDir, "image-only.pdf"),
     transparentPdf: path.join(fixturesDir, "transparent-content.pdf"),
@@ -94,6 +96,7 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     createPhase41MarkerPdf(paths.phase41Markers),
     createPhase44MarkerPdf(paths.phase44Markers),
     createPhase45MarkerPdf(paths.phase45Markers),
+    createPhase46MarkerPdf(paths.phase46Markers),
     createImageHeavyPdf(paths.imageHeavy),
     createImageOnlyPdf(paths.imageOnly),
     createTransparentPdf(paths.transparentPdf),
@@ -220,6 +223,32 @@ async function createPhase45MarkerPdf(filePath: string) {
       color: rgb(0.1, 0.1, 0.1),
     });
     page.drawText(`Rotate targeting marker for Phase 45 page ${pageNumber}.`, {
+      x: 72,
+      y: 720,
+      size: 14,
+      font,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+  }
+
+  await writeFileAtomic(filePath, Buffer.from(await pdf.save()));
+}
+
+async function createPhase46MarkerPdf(filePath: string) {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdf.embedFont(StandardFonts.HelveticaBold);
+
+  for (let pageNumber = 1; pageNumber <= 6; pageNumber += 1) {
+    const page = pdf.addPage([595, 842]);
+    page.drawText(`PHASE46-PAGE-${pageNumber}`, {
+      x: 72,
+      y: 760,
+      size: 24,
+      font: boldFont,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    page.drawText(`Extract ZIP marker for Phase 46 page ${pageNumber}.`, {
       x: 72,
       y: 720,
       size: 14,

@@ -13,6 +13,8 @@ import {
   Scissors,
   ShieldCheck,
 } from "lucide-react";
+import JSZip from "jszip";
+import type { PDFDocument as PdfLibDocument } from "pdf-lib";
 import { Button } from "@/components/ui/button";
 import { PdfUploadZone } from "@/components/tools/pdf-upload-zone";
 import {
@@ -39,9 +41,12 @@ type SelectedPdf = {
 type GeneratedFile = {
   url: string;
   fileName: string;
+  format: "pdf" | "zip";
 };
 
 const outputFileName = "pages-extracted.pdf";
+const zipOutputFileName = "extracted-pages.zip";
+type OutputMode = "combined" | "separate";
 
 export function ExtractPagesTool() {
   const [selectedPdf, setSelectedPdf] = useState<SelectedPdf | null>(null);
@@ -52,6 +57,7 @@ export function ExtractPagesTool() {
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [generatedFile, setGeneratedFile] = useState<GeneratedFile | null>(null);
+  const [outputMode, setOutputMode] = useState<OutputMode>("combined");
 
   const generatedFileRef = useRef<GeneratedFile | null>(null);
   const pagesRef = useRef<PdfPageThumbnail[]>([]);
@@ -220,49 +226,38 @@ export function ExtractPagesTool() {
     setIsExporting(true);
     setProgress("Preparing PDF...");
     clearGeneratedFile();
+    const selectedPagesInOrder = selectedPages.slice().sort((a, b) => a - b);
+    const outputFormat = outputMode === "separate" ? "zip" : "pdf";
     analytics.trackConversionStarted({
-      mode: "extract_pages",
-      pageCount: selectedPages.length,
-      outputFormat: "pdf",
+      mode: outputMode === "separate" ? "separate_pdfs_zip" : "combined_pdf",
+      pageCount: selectedPagesInOrder.length,
+      outputFormat,
     });
 
     try {
       const { PDFDocument } = await import("pdf-lib");
       const sourcePdf = await PDFDocument.load(await selectedPdf.file.arrayBuffer());
-      const outputPdf = await PDFDocument.create();
-      const pageIndexes = selectedPages
-        .slice()
-        .sort((a, b) => a - b)
-        .map((pageNumber) => pageNumber - 1);
-      setProgress("Extracting pages...");
-      const copiedPages = await outputPdf.copyPages(sourcePdf, pageIndexes);
 
-      copiedPages.forEach((page) => outputPdf.addPage(page));
-
-      setProgress("Generating PDF...");
-      const pdfBytes = await outputPdf.save({
-        useObjectStreams: true,
-        addDefaultPage: false,
-      });
-      const buffer = new ArrayBuffer(pdfBytes.byteLength);
-      new Uint8Array(buffer).set(pdfBytes);
-      const blob = new Blob([buffer], { type: "application/pdf" });
-      const nextFile = {
-        url: URL.createObjectURL(blob),
-        fileName: outputFileName,
-      };
+      const nextFile =
+        outputMode === "separate"
+          ? await createSeparatePagesZip(sourcePdf, selectedPagesInOrder)
+          : await createCombinedExtractedPdf(sourcePdf, selectedPagesInOrder);
 
       setGeneratedFile(nextFile);
-      setProgress("Pages extracted successfully.");
+      setProgress(
+        outputMode === "separate"
+          ? "ZIP created successfully."
+          : "Pages extracted successfully.",
+      );
       analytics.trackConversionCompleted({
-        mode: "extract_pages",
-        pageCount: selectedPages.length,
-        outputFormat: "pdf",
+        mode: outputMode === "separate" ? "separate_pdfs_zip" : "combined_pdf",
+        pageCount: selectedPagesInOrder.length,
+        outputFormat,
         status: "success",
       });
-      analytics.trackDownloadStarted({ outputFormat: "pdf" });
+      analytics.trackDownloadStarted({ outputFormat });
       triggerDownload(nextFile.url, nextFile.fileName);
-      analytics.trackDownloadCompleted({ outputFormat: "pdf" });
+      analytics.trackDownloadCompleted({ outputFormat });
     } catch {
       setError(
         "The selected pages could not be extracted. If the PDF is password protected, unlock it first and try again.",
@@ -274,6 +269,65 @@ export function ExtractPagesTool() {
     }
   }
 
+  async function createCombinedExtractedPdf(
+    sourcePdf: PdfLibDocument,
+    selectedPagesInOrder: number[],
+  ): Promise<GeneratedFile> {
+    const { PDFDocument } = await import("pdf-lib");
+    const outputPdf = await PDFDocument.create();
+    const pageIndexes = selectedPagesInOrder.map((pageNumber) => pageNumber - 1);
+    setProgress("Extracting pages...");
+    const copiedPages = await outputPdf.copyPages(sourcePdf, pageIndexes);
+
+    copiedPages.forEach((page) => outputPdf.addPage(page));
+
+    setProgress("Generating PDF...");
+    const pdfBytes = await outputPdf.save({
+      useObjectStreams: true,
+      addDefaultPage: false,
+    });
+    const blob = new Blob([copyToArrayBuffer(pdfBytes)], {
+      type: "application/pdf",
+    });
+
+    return {
+      url: URL.createObjectURL(blob),
+      fileName: outputFileName,
+      format: "pdf",
+    };
+  }
+
+  async function createSeparatePagesZip(
+    sourcePdf: PdfLibDocument,
+    selectedPagesInOrder: number[],
+  ): Promise<GeneratedFile> {
+    const { PDFDocument } = await import("pdf-lib");
+    const zip = new JSZip();
+
+    for (const [index, pageNumber] of selectedPagesInOrder.entries()) {
+      setProgress(`Creating file ${index + 1} of ${selectedPagesInOrder.length}...`);
+      const singlePagePdf = await PDFDocument.create();
+      const [copiedPage] = await singlePagePdf.copyPages(sourcePdf, [
+        pageNumber - 1,
+      ]);
+      singlePagePdf.addPage(copiedPage);
+      const pdfBytes = await singlePagePdf.save({
+        useObjectStreams: true,
+        addDefaultPage: false,
+      });
+      zip.file(`extracted-page-${pageNumber}.pdf`, pdfBytes);
+    }
+
+    setProgress("Generating ZIP...");
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+
+    return {
+      url: URL.createObjectURL(zipBlob),
+      fileName: zipOutputFileName,
+      format: "zip",
+    };
+  }
+
   function handleReset() {
     setSelectedPdf(null);
     setError(null);
@@ -283,6 +337,7 @@ export function ExtractPagesTool() {
     clearGeneratedFile();
     clearPagePreviews();
     setSelectedPages([]);
+    setOutputMode("combined");
   }
 
   return (
@@ -400,10 +455,63 @@ export function ExtractPagesTool() {
             value={String(selectedPages.length)}
           />
           <PdfSummaryRow
+            label="Output mode"
+            value={
+              outputMode === "separate"
+                ? "Separate PDFs in ZIP"
+                : "One PDF"
+            }
+          />
+          <PdfSummaryRow
             label="File size"
             value={selectedPdf ? formatFileSize(selectedPdf.file.size) : "-"}
           />
-          <PdfSummaryRow label="Output" value={outputFileName} />
+          <PdfSummaryRow
+            label="Output"
+            value={outputMode === "separate" ? zipOutputFileName : outputFileName}
+          />
+        </div>
+
+        <div className="mt-5 rounded-xl border border-border bg-background p-3">
+          <p className="text-sm font-semibold text-foreground">Output</p>
+          <div className="mt-3 grid gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                clearGeneratedFile();
+                setProgress(null);
+                setOutputMode("combined");
+              }}
+              className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors ${
+                outputMode === "combined"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+              }`}
+              aria-pressed={outputMode === "combined"}
+            >
+              One PDF with selected pages
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearGeneratedFile();
+                setProgress(null);
+                setOutputMode("separate");
+              }}
+              className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors ${
+                outputMode === "separate"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+              }`}
+              aria-pressed={outputMode === "separate"}
+            >
+              Separate PDFs in ZIP
+            </button>
+          </div>
+          <p className="mt-3 text-xs leading-5 text-muted-foreground">
+            ZIP mode creates one PDF for each selected page with explicit file
+            names.
+          </p>
         </div>
 
         {progress ? (
@@ -427,7 +535,11 @@ export function ExtractPagesTool() {
             ) : (
               <FileCheck2 className="size-4" aria-hidden="true" />
             )}
-            {isExporting ? "Generating PDF..." : "Extract Selected"}
+            {isExporting
+              ? outputMode === "separate"
+                ? "Generating ZIP..."
+                : "Generating PDF..."
+              : "Extract Selected"}
           </Button>
 
           {generatedFile ? (
@@ -435,14 +547,20 @@ export function ExtractPagesTool() {
               <a
                 href={generatedFile.url}
                 download={generatedFile.fileName}
-                aria-label="Download PDF"
+                aria-label={
+                  generatedFile.format === "zip" ? "Download ZIP" : "Download PDF"
+                }
                 onClick={() => {
-                  analytics.trackDownloadStarted({ outputFormat: "pdf" });
-                  analytics.trackDownloadCompleted({ outputFormat: "pdf" });
+                  analytics.trackDownloadStarted({
+                    outputFormat: generatedFile.format,
+                  });
+                  analytics.trackDownloadCompleted({
+                    outputFormat: generatedFile.format,
+                  });
                 }}
               >
                 <Download className="size-4" aria-hidden="true" />
-                Download PDF
+                {generatedFile.format === "zip" ? "Download ZIP" : "Download PDF"}
               </a>
             </Button>
           ) : null}
@@ -457,7 +575,9 @@ export function ExtractPagesTool() {
           <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-medium text-emerald-800">
             <span className="flex items-center gap-2">
               <CheckCircle2 className="size-4" aria-hidden="true" />
-              Pages extracted successfully
+              {generatedFile.format === "zip"
+                ? "ZIP created successfully"
+                : "Pages extracted successfully"}
             </span>
           </div>
         ) : null}
@@ -557,4 +677,10 @@ function triggerDownload(url: string, fileName: string) {
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
+}
+
+function copyToArrayBuffer(bytes: Uint8Array) {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
 }

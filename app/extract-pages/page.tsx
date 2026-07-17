@@ -6,7 +6,7 @@ import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Extract PDF Pages Online Free | LiftPDF";
 const description =
-  "Extract one page or selected pages from a PDF online for free. Create a new PDF directly in your browser without uploading your file.";
+  "Extract one page or selected pages from a PDF online for free. Create one PDF or separate PDFs in a ZIP directly in your browser.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
@@ -25,9 +25,9 @@ export default function ExtractPagesPage() {
   return (
     <ToolPageShell
       title="Extract PDF Pages"
-      description="Select one page, multiple pages, or a focused excerpt and save them as a new PDF directly in your browser."
+      description="Select one page, multiple pages, or a focused excerpt and save them as one PDF or separate PDFs in a ZIP directly in your browser."
       seoTitle="Extract pages from PDF online"
-      seoText="LiftPDF helps you extract one page or selected pages from a PDF without Adobe Acrobat. Preview every page, choose exactly what you need and export a new PDF locally while preserving page order and quality."
+      seoText="LiftPDF helps you extract one page or selected pages from a PDF without Adobe Acrobat. Preview every page, choose exactly what you need and export one combined PDF or separate PDFs in a ZIP locally while preserving page order and quality."
       currentHref="/extract-pages"
       premiumContent={premiumToolContent.extractPages}
       faq={[
@@ -44,7 +44,12 @@ export default function ExtractPagesPage() {
         {
           question: "Can I extract multiple pages from a PDF?",
           answer:
-            "Yes. Select one page, several pages, or all pages before exporting the new PDF.",
+            "Yes. Select one page, several pages, or all pages before exporting one combined PDF or separate PDF files in a ZIP.",
+        },
+        {
+          question: "Can I save each extracted page as a separate PDF?",
+          answer:
+            "Yes. Choose Separate PDFs in ZIP and LiftPDF creates one PDF file for each selected page, packaged in a ZIP download.",
         },
         {
           question: "How do I extract one page from a PDF?",

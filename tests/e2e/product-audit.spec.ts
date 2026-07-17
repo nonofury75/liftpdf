@@ -569,6 +569,19 @@ test.describe("critical PDF workflows", () => {
     );
     expect((await PDFDocument.load(extractedBytes)).getPageCount()).toBe(2);
 
+    await page.getByRole("button", { name: /Separate PDFs in ZIP/i }).click();
+    const extractedZipBytes = await generateThenDownloadBytes(
+      page,
+      /^Extract Selected$/,
+      /^Download ZIP$/,
+      "extracted-pages.zip",
+    );
+    const extractedZip = await JSZip.loadAsync(extractedZipBytes);
+    expect(getPdfZipEntryNames(extractedZip)).toEqual([
+      "extracted-page-2.pdf",
+      "extracted-page-5.pdf",
+    ]);
+
     await page.goto("/reorder-pages");
     await uploadFirstFile(page, fixtures.text10);
     await expect(
@@ -628,6 +641,69 @@ test.describe("critical PDF workflows", () => {
     expect(outputs.Strong.byteLength).toBeLessThanOrEqual(
       outputs.Balanced.byteLength,
     );
+  });
+
+  test("extract pages exports selected pages as separate marked PDFs", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "Deep ZIP/PDF assertions run once.");
+    const fixtures = await ensureFixtures();
+
+    await page.goto("/extract-pages");
+    await uploadFirstFile(page, fixtures.phase46Markers);
+    await expect(
+      page.getByRole("button", { name: "Select page 2", exact: true }),
+    ).toBeVisible();
+
+    for (const pageNumber of [2, 4, 6]) {
+      await page
+        .getByRole("button", { name: `Select page ${pageNumber}`, exact: true })
+        .click();
+    }
+
+    await page.getByRole("button", { name: /Separate PDFs in ZIP/i }).click();
+    const zipBytes = await generateThenDownloadBytes(
+      page,
+      /^Extract Selected$/,
+      /^Download ZIP$/,
+      "extracted-pages.zip",
+    );
+    const zip = await JSZip.loadAsync(zipBytes);
+
+    expect(getPdfZipEntryNames(zip)).toEqual([
+      "extracted-page-2.pdf",
+      "extracted-page-4.pdf",
+      "extracted-page-6.pdf",
+    ]);
+
+    for (const pageNumber of [2, 4, 6]) {
+      const entryBytes = await getZipPdfBytes(
+        zip,
+        `extracted-page-${pageNumber}.pdf`,
+      );
+      expect((await PDFDocument.load(entryBytes)).getPageCount()).toBe(1);
+      const pageText = await extractPdfPageText(entryBytes, 1);
+      expect(pageText).toContain(`PHASE46-PAGE-${pageNumber}`);
+
+      for (const otherPageNumber of [1, 2, 3, 4, 5, 6]) {
+        if (otherPageNumber !== pageNumber) {
+          expect(pageText).not.toContain(`PHASE46-PAGE-${otherPageNumber}`);
+        }
+      }
+    }
+
+    await page.getByRole("button", { name: /One PDF with selected pages/i }).click();
+    const combinedBytes = await generateThenDownloadBytes(
+      page,
+      /^Extract Selected$/,
+      /^Download PDF$/,
+      "pages-extracted.pdf",
+    );
+    expect((await PDFDocument.load(combinedBytes)).getPageCount()).toBe(3);
+    await expectExtractedPageMarker(combinedBytes, 1, "PHASE46-PAGE-2");
+    await expectExtractedPageMarker(combinedBytes, 2, "PHASE46-PAGE-4");
+    await expectExtractedPageMarker(combinedBytes, 3, "PHASE46-PAGE-6");
   });
 
   test("compress PDF can remove metadata without changing page count", async ({
@@ -1740,6 +1816,15 @@ async function getZipPdfBytes(zip: JSZip, entryName: string) {
   }
 
   return entry.async("nodebuffer");
+}
+
+async function expectExtractedPageMarker(
+  pdfBytes: Buffer,
+  pageNumber: number,
+  expectedMarker: string,
+) {
+  const pageText = await extractPdfPageText(pdfBytes, pageNumber);
+  expect(pageText).toContain(expectedMarker);
 }
 
 async function expectPdfTextMarkers(
