@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 
 type WatermarkMode = "text" | "image";
 type FontChoice = "helvetica" | "times" | "courier";
+type PageTargetMode = "all" | "range";
 type WatermarkPosition =
   | "center"
   | "top-left"
@@ -92,6 +93,23 @@ const fontOptions: Array<{ label: string; value: FontChoice }> = [
   { label: "Courier", value: "courier" },
 ];
 
+const pageTargetOptions: Array<{
+  label: string;
+  value: PageTargetMode;
+  description: string;
+}> = [
+  {
+    label: "All pages",
+    value: "all",
+    description: "Apply the watermark to every page.",
+  },
+  {
+    label: "Page range",
+    value: "range",
+    description: "Apply only to selected pages, for example 2-5 or 1,3,7.",
+  },
+];
+
 export function WatermarkPdfTool() {
   const [selectedPdf, setSelectedPdf] = useState<SelectedPdf | null>(null);
   const [pages, setPages] = useState<PagePreview[]>([]);
@@ -109,6 +127,8 @@ export function WatermarkPdfTool() {
   const [imageSize, setImageSize] = useState(35);
   const [imageOpacity, setImageOpacity] = useState(0.35);
   const [imageRotation, setImageRotation] = useState(-25);
+  const [pageTargetMode, setPageTargetMode] = useState<PageTargetMode>("all");
+  const [pageRange, setPageRange] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -157,6 +177,39 @@ export function WatermarkPdfTool() {
       textSize,
     ],
   );
+
+  const pageTargeting = useMemo(() => {
+    if (!selectedPdf) {
+      return {
+        pageNumbers: [] as number[],
+        pageSet: new Set<number>(),
+        error: null as string | null,
+      };
+    }
+
+    try {
+      const pageNumbers = getTargetPageNumbers({
+        mode: pageTargetMode,
+        pageRange,
+        pageCount: selectedPdf.pageCount,
+      });
+
+      return {
+        pageNumbers,
+        pageSet: new Set(pageNumbers),
+        error: null,
+      };
+    } catch (caughtError) {
+      return {
+        pageNumbers: [] as number[],
+        pageSet: new Set<number>(),
+        error:
+          caughtError instanceof Error
+            ? caughtError.message
+            : "The selected page range is invalid.",
+      };
+    }
+  }, [pageRange, pageTargetMode, selectedPdf]);
 
   useEffect(() => {
     generatedFileRef.current = generatedFile;
@@ -305,6 +358,18 @@ export function WatermarkPdfTool() {
       return;
     }
 
+    if (pageTargeting.error) {
+      setError(pageTargeting.error);
+      analytics.trackError({ errorCode: "invalid_page_range" });
+      return;
+    }
+
+    if (!pageTargeting.pageNumbers.length) {
+      setError("Choose at least one page to watermark.");
+      analytics.trackError({ errorCode: "empty_page_selection" });
+      return;
+    }
+
     setError(null);
     setIsGenerating(true);
     setProgress("Preparing PDF...");
@@ -318,13 +383,23 @@ export function WatermarkPdfTool() {
     try {
       const pdf = await PDFDocument.load(await selectedPdf.file.arrayBuffer());
       const pdfPages = pdf.getPages();
+      const targetPages = getTargetPageNumbers({
+        mode: pageTargetMode,
+        pageRange,
+        pageCount: pdfPages.length,
+      });
+      const targetPageSet = new Set(targetPages);
 
       setProgress("Applying watermark...");
       if (mode === "text") {
         const embeddedFont = await embedSelectedFont(pdf, font);
         const color = hexToRgb(textColor);
 
-        pdfPages.forEach((page) => {
+        pdfPages.forEach((page, index) => {
+          if (!targetPageSet.has(index + 1)) {
+            return;
+          }
+
           drawTextWatermark({
             page,
             text: text.trim(),
@@ -343,7 +418,11 @@ export function WatermarkPdfTool() {
             ? await pdf.embedJpg(imageBytes.bytes)
             : await pdf.embedPng(imageBytes.bytes);
 
-        pdfPages.forEach((page) => {
+        pdfPages.forEach((page, index) => {
+          if (!targetPageSet.has(index + 1)) {
+            return;
+          }
+
           drawImageWatermark({
             page,
             image: embeddedImage,
@@ -424,10 +503,12 @@ export function WatermarkPdfTool() {
     setTextSize(42);
     setTextColor("#111827");
     setTextOpacity(0.25);
-    setTextRotation(-35);
-    setImageSize(35);
-    setImageOpacity(0.35);
-    setImageRotation(-25);
+      setTextRotation(-35);
+      setImageSize(35);
+      setImageOpacity(0.35);
+      setImageRotation(-25);
+      setPageTargetMode("all");
+      setPageRange("");
     setImageWatermark((currentImage) => {
       if (currentImage) {
         URL.revokeObjectURL(currentImage.previewUrl);
@@ -665,6 +746,59 @@ export function WatermarkPdfTool() {
                 ))}
               </div>
             </FieldGroup>
+
+            <FieldGroup label="Pages to watermark">
+              <div className="grid gap-2">
+                {pageTargetOptions.map((target) => (
+                  <button
+                    key={target.value}
+                    type="button"
+                    aria-pressed={pageTargetMode === target.value}
+                    className={cn(
+                      "rounded-xl border px-3 py-3 text-left transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm",
+                      pageTargetMode === target.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-background text-foreground hover:bg-muted",
+                    )}
+                    onClick={() =>
+                      updateWatermark(() => setPageTargetMode(target.value))
+                    }
+                  >
+                    <span className="block text-sm font-semibold">
+                      {target.label}
+                    </span>
+                    <span className="mt-1 block text-sm leading-5 text-muted-foreground">
+                      {target.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </FieldGroup>
+
+            {pageTargetMode === "range" ? (
+              <label className="block">
+                <span className="text-sm font-semibold text-foreground">
+                  Page range
+                </span>
+                <input
+                  value={pageRange}
+                  onChange={(event) =>
+                    updateWatermark(() => setPageRange(event.target.value))
+                  }
+                  placeholder="2-5 or 1,3,7"
+                  aria-invalid={Boolean(pageTargeting.error)}
+                  className="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/20"
+                />
+                <span className="mt-2 block text-sm leading-5 text-muted-foreground">
+                  Use commas for separate pages and hyphens for ranges.
+                </span>
+                {pageTargeting.error ? (
+                  <span className="mt-2 block text-sm font-medium text-red-600">
+                    {pageTargeting.error}
+                  </span>
+                ) : null}
+              </label>
+            ) : null}
           </div>
         </div>
 
@@ -680,27 +814,47 @@ export function WatermarkPdfTool() {
             </div>
 
             <div className="mt-5 grid max-h-[760px] gap-4 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
-              {pages.map((page) => (
-                <article
-                  key={page.pageNumber}
-                  className="rounded-2xl border border-border bg-background p-3 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md"
-                >
-                  <div className="relative flex min-h-60 items-center justify-center overflow-hidden rounded-xl bg-slate-100 p-4 shadow-inner">
-                    <Image
-                      src={page.previewUrl}
-                      alt={`Page ${page.pageNumber}`}
-                      width={190}
-                      height={260}
-                      className="h-auto max-h-64 w-auto rounded-sm bg-white shadow-lg ring-1 ring-black/10"
-                      unoptimized
-                    />
-                    <WatermarkPreviewOverlay watermark={previewWatermark} />
-                  </div>
-                  <p className="mt-3 text-sm font-semibold text-foreground">
-                    Page {page.pageNumber}
-                  </p>
-                </article>
-              ))}
+              {pages.map((page) => {
+                const isWatermarked = pageTargeting.pageSet.has(
+                  page.pageNumber,
+                );
+
+                return (
+                  <article
+                    key={page.pageNumber}
+                    className="rounded-2xl border border-border bg-background p-3 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md"
+                  >
+                    <div className="relative flex min-h-60 items-center justify-center overflow-hidden rounded-xl bg-slate-100 p-4 shadow-inner">
+                      <Image
+                        src={page.previewUrl}
+                        alt={`Page ${page.pageNumber}`}
+                        width={190}
+                        height={260}
+                        className="h-auto max-h-64 w-auto rounded-sm bg-white shadow-lg ring-1 ring-black/10"
+                        unoptimized
+                      />
+                      {isWatermarked ? (
+                        <WatermarkPreviewOverlay watermark={previewWatermark} />
+                      ) : null}
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-foreground">
+                        Page {page.pageNumber}
+                      </p>
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-1 text-xs font-semibold",
+                          isWatermarked
+                            ? "bg-primary/10 text-primary"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {isWatermarked ? "Watermarked" : "Skipped"}
+                      </span>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </div>
         ) : null}
@@ -748,6 +902,14 @@ export function WatermarkPdfTool() {
           <PdfSummaryRow label="Position" value={labelForPosition(position)} />
           <PdfSummaryRow label="Opacity" value={activeOpacity.toFixed(1)} />
           <PdfSummaryRow label="Rotation" value={`${activeRotation} deg`} />
+          <PdfSummaryRow
+            label="Pages watermarked"
+            value={
+              selectedPdf
+                ? summarizePageTarget(pageTargetMode, pageRange, pageTargeting.pageNumbers)
+                : "0"
+            }
+          />
           <PdfSummaryRow label="Output" value={watermarkedFileName} />
         </div>
 
@@ -1293,6 +1455,96 @@ function labelForPosition(position: WatermarkPosition) {
     positionOptions.find((option) => option.value === position)?.label ??
     "Center"
   );
+}
+
+function getTargetPageNumbers({
+  mode,
+  pageRange,
+  pageCount,
+}: {
+  mode: PageTargetMode;
+  pageRange: string;
+  pageCount: number;
+}) {
+  if (mode === "all") {
+    return Array.from({ length: pageCount }, (_, index) => index + 1);
+  }
+
+  return parsePageRange(pageRange, pageCount);
+}
+
+function parsePageRange(input: string, pageCount: number) {
+  const trimmedInput = input.trim();
+
+  if (!trimmedInput) {
+    throw new Error("Enter a page range such as 2-5 or 1,3,7.");
+  }
+
+  const pageNumbers: number[] = [];
+  const seenPages = new Set<number>();
+
+  for (const part of trimmedInput.split(",")) {
+    const token = part.trim();
+
+    if (!token) {
+      throw new Error("Enter a page range such as 2-5 or 1,3,7.");
+    }
+
+    const singlePageMatch = /^(\d+)$/.exec(token);
+
+    if (singlePageMatch) {
+      addPageNumber(Number(singlePageMatch[1]));
+      continue;
+    }
+
+    const rangeMatch = /^(\d+)-(\d+)$/.exec(token);
+
+    if (rangeMatch) {
+      const startPage = Number(rangeMatch[1]);
+      const endPage = Number(rangeMatch[2]);
+
+      if (startPage > endPage) {
+        throw new Error("Page ranges must go from low to high, for example 2-5.");
+      }
+
+      for (let pageNumber = startPage; pageNumber <= endPage; pageNumber += 1) {
+        addPageNumber(pageNumber);
+      }
+
+      continue;
+    }
+
+    throw new Error("Enter a page range such as 2-5 or 1,3,7.");
+  }
+
+  return pageNumbers;
+
+  function addPageNumber(pageNumber: number) {
+    if (pageNumber < 1 || pageNumber > pageCount) {
+      throw new Error("Page range cannot include pages outside this PDF.");
+    }
+
+    if (!seenPages.has(pageNumber)) {
+      seenPages.add(pageNumber);
+      pageNumbers.push(pageNumber);
+    }
+  }
+}
+
+function summarizePageTarget(
+  mode: PageTargetMode,
+  pageRange: string,
+  pageNumbers: number[],
+) {
+  if (!pageNumbers.length) {
+    return "0";
+  }
+
+  if (mode === "all") {
+    return `${pageNumbers.length} pages`;
+  }
+
+  return `${pageNumbers.length} pages (${pageRange.trim()})`;
 }
 
 function isPdfFile(file: File) {

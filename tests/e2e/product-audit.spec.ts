@@ -1039,6 +1039,34 @@ test.describe("critical PDF workflows", () => {
       "watermarked.pdf",
     );
     expect((await PDFDocument.load(watermarkedBytes)).getPageCount()).toBe(10);
+
+    await page.goto("/watermark-pdf");
+    await uploadFirstFile(page, fixtures.text10);
+    await expect(page.getByText(/10 pages/i).first()).toBeVisible();
+    await page.getByLabel(/Watermark text/i).fill("PHASE40-WATERMARK");
+    await page.getByRole("button", { name: /Page range/i }).click();
+    await page.getByLabel("Page range").fill("2-3");
+    const rangeWatermarkedBytes = await generateThenDownloadBytes(
+      page,
+      /^Add watermark$/,
+      /^Download watermarked PDF$/,
+      "watermarked.pdf",
+    );
+    expect((await PDFDocument.load(rangeWatermarkedBytes)).getPageCount()).toBe(
+      10,
+    );
+    expect(await extractPdfPageText(rangeWatermarkedBytes, 1)).not.toContain(
+      "PHASE40-WATERMARK",
+    );
+    expect(await extractPdfPageText(rangeWatermarkedBytes, 2)).toContain(
+      "PHASE40-WATERMARK",
+    );
+    expect(await extractPdfPageText(rangeWatermarkedBytes, 3)).toContain(
+      "PHASE40-WATERMARK",
+    );
+    expect(await extractPdfPageText(rangeWatermarkedBytes, 4)).not.toContain(
+      "PHASE40-WATERMARK",
+    );
   });
 });
 

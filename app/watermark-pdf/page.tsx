@@ -6,7 +6,7 @@ import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Watermark PDF Online - Add Text or Image Watermark | LiftPDF";
 const description =
-  "Add text or image watermarks to PDF files online for free. Customize position, opacity, rotation and style with LiftPDF.";
+  "Add text or image watermarks to PDF files online for free. Customize position, opacity, rotation, style and page range with LiftPDF.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
@@ -25,9 +25,9 @@ export default function WatermarkPdfPage() {
   return (
     <ToolPageShell
       title="Watermark PDF Online"
-      description="Add a custom text or image watermark to every PDF page with live preview and precise styling controls."
+      description="Add a custom text or image watermark to every PDF page or only selected pages with live preview and precise styling controls."
       seoTitle="Add text or image watermarks"
-      seoText="LiftPDF lets you watermark PDFs directly in your browser. Choose a text or image watermark, adjust position, opacity and rotation, preview every page and download a finished PDF without a backend API."
+      seoText="LiftPDF lets you watermark PDFs directly in your browser. Choose a text or image watermark, adjust position, opacity and rotation, apply it to every page or a selected page range, preview the result and download a finished PDF without a backend API."
       currentHref="/watermark-pdf"
       premiumContent={premiumToolContent.watermarkPdf}
       faq={[
@@ -45,6 +45,11 @@ export default function WatermarkPdfPage() {
           question: "Can I repeat the watermark across the page?",
           answer:
             "Yes. Use Tile / Repeat to place the watermark multiple times across every PDF page.",
+        },
+        {
+          question: "Can I watermark only selected pages?",
+          answer:
+            "Yes. Apply the watermark to every page or enter a page range such as 2-5 or 1,3,7.",
         },
         {
           question: "Can I control opacity and rotation?",

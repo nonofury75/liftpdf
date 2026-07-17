@@ -1009,7 +1009,7 @@ Object.assign(premiumToolContent, {
     purpose:
       "Apply text or image watermarks for drafts, branding, review copies and ownership marks.",
     action: "Apply watermark",
-    output: "Download the PDF with the watermark applied to every page.",
+    output: "Download the PDF with the watermark applied to every page or only the pages you choose.",
     emphasis: "edit",
     related: [
       { label: "Add Page Numbers", href: "/add-page-numbers", text: "Add numbering alongside a watermark." },
@@ -1021,7 +1021,7 @@ Object.assign(premiumToolContent, {
       {
         title: "Choose visible but readable watermarks",
         paragraphs: [
-          "A good watermark identifies the document without making the main content hard to read. Use opacity and rotation carefully, and preview every page before downloading.",
+          "A good watermark identifies the document without making the main content hard to read. Use opacity and rotation carefully, choose whether every page or only a page range needs the mark, and preview before downloading.",
           "Text watermarks are best for draft labels and confidentiality notes. Image watermarks are useful for logos or brand marks.",
         ],
       },
