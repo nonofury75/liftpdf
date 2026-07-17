@@ -26,6 +26,7 @@ export type FixturePaths = {
   text200: string;
   phase41Markers: string;
   phase44Markers: string;
+  phase45Markers: string;
   imageHeavy: string;
   imageOnly: string;
   transparentPdf: string;
@@ -60,6 +61,7 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     text200: path.join(fixturesDir, "text-200.pdf"),
     phase41Markers: path.join(fixturesDir, "phase41-markers.pdf"),
     phase44Markers: path.join(fixturesDir, "phase44-markers.pdf"),
+    phase45Markers: path.join(fixturesDir, "phase45-markers.pdf"),
     imageHeavy: path.join(fixturesDir, "image-heavy.pdf"),
     imageOnly: path.join(fixturesDir, "image-only.pdf"),
     transparentPdf: path.join(fixturesDir, "transparent-content.pdf"),
@@ -91,6 +93,7 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     createTextPdf(paths.text200, 200),
     createPhase41MarkerPdf(paths.phase41Markers),
     createPhase44MarkerPdf(paths.phase44Markers),
+    createPhase45MarkerPdf(paths.phase45Markers),
     createImageHeavyPdf(paths.imageHeavy),
     createImageOnlyPdf(paths.imageOnly),
     createTransparentPdf(paths.transparentPdf),
@@ -197,6 +200,32 @@ async function createPhase44MarkerPdf(filePath: string) {
         color: rgb(0.2, 0.2, 0.2),
       },
     );
+  }
+
+  await writeFileAtomic(filePath, Buffer.from(await pdf.save()));
+}
+
+async function createPhase45MarkerPdf(filePath: string) {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdf.embedFont(StandardFonts.HelveticaBold);
+
+  for (let pageNumber = 1; pageNumber <= 10; pageNumber += 1) {
+    const page = pdf.addPage([595, 842]);
+    page.drawText(`PHASE45-PAGE-${pageNumber}`, {
+      x: 72,
+      y: 760,
+      size: 24,
+      font: boldFont,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    page.drawText(`Rotate targeting marker for Phase 45 page ${pageNumber}.`, {
+      x: 72,
+      y: 720,
+      size: 14,
+      font,
+      color: rgb(0.2, 0.2, 0.2),
+    });
   }
 
   await writeFileAtomic(filePath, Buffer.from(await pdf.save()));

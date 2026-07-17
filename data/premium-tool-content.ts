@@ -970,7 +970,7 @@ Object.assign(premiumToolContent, {
         title: "Fix orientation before editing",
         paragraphs: [
           "Rotating pages is often the first cleanup step after scanning. Fixing orientation before adding numbers, watermarks or page order changes makes the rest of the workflow easier.",
-          "LiftPDF applies PDF page rotation, so the original text, images, dimensions and page content are preserved.",
+          "Use All pages, Selected pages, Odd pages, Even pages or Page range when a scan has only part of the document turned sideways. LiftPDF applies PDF page rotation, so the original text, images, dimensions and page content are preserved.",
         ],
       },
     ],

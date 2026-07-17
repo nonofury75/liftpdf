@@ -793,6 +793,183 @@ test.describe("critical PDF workflows", () => {
     expect(getPdfZipEntryNames(hundredPageZip)).toHaveLength(10);
   });
 
+  test("rotate PDF targets all selected odd even and page ranges", async ({
+    page,
+  }) => {
+    const fixtures = await ensureFixtures();
+
+    await page.goto("/rotate-pdf");
+    await uploadFirstFile(page, fixtures.phase45Markers);
+    await expect(page.getByText(/10 pages/i).first()).toBeVisible();
+    await page.getByRole("button", { name: /^Odd pages$/ }).click();
+    await page.getByRole("button", { name: /^Rotate right 90 deg$/ }).click();
+    const oddBytes = await generateThenDownloadBytes(
+      page,
+      /^Rotate PDF$/,
+      /^Download rotated PDF$/,
+      "rotated.pdf",
+    );
+    await expectPageRotations(oddBytes, {
+      1: 90,
+      2: 0,
+      3: 90,
+      4: 0,
+      5: 90,
+      6: 0,
+      7: 90,
+      8: 0,
+      9: 90,
+      10: 0,
+    });
+
+    await page.goto("/rotate-pdf");
+    await uploadFirstFile(page, fixtures.phase45Markers);
+    await page.getByRole("button", { name: /^Even pages$/ }).click();
+    await page.getByRole("button", { name: /^Rotate left 90 deg$/ }).click();
+    const evenBytes = await generateThenDownloadBytes(
+      page,
+      /^Rotate PDF$/,
+      /^Download rotated PDF$/,
+      "rotated.pdf",
+    );
+    await expectPageRotations(evenBytes, {
+      1: 0,
+      2: 270,
+      3: 0,
+      4: 270,
+      5: 0,
+      6: 270,
+      7: 0,
+      8: 270,
+      9: 0,
+      10: 270,
+    });
+
+    await page.goto("/rotate-pdf");
+    await uploadFirstFile(page, fixtures.phase45Markers);
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("2-4,8");
+    await page.getByRole("button", { name: /^Rotate 180 deg$/ }).click();
+    const rangeBytes = await generateThenDownloadBytes(
+      page,
+      /^Rotate PDF$/,
+      /^Download rotated PDF$/,
+      "rotated.pdf",
+    );
+    await expectPageRotations(rangeBytes, {
+      1: 0,
+      2: 180,
+      3: 180,
+      4: 180,
+      5: 0,
+      6: 0,
+      7: 0,
+      8: 180,
+      9: 0,
+      10: 0,
+    });
+
+    await page.goto("/rotate-pdf");
+    await uploadFirstFile(page, fixtures.phase45Markers);
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("1,1,3");
+    await page.getByRole("button", { name: /^Rotate right 90 deg$/ }).click();
+    const dedupedRangeBytes = await generateThenDownloadBytes(
+      page,
+      /^Rotate PDF$/,
+      /^Download rotated PDF$/,
+      "rotated.pdf",
+    );
+    await expectPageRotations(dedupedRangeBytes, { 1: 90, 2: 0, 3: 90 });
+
+    await page.goto("/rotate-pdf");
+    await uploadFirstFile(page, fixtures.phase45Markers);
+    await page.getByRole("button", { name: /^Selected pages$/ }).click();
+    await page.getByRole("button", { name: /^Select page 2$/ }).click();
+    await page.getByRole("button", { name: /^Rotate right 90 deg$/ }).click();
+    await page.getByRole("button", { name: /^Rotate right 90 deg$/ }).click();
+    const cumulativeBytes = await generateThenDownloadBytes(
+      page,
+      /^Rotate PDF$/,
+      /^Download rotated PDF$/,
+      "rotated.pdf",
+    );
+    await expectPageRotations(cumulativeBytes, { 1: 0, 2: 180, 3: 0 });
+
+    await page.goto("/rotate-pdf");
+    await uploadFirstFile(page, fixtures.phase45Markers);
+    await page.getByRole("button", { name: /^All pages$/ }).click();
+    await page.getByRole("button", { name: /^Rotate 180 deg$/ }).click();
+    const allBytes = await generateThenDownloadBytes(
+      page,
+      /^Rotate PDF$/,
+      /^Download rotated PDF$/,
+      "rotated.pdf",
+    );
+    await expectPageRotations(allBytes, {
+      1: 180,
+      2: 180,
+      3: 180,
+      4: 180,
+      5: 180,
+      6: 180,
+      7: 180,
+      8: 180,
+      9: 180,
+      10: 180,
+    });
+
+    await page.goto("/rotate-pdf");
+    await uploadFirstFile(page, fixtures.phase45Markers);
+    await page.getByRole("button", { name: /^Selected pages$/ }).click();
+    await expect(page.getByRole("button", { name: /^Rotate right 90 deg$/ })).toBeDisabled();
+    await page.getByRole("button", { name: /^Select page 2$/ }).click();
+    await page.getByRole("button", { name: /^Rotate right 90 deg$/ }).click();
+    await page.getByRole("button", { name: /^Reset rotations$/ }).click();
+    const resetBytes = await generateThenDownloadBytes(
+      page,
+      /^Rotate PDF$/,
+      /^Download rotated PDF$/,
+      "rotated.pdf",
+    );
+    await expectPageRotations(resetBytes, { 1: 0, 2: 0, 3: 0 });
+
+    await page.goto("/rotate-pdf");
+    await uploadFirstFile(page, fixtures.phase45Markers);
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("99");
+    await expect(
+      page.getByText(/This PDF has 10 pages. Enter pages between 1 and 10./i),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Rotate right 90 deg$/ })).toBeDisabled();
+
+    await page.goto("/rotate-pdf");
+    await uploadFirstFile(page, fixtures.text1);
+    await page.getByRole("button", { name: /^Odd pages$/ }).click();
+    await expect(page.getByText(/Targeted pages: All 1/i)).toBeVisible();
+    await page.getByRole("button", { name: /^Even pages$/ }).click();
+    await expect(page.getByText(/Targeted pages: 0/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Rotate right 90 deg$/ })).toBeDisabled();
+
+    await page.goto("/rotate-pdf");
+    await uploadFirstFile(page, fixtures.text100);
+    await page.getByRole("button", { name: /^Odd pages$/ }).click();
+    await page.getByRole("button", { name: /^Rotate right 90 deg$/ }).click();
+    const hundredPageBytes = await generateThenDownloadBytes(
+      page,
+      /^Rotate PDF$/,
+      /^Download rotated PDF$/,
+      "rotated.pdf",
+    );
+    expect((await PDFDocument.load(hundredPageBytes)).getPageCount()).toBe(100);
+    await expectPageRotations(hundredPageBytes, {
+      1: 90,
+      2: 0,
+      99: 90,
+      100: 0,
+    });
+  });
+
   test("protect and unlock use real PDF encryption", async ({ page }) => {
     const fixtures = await ensureFixtures();
     const password = "StrongPass123";
@@ -1340,8 +1517,8 @@ test.describe("critical PDF workflows", () => {
 
     await page.goto("/rotate-pdf");
     await uploadFirstFile(page, fixtures.text10);
-    await expect(page.getByRole("button", { name: /Rotate all right/i })).toBeVisible();
-    await page.getByRole("button", { name: /Rotate all right/i }).click();
+    await expect(page.getByRole("button", { name: /^All pages$/ })).toBeVisible();
+    await page.getByRole("button", { name: /^Rotate right 90 deg$/ }).click();
     const rotatedBytes = await generateThenDownloadBytes(
       page,
       /^Rotate PDF$/,
@@ -1588,6 +1765,27 @@ async function expectPdfTextMarkers(
 
 function createPhase44MarkerPattern(pageNumber: number) {
   return new RegExp(`PHASE44-PAGE-${pageNumber}(?!\\d)`);
+}
+
+async function expectPageRotations(
+  pdfBytes: Buffer,
+  expectedRotations: Record<number, number>,
+) {
+  const pdf = await PDFDocument.load(pdfBytes);
+
+  for (const [pageNumberText, expectedRotation] of Object.entries(
+    expectedRotations,
+  )) {
+    const pageNumber = Number(pageNumberText);
+    const page = pdf.getPage(pageNumber - 1);
+    expect(normalizeTestRotation(page.getRotation().angle)).toBe(
+      expectedRotation,
+    );
+  }
+}
+
+function normalizeTestRotation(rotation: number) {
+  return ((rotation % 360) + 360) % 360;
 }
 
 function pageOrientation({ height, width }: { height: number; width: number }) {

@@ -29,6 +29,9 @@ import {
   summarizeFilesForAnalytics,
   useToolAnalytics,
 } from "@/hooks/use-tool-analytics";
+import { parsePageRangeInput } from "@/lib/page-ranges";
+
+type TargetMode = "all" | "selected" | "odd" | "even" | "range";
 
 type SelectedPdf = {
   file: File;
@@ -47,6 +50,13 @@ type GeneratedFile = {
 };
 
 const rotatedFileName = "rotated.pdf";
+const targetModeOptions: Array<{ label: string; value: TargetMode }> = [
+  { label: "All pages", value: "all" },
+  { label: "Selected pages", value: "selected" },
+  { label: "Odd pages", value: "odd" },
+  { label: "Even pages", value: "even" },
+  { label: "Page range", value: "range" },
+];
 
 export function RotatePdfTool() {
   const [selectedPdf, setSelectedPdf] = useState<SelectedPdf | null>(null);
@@ -55,6 +65,9 @@ export function RotatePdfTool() {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
+  const [targetMode, setTargetMode] = useState<TargetMode>("all");
+  const [selectedPageNumbers, setSelectedPageNumbers] = useState<number[]>([]);
+  const [rangeInput, setRangeInput] = useState("");
   const [generatedFile, setGeneratedFile] = useState<GeneratedFile | null>(
     null,
   );
@@ -84,6 +97,78 @@ export function RotatePdfTool() {
 
     return `${rotatedPagesCount} selected`;
   }, [pages, rotatedPagesCount]);
+  const rangeInputError = useMemo(() => {
+    if (!selectedPdf || targetMode !== "range" || !rangeInput.trim()) {
+      return null;
+    }
+
+    try {
+      parsePageRangeInput(rangeInput, selectedPdf.pageCount);
+      return null;
+    } catch (validationError) {
+      return validationError instanceof Error
+        ? validationError.message
+        : "Enter page numbers or ranges separated by commas.";
+    }
+  }, [rangeInput, selectedPdf, targetMode]);
+  const targetedPageNumbers = useMemo(() => {
+    if (!selectedPdf) {
+      return [];
+    }
+
+    if (targetMode === "all") {
+      return pages.map((page) => page.pageNumber);
+    }
+
+    if (targetMode === "selected") {
+      return selectedPageNumbers
+        .filter((pageNumber) => pageNumber >= 1 && pageNumber <= selectedPdf.pageCount)
+        .sort((a, b) => a - b);
+    }
+
+    if (targetMode === "odd") {
+      return pages
+        .map((page) => page.pageNumber)
+        .filter((pageNumber) => pageNumber % 2 === 1);
+    }
+
+    if (targetMode === "even") {
+      return pages
+        .map((page) => page.pageNumber)
+        .filter((pageNumber) => pageNumber % 2 === 0);
+    }
+
+    if (!rangeInput.trim()) {
+      return [];
+    }
+
+    try {
+      return parsePageRangeInput(rangeInput, selectedPdf.pageCount);
+    } catch {
+      return [];
+    }
+  }, [pages, rangeInput, selectedPageNumbers, selectedPdf, targetMode]);
+  const targetedPageSet = useMemo(
+    () => new Set(targetedPageNumbers),
+    [targetedPageNumbers],
+  );
+  const canApplyTargetedRotation =
+    Boolean(selectedPdf) && targetedPageNumbers.length > 0 && !rangeInputError;
+  const targetSummary = useMemo(() => {
+    if (!selectedPdf) {
+      return "0";
+    }
+
+    if (targetedPageNumbers.length === 0) {
+      return "0";
+    }
+
+    if (targetedPageNumbers.length === selectedPdf.pageCount) {
+      return `All ${selectedPdf.pageCount}`;
+    }
+
+    return String(targetedPageNumbers.length);
+  }, [selectedPdf, targetedPageNumbers.length]);
 
   useEffect(() => {
     generatedFileRef.current = generatedFile;
@@ -125,6 +210,9 @@ export function RotatePdfTool() {
 
     clearGeneratedFile();
     clearPagePreviews();
+    setSelectedPageNumbers([]);
+    setTargetMode("all");
+    setRangeInput("");
     setSelectedPdf(null);
     setProgress(null);
     setError(null);
@@ -180,14 +268,41 @@ export function RotatePdfTool() {
     );
   }
 
-  function rotateAll(degreesToAdd: number) {
+  function rotatePages(pageNumbers: number[], degreesToAdd: number) {
     clearGeneratedFile();
     setProgress(null);
+    setError(null);
+    const pageNumberSet = new Set(pageNumbers);
     setPages((currentPages) =>
-      currentPages.map((page) => ({
-        ...page,
-        rotation: normalizeRotation(page.rotation + degreesToAdd),
-      })),
+      currentPages.map((page) =>
+        pageNumberSet.has(page.pageNumber)
+          ? {
+              ...page,
+              rotation: normalizeRotation(page.rotation + degreesToAdd),
+            }
+          : page,
+      ),
+    );
+  }
+
+  function rotateTargetedPages(degreesToAdd: number) {
+    if (!canApplyTargetedRotation) {
+      setError("Choose at least one target page before rotating.");
+      analytics.trackError({ errorCode: "no_target_pages" });
+      return;
+    }
+
+    rotatePages(targetedPageNumbers, degreesToAdd);
+  }
+
+  function toggleSelectedPage(pageNumber: number) {
+    clearGeneratedFile();
+    setProgress(null);
+    setError(null);
+    setSelectedPageNumbers((currentPages) =>
+      currentPages.includes(pageNumber)
+        ? currentPages.filter((currentPage) => currentPage !== pageNumber)
+        : [...currentPages, pageNumber].sort((a, b) => a - b),
     );
   }
 
@@ -213,8 +328,9 @@ export function RotatePdfTool() {
     setIsRotating(true);
     setProgress("Preparing PDF...");
     clearGeneratedFile();
+    const analyticsMode = `${targetMode}_${targetedPageNumbers.length}_targeted`;
     analytics.trackConversionStarted({
-      mode: "rotate_pages",
+      mode: analyticsMode,
       pageCount: selectedPdf.pageCount,
       outputFormat: "pdf",
     });
@@ -252,7 +368,7 @@ export function RotatePdfTool() {
       });
       setProgress("Rotated PDF created successfully.");
       analytics.trackConversionCompleted({
-        mode: "rotate_pages",
+        mode: analyticsMode,
         pageCount: selectedPdf.pageCount,
         outputFormat: "pdf",
         status: "success",
@@ -272,6 +388,9 @@ export function RotatePdfTool() {
     setSelectedPdf(null);
     setError(null);
     setProgress(null);
+    setTargetMode("all");
+    setSelectedPageNumbers([]);
+    setRangeInput("");
     clearGeneratedFile();
     clearPagePreviews();
   }
@@ -334,27 +453,39 @@ export function RotatePdfTool() {
                   Page preview
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Rotate individual pages or apply the same turn to every page.
+                  Choose which pages are targeted, then apply a rotation.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => rotateAll(-90)}
+                  onClick={() => rotateTargetedPages(-90)}
+                  disabled={!canApplyTargetedRotation}
                   className="transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm"
                 >
                   <RotateCcwSquare className="size-4" aria-hidden="true" />
-                  Rotate all left
+                  Rotate left 90 deg
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => rotateAll(90)}
+                  onClick={() => rotateTargetedPages(90)}
+                  disabled={!canApplyTargetedRotation}
                   className="transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm"
                 >
                   <RotateCwSquare className="size-4" aria-hidden="true" />
-                  Rotate all right
+                  Rotate right 90 deg
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => rotateTargetedPages(180)}
+                  disabled={!canApplyTargetedRotation}
+                  className="transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm"
+                >
+                  <RotateCwSquare className="size-4" aria-hidden="true" />
+                  Rotate 180 deg
                 </Button>
                 <Button
                   type="button"
@@ -368,11 +499,83 @@ export function RotatePdfTool() {
               </div>
             </div>
 
+            <div className="mt-5 rounded-2xl border border-border bg-muted/25 p-4">
+              <h3 className="text-sm font-semibold text-foreground">
+                Pages to rotate
+              </h3>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                {targetModeOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={targetMode === option.value}
+                    className={`rounded-xl border px-3 py-2.5 text-left text-sm font-semibold transition hover:border-primary/50 ${
+                      targetMode === option.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-background text-foreground"
+                    }`}
+                    onClick={() => {
+                      setTargetMode(option.value);
+                      setError(null);
+                      setProgress(null);
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              {targetMode === "range" ? (
+                <label className="mt-4 block">
+                  <span className="text-sm font-semibold text-foreground">
+                    Page range
+                  </span>
+                  <input
+                    value={rangeInput}
+                    onChange={(event) => {
+                      setRangeInput(event.target.value);
+                      setError(null);
+                      setProgress(null);
+                      clearGeneratedFile();
+                    }}
+                    placeholder="1-3, 6, 9-12"
+                    className="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/20"
+                  />
+                  <span className="mt-2 block text-xs font-medium text-muted-foreground">
+                    Enter page numbers or ranges separated by commas.
+                  </span>
+                  {rangeInputError ? (
+                    <span className="mt-2 block rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                      {rangeInputError}
+                    </span>
+                  ) : null}
+                </label>
+              ) : null}
+
+              {targetMode === "selected" ? (
+                <p className="mt-3 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-muted-foreground">
+                  Select pages in the preview below, then apply a rotation.
+                </p>
+              ) : null}
+
+              <p className="mt-3 text-sm font-medium text-muted-foreground">
+                Targeted pages: {targetSummary}
+              </p>
+            </div>
+
             <div className="mt-5 grid max-h-[760px] gap-4 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
-              {pages.map((page) => (
+              {pages.map((page) => {
+                const isTargeted = targetedPageSet.has(page.pageNumber);
+                const isSelected = selectedPageNumbers.includes(page.pageNumber);
+
+                return (
                 <article
                   key={page.pageNumber}
-                  className="rounded-2xl border border-border bg-background p-3 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md"
+                  className={`rounded-2xl border bg-background p-3 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md ${
+                    isTargeted
+                      ? "border-primary ring-2 ring-primary/15"
+                      : "border-border"
+                  }`}
                 >
                   <div className="flex min-h-60 items-center justify-center overflow-hidden rounded-xl bg-slate-100 p-4 shadow-inner">
                     <div
@@ -395,11 +598,35 @@ export function RotatePdfTool() {
                     <p className="text-sm font-semibold text-foreground">
                       Page {page.pageNumber}
                     </p>
-                    <p className="rounded-full bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
-                      {page.rotation} deg
-                    </p>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <span className="rounded-full bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
+                        {page.rotation} deg
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                          isTargeted
+                            ? "bg-primary/10 text-primary"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {isTargeted ? "Targeted" : "Not targeted"}
+                      </span>
+                    </div>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-2">
+                    {targetMode === "selected" ? (
+                      <Button
+                        type="button"
+                        variant={isSelected ? "default" : "outline"}
+                        size="sm"
+                        aria-pressed={isSelected}
+                        aria-label={`${isSelected ? "Unselect" : "Select"} page ${page.pageNumber}`}
+                        onClick={() => toggleSelectedPage(page.pageNumber)}
+                        className="col-span-2"
+                      >
+                        {isSelected ? "Selected" : "Select page"}
+                      </Button>
+                    ) : null}
                     <Button
                       type="button"
                       variant="outline"
@@ -422,7 +649,8 @@ export function RotatePdfTool() {
                     </Button>
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </div>
           </section>
         ) : null}
@@ -466,6 +694,14 @@ export function RotatePdfTool() {
           <PdfSummaryRow
             label="Rotated pages"
             value={rotationSummary}
+          />
+          <PdfSummaryRow
+            label="Target mode"
+            value={getTargetModeLabel(targetMode)}
+          />
+          <PdfSummaryRow
+            label="Targeted pages"
+            value={targetSummary}
           />
           <PdfSummaryRow
             label="File size"
@@ -558,6 +794,10 @@ function StatusNotice({ tone, icon, message }: StatusNoticeProps) {
 
 function normalizeRotation(rotation: number) {
   return ((rotation % 360) + 360) % 360;
+}
+
+function getTargetModeLabel(mode: TargetMode) {
+  return targetModeOptions.find((option) => option.value === mode)?.label ?? mode;
 }
 
 function isPdfFile(file: File) {

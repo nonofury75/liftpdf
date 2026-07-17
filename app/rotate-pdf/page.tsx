@@ -6,7 +6,7 @@ import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Rotate PDF Online - Free PDF Rotator | LiftPDF";
 const description =
-  "Rotate PDF pages online for free. Rotate one page or all pages quickly and securely with LiftPDF.";
+  "Rotate PDF pages online for free. Rotate all pages, selected pages, odd or even pages, or custom page ranges with LiftPDF.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
@@ -25,9 +25,9 @@ export default function RotatePdfPage() {
   return (
     <ToolPageShell
       title="Rotate PDF Online"
-      description="Preview every PDF page, rotate individual pages or apply the same rotation to all pages."
+      description="Preview every PDF page, rotate individual pages, or target all, selected, odd, even or custom page ranges."
       seoTitle="Rotate PDF pages online"
-      seoText="LiftPDF rotates PDF pages directly in your browser. The tool keeps page dimensions and document content intact while applying the page rotation you choose before download."
+      seoText="LiftPDF rotates PDF pages directly in your browser. Target all pages, selected pages, odd pages, even pages or a custom range, then download a valid PDF with page dimensions and content preserved."
       currentHref="/rotate-pdf"
       premiumContent={premiumToolContent.rotatePdf}
       faq={[
@@ -39,7 +39,17 @@ export default function RotatePdfPage() {
         {
           question: "Can I rotate all pages together?",
           answer:
-            "Yes. Use Rotate All Left or Rotate All Right to apply a 90 degree rotation to every page.",
+            "Yes. Choose All pages, then use Rotate left 90 deg, Rotate right 90 deg or Rotate 180 deg.",
+        },
+        {
+          question: "Can I rotate only odd or even pages?",
+          answer:
+            "Yes. Choose Odd pages or Even pages, then apply a 90 degree or 180 degree rotation only to those targeted pages.",
+        },
+        {
+          question: "Can I rotate a custom page range?",
+          answer:
+            "Yes. Choose Page range and enter values like 2-5, 1,3,7 or 1-3,6,9-12. LiftPDF validates the range before applying the rotation.",
         },
         {
           question: "Can I rotate a page by 180 degrees?",
