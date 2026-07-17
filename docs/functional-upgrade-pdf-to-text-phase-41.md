@@ -231,7 +231,13 @@ Local validation:
 
 Production validation:
 
-- Vercel production: Pending
+- Vercel production: READY
+- Production URL: `https://liftpdf.com/pdf-to-text`
+- HTTP 200: OK
+- Mobile viewport production check: OK
+- TXT download for range `2-3`: OK
+- Non-selected pages excluded in production TXT: OK
+- Critical console/page/request errors: none observed
 
 ## Summary
 
@@ -254,5 +260,5 @@ Lint: OK
 Typecheck: OK  
 Build: OK  
 E2E: OK  
-Production deployed: Pending  
+Production deployed: Yes  
 Next remaining P1: Protect PDF permission toggles if verified, Unlock PDF restriction-only handling, Merge PDF protected-file diagnostics/editable filename, PDF image conversion memory guard.
