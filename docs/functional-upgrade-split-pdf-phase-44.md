@@ -226,6 +226,46 @@ Mobile Chromium:
 - Pages per PDF input usable.
 - Group preview showed `Pages 11-12`.
 
+## Production Verification
+
+Route:
+
+- `https://liftpdf.com/split-pdf`
+
+Deployment:
+
+- `https://liftpdf-n0jvkvm5t-rachator75010-5712s-projects.vercel.app`
+
+Status:
+
+- Vercel READY
+
+Chromium production:
+
+- Uploaded `phase44-markers.pdf`.
+- Selected Split every N pages.
+- Set pages per PDF to 5.
+- Group preview showed `Pages 11-12`.
+- Downloaded `split-pages.zip`.
+- Verified entries:
+  - `split-pages-1-5.pdf`
+  - `split-pages-6-10.pdf`
+  - `split-pages-11-12.pdf`
+- Verified page counts:
+  - 5
+  - 5
+  - 2
+- No page errors.
+- No critical failed requests.
+
+Mobile Chromium production:
+
+- Route loaded.
+- File uploaded.
+- Split every N pages selected.
+- Pages per PDF input usable.
+- Group preview showed `Pages 11-12`.
+
 ## Rejected In This Phase
 
 Split by bookmarks:
@@ -290,6 +330,6 @@ Build: OK
 
 E2E: OK
 
-Production deployed: PENDING
+Production deployed: YES
 
 Next remaining P1: Protect PDF verified permission controls, Unlock PDF restriction-only behavior, or JPG/PNG EXIF handling depending on the next roadmap pass.
