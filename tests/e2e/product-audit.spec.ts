@@ -519,8 +519,8 @@ test.describe("critical PDF workflows", () => {
     await expect(page.getByRole("link", { name: /^Download PDF$/ })).toBeVisible();
     expect((await PDFDocument.load(splitBytes)).getPageCount()).toBe(3);
     await page.getByRole("textbox").fill("99");
-    await page.getByRole("button", { name: /^Split PDF$/ }).click();
     await expect(page.getByText(/Page 99 does not exist/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Split PDF$/ })).toBeDisabled();
 
     await page.getByRole("button", { name: /Split every page/i }).click();
     const splitZipDownloadPromise = page.waitForEvent("download");
@@ -682,6 +682,115 @@ test.describe("critical PDF workflows", () => {
     await uploadFirstFile(page, fixtures.metadataRich);
     await page.getByRole("button", { name: /Strong/i }).click();
     await expect(page.getByLabel(/Remove document metadata/i)).toBeChecked();
+  });
+
+  test("split PDF creates fixed interval ZIP groups with explicit names", async ({
+    page,
+  }) => {
+    const fixtures = await ensureFixtures();
+
+    await page.goto("/split-pdf");
+    await uploadFirstFile(page, fixtures.phase44Markers);
+    await expect(page.getByText(/12 pages/i).first()).toBeVisible();
+    await page.getByRole("button", { name: /Split every N pages/i }).click();
+    await page.getByLabel("Pages per PDF").fill("5");
+    await expect(page.getByText("Pages 1-5")).toBeVisible();
+    await expect(page.getByText("Pages 6-10")).toBeVisible();
+    await expect(page.getByText("Pages 11-12")).toBeVisible();
+
+    const intervalFiveBytes = await generateThenDownloadBytes(
+      page,
+      /^Split PDF$/,
+      /^Download ZIP$/,
+      "split-pages.zip",
+    );
+    const intervalFiveZip = await JSZip.loadAsync(intervalFiveBytes);
+    const intervalFiveNames = getPdfZipEntryNames(intervalFiveZip);
+    expect(intervalFiveNames).toEqual([
+      "split-pages-1-5.pdf",
+      "split-pages-6-10.pdf",
+      "split-pages-11-12.pdf",
+    ]);
+
+    const firstGroup = await getZipPdfBytes(
+      intervalFiveZip,
+      "split-pages-1-5.pdf",
+    );
+    const secondGroup = await getZipPdfBytes(
+      intervalFiveZip,
+      "split-pages-6-10.pdf",
+    );
+    const thirdGroup = await getZipPdfBytes(
+      intervalFiveZip,
+      "split-pages-11-12.pdf",
+    );
+    expect((await PDFDocument.load(firstGroup)).getPageCount()).toBe(5);
+    expect((await PDFDocument.load(secondGroup)).getPageCount()).toBe(5);
+    expect((await PDFDocument.load(thirdGroup)).getPageCount()).toBe(2);
+    await expectPdfTextMarkers(firstGroup, [1, 5], [6, 11]);
+    await expectPdfTextMarkers(secondGroup, [6, 10], [5, 11]);
+    await expectPdfTextMarkers(thirdGroup, [11, 12], [1, 10]);
+
+    for (const { interval, expectedEntries } of [
+      { interval: "1", expectedEntries: 12 },
+      { interval: "2", expectedEntries: 6 },
+      { interval: "10", expectedEntries: 2 },
+      { interval: "12", expectedEntries: 1 },
+    ]) {
+      await page.goto("/split-pdf");
+      await uploadFirstFile(page, fixtures.phase44Markers);
+      await page.getByRole("button", { name: /Split every N pages/i }).click();
+      await page.getByLabel("Pages per PDF").fill(interval);
+      const bytes = await generateThenDownloadBytes(
+        page,
+        /^Split PDF$/,
+        /^Download ZIP$/,
+        "split-pages.zip",
+      );
+      const zip = await JSZip.loadAsync(bytes);
+      expect(getPdfZipEntryNames(zip)).toHaveLength(expectedEntries);
+    }
+
+    await page.goto("/split-pdf");
+    await uploadFirstFile(page, fixtures.phase44Markers);
+    await page.getByRole("button", { name: /Split every N pages/i }).click();
+    await page.getByLabel("Pages per PDF").fill("13");
+    await expect(
+      page.getByText(/This PDF has 12 pages. Enter a value between 1 and 12./i),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Split PDF$/ })).toBeDisabled();
+    await page.getByLabel("Pages per PDF").fill("2.5");
+    await expect(page.getByText(/must be a whole number/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Split PDF$/ })).toBeDisabled();
+
+    await page.goto("/split-pdf");
+    await uploadFirstFile(page, fixtures.text1);
+    await page.getByRole("button", { name: /Split every N pages/i }).click();
+    await page.getByLabel("Pages per PDF").fill("1");
+    const singlePageZipBytes = await generateThenDownloadBytes(
+      page,
+      /^Split PDF$/,
+      /^Download ZIP$/,
+      "split-pages.zip",
+    );
+    const singlePageZip = await JSZip.loadAsync(singlePageZipBytes);
+    expect(getPdfZipEntryNames(singlePageZip)).toEqual(["split-pages-1.pdf"]);
+    expect(
+      (await PDFDocument.load(await getZipPdfBytes(singlePageZip, "split-pages-1.pdf"))).getPageCount(),
+    ).toBe(1);
+
+    await page.goto("/split-pdf");
+    await uploadFirstFile(page, fixtures.text100);
+    await page.getByRole("button", { name: /Split every N pages/i }).click();
+    await page.getByLabel("Pages per PDF").fill("10");
+    const hundredPageZipBytes = await generateThenDownloadBytes(
+      page,
+      /^Split PDF$/,
+      /^Download ZIP$/,
+      "split-pages.zip",
+    );
+    const hundredPageZip = await JSZip.loadAsync(hundredPageZipBytes);
+    expect(getPdfZipEntryNames(hundredPageZip)).toHaveLength(10);
   });
 
   test("protect and unlock use real PDF encryption", async ({ page }) => {
@@ -1438,6 +1547,47 @@ async function readPdfMetadata(pdfBytes: Buffer) {
     creator: pdf.getCreator(),
     producer: pdf.getProducer(),
   };
+}
+
+function getPdfZipEntryNames(zip: JSZip) {
+  return Object.keys(zip.files)
+    .filter((name) => name.endsWith(".pdf"))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
+async function getZipPdfBytes(zip: JSZip, entryName: string) {
+  const entry = zip.file(entryName);
+
+  if (!entry) {
+    throw new Error(`Missing ZIP entry: ${entryName}`);
+  }
+
+  return entry.async("nodebuffer");
+}
+
+async function expectPdfTextMarkers(
+  pdfBytes: Buffer,
+  expectedPages: number[],
+  absentPages: number[],
+) {
+  const pdf = await PDFDocument.load(pdfBytes);
+  let text = "";
+
+  for (let pageNumber = 1; pageNumber <= pdf.getPageCount(); pageNumber += 1) {
+    text += ` ${await extractPdfPageText(pdfBytes, pageNumber)}`;
+  }
+
+  for (const pageNumber of expectedPages) {
+    expect(text).toMatch(createPhase44MarkerPattern(pageNumber));
+  }
+
+  for (const pageNumber of absentPages) {
+    expect(text).not.toMatch(createPhase44MarkerPattern(pageNumber));
+  }
+}
+
+function createPhase44MarkerPattern(pageNumber: number) {
+  return new RegExp(`PHASE44-PAGE-${pageNumber}(?!\\d)`);
 }
 
 function pageOrientation({ height, width }: { height: number; width: number }) {

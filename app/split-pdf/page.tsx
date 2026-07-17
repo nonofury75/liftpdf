@@ -6,7 +6,7 @@ import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Split PDF Online - Free PDF Splitter | LiftPDF";
 const description =
-  "Split PDF files online for free. Extract selected pages or split every page into separate PDF files with LiftPDF.";
+  "Split PDF files online for free. Extract selected pages, split every page, or split a PDF into fixed page groups with LiftPDF.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
@@ -25,9 +25,9 @@ export default function SplitPdfPage() {
   return (
     <ToolPageShell
       title="Split PDF Online"
-      description="Extract selected pages or split every page into separate PDF files directly in your browser."
+      description="Extract selected pages, split every page, or create fixed-size PDF groups directly in your browser."
       seoTitle="Split PDF files online"
-      seoText="LiftPDF helps you split a PDF without installing software. Choose specific pages like 1,3,5-8 to create one new PDF, or split every page into separate PDF files inside a ZIP archive."
+      seoText="LiftPDF helps you split a PDF without installing software. Choose specific pages like 1,3,5-8 to create one new PDF, split every page into separate files, or split a long document into fixed groups such as every 5 pages."
       currentHref="/split-pdf"
       premiumContent={premiumToolContent.splitPdf}
       faq={[
@@ -40,6 +40,11 @@ export default function SplitPdfPage() {
           question: "Can I split every page into a separate PDF?",
           answer:
             "Yes. The split every page mode creates a ZIP file containing page-1.pdf, page-2.pdf and the rest of the pages.",
+        },
+        {
+          question: "Can I split a PDF every 2, 5 or 10 pages?",
+          answer:
+            "Yes. Use Split every N pages, choose a preset or enter a custom number, and LiftPDF creates a ZIP with clearly named files such as split-pages-1-5.pdf.",
         },
         {
           question: "Are my PDFs uploaded to a server?",

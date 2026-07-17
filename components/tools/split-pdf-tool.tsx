@@ -24,7 +24,7 @@ import {
 } from "@/hooks/use-tool-analytics";
 import { cn } from "@/lib/utils";
 
-type SplitMode = "extract" | "every-page";
+type SplitMode = "extract" | "every-page" | "fixed-interval";
 
 type SplitPagePreview = {
   height: number;
@@ -44,6 +44,12 @@ type GeneratedFile = {
   fileName: string;
 };
 
+type PageGroup = {
+  endPage: number;
+  index: number;
+  startPage: number;
+};
+
 const extractedFileName = "split.pdf";
 const splitZipFileName = "split-pages.zip";
 
@@ -51,10 +57,12 @@ export function SplitPdfTool() {
   const [selectedPdf, setSelectedPdf] = useState<SelectedPdf | null>(null);
   const [mode, setMode] = useState<SplitMode>("extract");
   const [rangeInput, setRangeInput] = useState("");
+  const [pagesPerPdfInput, setPagesPerPdfInput] = useState("5");
   const [error, setError] = useState<string | null>(null);
   const [isReadingPdf, setIsReadingPdf] = useState(false);
   const [renderProgress, setRenderProgress] = useState<string | null>(null);
   const [isSplitting, setIsSplitting] = useState(false);
+  const [splitProgress, setSplitProgress] = useState<string | null>(null);
   const [generatedFile, setGeneratedFile] = useState<GeneratedFile | null>(
     null,
   );
@@ -66,6 +74,24 @@ export function SplitPdfTool() {
     () => (mode === "extract" ? extractedFileName : splitZipFileName),
     [mode],
   );
+  const fixedInterval = useMemo(() => {
+    if (!selectedPdf || mode !== "fixed-interval") {
+      return null;
+    }
+
+    try {
+      return parsePagesPerPdf(pagesPerPdfInput, selectedPdf.pageCount);
+    } catch {
+      return null;
+    }
+  }, [mode, pagesPerPdfInput, selectedPdf]);
+  const pageGroups = useMemo(() => {
+    if (!selectedPdf || mode !== "fixed-interval" || !fixedInterval) {
+      return [];
+    }
+
+    return createPageGroups(selectedPdf.pageCount, fixedInterval);
+  }, [fixedInterval, mode, selectedPdf]);
   const parsedSelection = useMemo(() => {
     if (!selectedPdf || mode !== "extract" || !rangeInput.trim()) {
       return [];
@@ -82,10 +108,71 @@ export function SplitPdfTool() {
       return `All ${selectedPdf?.pageCount ?? 0} pages`;
     }
 
+    if (mode === "fixed-interval") {
+      return pageGroups.length
+        ? `${pageGroups.length} ${pageGroups.length === 1 ? "file" : "files"}`
+        : "None";
+    }
+
     return parsedSelection.length
       ? formatPageNumbersAsRanges(parsedSelection)
       : "None";
-  }, [mode, parsedSelection, selectedPdf]);
+  }, [mode, pageGroups.length, parsedSelection, selectedPdf]);
+  const pagesPerPdfError = useMemo(() => {
+    if (!selectedPdf || mode !== "fixed-interval") {
+      return null;
+    }
+
+    try {
+      parsePagesPerPdf(pagesPerPdfInput, selectedPdf.pageCount);
+      return null;
+    } catch (validationError) {
+      return validationError instanceof Error
+        ? validationError.message
+      : "Enter a valid number of pages per PDF.";
+    }
+  }, [mode, pagesPerPdfInput, selectedPdf]);
+  const rangeInputError = useMemo(() => {
+    if (!selectedPdf || mode !== "extract" || !rangeInput.trim()) {
+      return null;
+    }
+
+    try {
+      parsePageRanges(rangeInput, selectedPdf.pageCount);
+      return null;
+    } catch (validationError) {
+      return validationError instanceof Error
+        ? validationError.message
+        : "The page range is invalid. Use a format like 1,3,5-8.";
+    }
+  }, [mode, rangeInput, selectedPdf]);
+  const canSplit = useMemo(() => {
+    if (!selectedPdf || isSplitting || isReadingPdf) {
+      return false;
+    }
+
+    if (mode === "extract") {
+      try {
+        return parsePageRanges(rangeInput, selectedPdf.pageCount).length > 0;
+      } catch {
+        return false;
+      }
+    }
+
+    if (mode === "fixed-interval") {
+      return !pagesPerPdfError && pageGroups.length > 0;
+    }
+
+    return true;
+  }, [
+    isReadingPdf,
+    isSplitting,
+    mode,
+    pageGroups.length,
+    pagesPerPdfError,
+    rangeInput,
+    selectedPdf,
+  ]);
 
   useEffect(() => {
     generatedFileRef.current = generatedFile;
@@ -180,10 +267,15 @@ export function SplitPdfTool() {
     }
 
     setError(null);
+    setSplitProgress("Preparing PDF");
     setIsSplitting(true);
     clearGeneratedFile();
+    const analyticsMode =
+      mode === "fixed-interval" && fixedInterval && pageGroups.length
+        ? `fixed_interval_${fixedInterval}_pages_${pageGroups.length}_files`
+        : mode;
     analytics.trackConversionStarted({
-      mode,
+      mode: analyticsMode,
       outputFormat: mode === "extract" ? "pdf" : "zip",
       pageCount: selectedPdf.pageCount,
     });
@@ -195,6 +287,7 @@ export function SplitPdfTool() {
 
       if (mode === "extract") {
         const pageNumbers = parsePageRanges(rangeInput, selectedPdf.pageCount);
+        setSplitProgress("Generating PDF");
         const outputPdf = await PDFDocument.create();
         const copiedPages = await outputPdf.copyPages(
           sourcePdf,
@@ -210,7 +303,7 @@ export function SplitPdfTool() {
         };
         setGeneratedFile(nextFile);
         analytics.trackConversionCompleted({
-          mode,
+          mode: analyticsMode,
           outputFormat: "pdf",
           pageCount: pageNumbers.length,
           status: "success",
@@ -221,14 +314,43 @@ export function SplitPdfTool() {
       } else {
         const zip = new JSZip();
 
-        for (const pageIndex of sourcePdf.getPageIndices()) {
-          const singlePagePdf = await PDFDocument.create();
-          const [page] = await singlePagePdf.copyPages(sourcePdf, [pageIndex]);
-          singlePagePdf.addPage(page);
-          const bytes = await singlePagePdf.save();
-          zip.file(`page-${pageIndex + 1}.pdf`, bytes);
+        if (mode === "every-page") {
+          const pageIndices = sourcePdf.getPageIndices();
+
+          for (const pageIndex of pageIndices) {
+            setSplitProgress(
+              `Creating file ${pageIndex + 1} of ${pageIndices.length}`,
+            );
+            const singlePagePdf = await PDFDocument.create();
+            const [page] = await singlePagePdf.copyPages(sourcePdf, [pageIndex]);
+            singlePagePdf.addPage(page);
+            const bytes = await singlePagePdf.save();
+            zip.file(`page-${pageIndex + 1}.pdf`, bytes);
+            await new Promise((resolve) => window.setTimeout(resolve, 0));
+          }
+        } else {
+          const interval = parsePagesPerPdf(
+            pagesPerPdfInput,
+            selectedPdf.pageCount,
+          );
+          const groups = createPageGroups(selectedPdf.pageCount, interval);
+
+          for (const group of groups) {
+            setSplitProgress(`Creating file ${group.index} of ${groups.length}`);
+            const groupedPdf = await PDFDocument.create();
+            const pageIndices = createPageIndexRange(
+              group.startPage,
+              group.endPage,
+            );
+            const copiedPages = await groupedPdf.copyPages(sourcePdf, pageIndices);
+            copiedPages.forEach((page) => groupedPdf.addPage(page));
+            const bytes = await groupedPdf.save();
+            zip.file(createGroupFileName(group), bytes);
+            await new Promise((resolve) => window.setTimeout(resolve, 0));
+          }
         }
 
+        setSplitProgress("Generating ZIP");
         const zipBlob = await zip.generateAsync({ type: "blob" });
         const nextFile = {
           url: URL.createObjectURL(zipBlob),
@@ -236,7 +358,7 @@ export function SplitPdfTool() {
         };
         setGeneratedFile(nextFile);
         analytics.trackConversionCompleted({
-          mode,
+          mode: analyticsMode,
           outputFormat: "zip",
           pageCount: selectedPdf.pageCount,
           status: "success",
@@ -254,6 +376,7 @@ export function SplitPdfTool() {
       analytics.trackError({ errorCode: "split_failed" });
     } finally {
       setIsSplitting(false);
+      setSplitProgress(null);
     }
   }
 
@@ -261,9 +384,11 @@ export function SplitPdfTool() {
     revokePagePreviews(selectedPdf);
     setSelectedPdf(null);
     setRangeInput("");
+    setPagesPerPdfInput("5");
     setMode("extract");
     setError(null);
     setRenderProgress(null);
+    setSplitProgress(null);
     clearGeneratedFile();
   }
 
@@ -362,6 +487,7 @@ export function SplitPdfTool() {
               onClick={() => {
                 setMode("extract");
                 clearGeneratedFile();
+                setError(null);
               }}
             >
               <span className="text-sm font-semibold text-foreground">
@@ -381,6 +507,7 @@ export function SplitPdfTool() {
               onClick={() => {
                 setMode("every-page");
                 clearGeneratedFile();
+                setError(null);
               }}
             >
               <span className="text-sm font-semibold text-foreground">
@@ -388,6 +515,26 @@ export function SplitPdfTool() {
               </span>
               <span className="mt-1 block text-sm leading-6 text-muted-foreground">
                 Create a ZIP with one PDF per page.
+              </span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={mode === "fixed-interval"}
+              className={cn(
+                "rounded-xl border border-border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm sm:col-span-2",
+                mode === "fixed-interval" && "border-primary bg-primary/5",
+              )}
+              onClick={() => {
+                setMode("fixed-interval");
+                clearGeneratedFile();
+                setError(null);
+              }}
+            >
+              <span className="text-sm font-semibold text-foreground">
+                Split every N pages
+              </span>
+              <span className="mt-1 block text-sm leading-6 text-muted-foreground">
+                Create one PDF for every fixed-size group of pages.
               </span>
             </button>
           </div>
@@ -409,13 +556,78 @@ export function SplitPdfTool() {
               <span className="mt-2 block text-xs font-medium text-muted-foreground">
                 Examples: 1-3, 5, 8-10 or 1,3,5-8.
               </span>
+              {rangeInputError ? (
+                <span className="mt-2 block rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                  {rangeInputError}
+                </span>
+              ) : null}
             </label>
+          ) : null}
+
+          {mode === "fixed-interval" ? (
+            <div className="mt-5 space-y-4">
+              <div>
+                <span className="text-sm font-semibold text-foreground">
+                  Pages per PDF
+                </span>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {["2", "5", "10"].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      className={cn(
+                        "rounded-md border px-3 py-2 text-sm font-semibold transition hover:border-primary/50",
+                        pagesPerPdfInput === preset
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-background text-foreground",
+                      )}
+                      onClick={() => {
+                        setPagesPerPdfInput(preset);
+                        setError(null);
+                        clearGeneratedFile();
+                      }}
+                    >
+                      {preset} pages
+                    </button>
+                  ))}
+                  <label className="flex min-w-36 flex-1 items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm">
+                    <span className="font-semibold text-muted-foreground">
+                      Custom
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={selectedPdf?.pageCount ?? undefined}
+                      step={1}
+                      value={pagesPerPdfInput}
+                      onChange={(event) => {
+                        setPagesPerPdfInput(event.target.value);
+                        setError(null);
+                        clearGeneratedFile();
+                      }}
+                      className="h-8 w-full min-w-16 bg-transparent text-sm font-semibold text-foreground outline-none"
+                      aria-label="Pages per PDF"
+                    />
+                  </label>
+                </div>
+                <p className="mt-2 text-xs font-medium text-muted-foreground">
+                  Last file can contain fewer pages if the document does not
+                  divide evenly.
+                </p>
+                {pagesPerPdfError ? (
+                  <p className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                    {pagesPerPdfError}
+                  </p>
+                ) : null}
+              </div>
+            </div>
           ) : null}
         </div>
 
         {selectedPdf ? (
           <PagePreviewGrid
             mode={mode}
+            pageGroups={pageGroups}
             pages={selectedPdf.pages}
             selectedPages={parsedSelection}
             onPageToggle={handlePageToggle}
@@ -439,8 +651,31 @@ export function SplitPdfTool() {
           />
           <SummaryRow
             label={mode === "extract" ? "Selected ranges" : "Split mode"}
-            value={selectedRangeLabel}
+            value={
+              mode === "every-page"
+                ? "Every page"
+                : mode === "fixed-interval"
+                  ? "Every N pages"
+                  : selectedRangeLabel
+            }
           />
+          {mode === "fixed-interval" ? (
+            <>
+              <SummaryRow
+                label="Pages per PDF"
+                value={fixedInterval ? String(fixedInterval) : "-"}
+              />
+              <SummaryRow
+                label="Output files"
+                value={pageGroups.length ? String(pageGroups.length) : "-"}
+              />
+            </>
+          ) : mode === "every-page" ? (
+            <SummaryRow
+              label="Output files"
+              value={selectedPdf ? String(selectedPdf.pageCount) : "-"}
+            />
+          ) : null}
           <SummaryRow
             label="Output"
             value={generatedFile?.fileName ?? outputFileName}
@@ -451,7 +686,7 @@ export function SplitPdfTool() {
           <Button
             type="button"
             onClick={handleSplit}
-            disabled={isSplitting || isReadingPdf}
+            disabled={!canSplit}
             className="h-12 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
           >
             {isSplitting ? (
@@ -461,6 +696,13 @@ export function SplitPdfTool() {
             )}
             {isSplitting ? "Splitting..." : "Split PDF"}
           </Button>
+
+          {splitProgress ? (
+            <p className="rounded-xl border border-primary/20 bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary">
+              <Loader2 className="mr-2 inline size-4 animate-spin" aria-hidden="true" />
+              {splitProgress}
+            </p>
+          ) : null}
 
           {generatedFile ? (
             <>
@@ -519,6 +761,7 @@ export function SplitPdfTool() {
 
 type PagePreviewGridProps = {
   mode: SplitMode;
+  pageGroups: PageGroup[];
   pages: SplitPagePreview[];
   selectedPages: number[];
   onPageToggle: (pageNumber: number) => void;
@@ -526,10 +769,50 @@ type PagePreviewGridProps = {
 
 function PagePreviewGrid({
   mode,
+  pageGroups,
   pages,
   selectedPages,
   onPageToggle,
 }: PagePreviewGridProps) {
+  if (mode === "fixed-interval") {
+    return (
+      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-md">
+        <div className="flex flex-col gap-2 border-b border-border bg-muted/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">
+              Group preview
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Each group will be exported as one PDF inside the ZIP.
+            </p>
+          </div>
+          <span className="rounded-md bg-background px-3 py-1 text-xs font-semibold text-muted-foreground">
+            {pageGroups.length} {pageGroups.length === 1 ? "file" : "files"}
+          </span>
+        </div>
+
+        <ul className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3">
+          {pageGroups.map((group) => (
+            <li
+              key={`${group.startPage}-${group.endPage}`}
+              className="rounded-xl border border-border bg-background p-4 shadow-sm"
+            >
+              <p className="text-sm font-semibold text-foreground">
+                Group {group.index}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Pages {formatGroupRange(group)}
+              </p>
+              <p className="mt-3 rounded-md bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground">
+                {createGroupFileName(group)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  }
+
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-md">
       <div className="flex flex-col gap-2 border-b border-border bg-muted/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -675,6 +958,70 @@ function validatePageNumber(pageNumber: number, pageCount: number) {
   if (pageNumber < 1 || pageNumber > pageCount) {
     throw new Error(`Page ${pageNumber} does not exist in this PDF.`);
   }
+}
+
+function parsePagesPerPdf(input: string, pageCount: number) {
+  const trimmedInput = input.trim();
+
+  if (!trimmedInput) {
+    throw new Error("Enter how many pages each output PDF should contain.");
+  }
+
+  if (!/^\d+$/.test(trimmedInput)) {
+    throw new Error("Pages per PDF must be a whole number.");
+  }
+
+  const pagesPerPdf = Number(trimmedInput);
+
+  if (pagesPerPdf < 1) {
+    throw new Error("Pages per PDF must be at least 1.");
+  }
+
+  if (pagesPerPdf > pageCount) {
+    throw new Error(
+      `This PDF has ${pageCount} pages. Enter a value between 1 and ${pageCount}.`,
+    );
+  }
+
+  return pagesPerPdf;
+}
+
+function createPageGroups(pageCount: number, pagesPerPdf: number) {
+  const groups: PageGroup[] = [];
+
+  for (
+    let startPage = 1, index = 1;
+    startPage <= pageCount;
+    startPage += pagesPerPdf, index += 1
+  ) {
+    groups.push({
+      endPage: Math.min(startPage + pagesPerPdf - 1, pageCount),
+      index,
+      startPage,
+    });
+  }
+
+  return groups;
+}
+
+function createPageIndexRange(startPage: number, endPage: number) {
+  const pageIndices: number[] = [];
+
+  for (let pageNumber = startPage; pageNumber <= endPage; pageNumber += 1) {
+    pageIndices.push(pageNumber - 1);
+  }
+
+  return pageIndices;
+}
+
+function formatGroupRange(group: PageGroup) {
+  return group.startPage === group.endPage
+    ? String(group.startPage)
+    : `${group.startPage}-${group.endPage}`;
+}
+
+function createGroupFileName(group: PageGroup) {
+  return `split-pages-${formatGroupRange(group)}.pdf`;
 }
 
 function createBlobUrl(bytes: Uint8Array<ArrayBufferLike>, type: string) {

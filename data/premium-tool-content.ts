@@ -891,9 +891,9 @@ Object.assign(premiumToolContent, {
     left: "a PDF",
     right: "split files",
     purpose:
-      "Extract the pages you need or split every page into its own PDF for sharing, filing or review.",
+      "Extract the pages you need, split every page, or divide long PDFs into fixed-size groups for sharing, filing or review.",
     action: "Split pages",
-    output: "Download one extracted PDF or a ZIP containing one PDF per page.",
+    output: "Download one extracted PDF or a ZIP containing page-by-page or fixed-interval PDF files.",
     emphasis: "pages",
     related: [
       { label: "Merge PDF", href: "/merge-pdf", text: "Combine split pages back into one PDF later." },
@@ -905,7 +905,7 @@ Object.assign(premiumToolContent, {
       {
         title: "Choose the right split mode",
         paragraphs: [
-          "Use Extract pages when you need a new PDF containing a specific range such as 1,3,5-8. Use Split every page when every page should become an individual file.",
+          "Use Extract pages when you need a new PDF containing a specific range such as 1,3,5-8. Use Split every page when every page should become an individual file. Use Split every N pages when a long PDF should become regular batches such as 5 pages per file.",
           "For visual page picking, Extract Pages gives a thumbnail-based workflow. Split PDF is faster when you already know the page numbers.",
         ],
       },
