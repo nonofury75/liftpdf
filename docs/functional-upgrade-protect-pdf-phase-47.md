@@ -288,7 +288,36 @@ Analytics additions are aggregate only:
 
 ## Production
 
-Production validation will be completed after the Phase 47 commit is pushed and Vercel reports READY.
+Commit deployed:
+
+- `20862f2 Upgrade Protect PDF permission controls`
+
+Vercel:
+
+- deployment URL: `https://liftpdf-2zn0wtujb-rachator75010-5712s-projects.vercel.app`
+- status: READY
+
+Production route:
+
+- `https://liftpdf.com/protect-pdf`
+
+Production validation completed against the live domain:
+
+- Chromium desktop: OK
+- Firefox desktop: OK
+- Mobile Chromium: OK
+- `/protect-pdf` HTTP 200
+- advanced permissions visible
+- downloaded `protected.pdf`
+- AES-256 verified
+- `/P -2348` verified for `low + extraction allowed + assembly`
+- decoded printing permission: `low`
+- decoded extraction permission: allowed
+- decoded modification permission: `assembly`
+- accessibility bit remains enabled
+- no pageerror
+- no critical console.error
+- no critical failed requests
 
 ## Remaining Limitations
 
@@ -374,6 +403,6 @@ Build: OK
 
 E2E: OK
 
-Production deployed: PENDING
+Production deployed: YES
 
 Next remaining P1: Unlock PDF restriction-only owner-password files or PDF to image memory guard, pending Phase 48 selection.
