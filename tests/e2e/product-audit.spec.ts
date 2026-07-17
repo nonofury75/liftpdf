@@ -987,6 +987,45 @@ test.describe("critical PDF workflows", () => {
     );
     expect((await PDFDocument.load(numberedBytes)).getPageCount()).toBe(10);
 
+    await page.goto("/add-page-numbers");
+    await uploadFirstFile(page, fixtures.text10);
+    await expect(page.getByText(/10 pages/i).first()).toBeVisible();
+    await page.getByRole("button", { name: /^Page 1$/ }).click();
+    await page.getByLabel("Start number").fill("900");
+    await page.getByRole("button", { name: /Skip first page/i }).click();
+    const skipCoverBytes = await generateThenDownloadBytes(
+      page,
+      /^Add page numbers$/,
+      /^Download numbered PDF$/,
+      "numbered.pdf",
+    );
+    const skipCoverPdf = await PDFDocument.load(skipCoverBytes);
+    expect(skipCoverPdf.getPageCount()).toBe(10);
+    const firstPageText = await extractPdfPageText(skipCoverBytes, 1);
+    const secondPageText = await extractPdfPageText(skipCoverBytes, 2);
+    expect(firstPageText).toContain("LiftPDF QA page 1");
+    expect(firstPageText).not.toContain("Page 900");
+    expect(secondPageText).toContain("Page 900");
+
+    await page.goto("/add-page-numbers");
+    await uploadFirstFile(page, fixtures.text10);
+    await expect(page.getByText(/10 pages/i).first()).toBeVisible();
+    await page.getByRole("button", { name: /^Page 1$/ }).click();
+    await page.getByLabel("Start number").fill("700");
+    await page.getByRole("button", { name: /Page range/i }).click();
+    await page.getByLabel("Page range").fill("2-3");
+    const rangeBytes = await generateThenDownloadBytes(
+      page,
+      /^Add page numbers$/,
+      /^Download numbered PDF$/,
+      "numbered.pdf",
+    );
+    expect((await PDFDocument.load(rangeBytes)).getPageCount()).toBe(10);
+    expect(await extractPdfPageText(rangeBytes, 1)).not.toContain("Page 700");
+    expect(await extractPdfPageText(rangeBytes, 2)).toContain("Page 700");
+    expect(await extractPdfPageText(rangeBytes, 3)).toContain("Page 701");
+    expect(await extractPdfPageText(rangeBytes, 4)).not.toContain("Page 702");
+
     await page.goto("/watermark-pdf");
     await uploadFirstFile(page, fixtures.text10);
     await expect(page.getByText(/10 pages/i).first()).toBeVisible();
@@ -1087,4 +1126,23 @@ async function generateThenDownloadBytes(
   }
 
   return fs.readFileSync(filePath);
+}
+
+async function extractPdfPageText(pdfBytes: Buffer, pageNumber: number) {
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const loadingTask = pdfjs.getDocument({
+    data: new Uint8Array(pdfBytes),
+  });
+  const pdf = await loadingTask.promise;
+
+  try {
+    const page = await pdf.getPage(pageNumber);
+    const textContent = await page.getTextContent();
+
+    return textContent.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join(" ");
+  } finally {
+    await pdf.destroy();
+  }
 }

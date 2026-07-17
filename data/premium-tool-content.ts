@@ -983,7 +983,7 @@ Object.assign(premiumToolContent, {
     purpose:
       "Add clear page numbers to reports, packets and documents that need easy references.",
     action: "Add numbers",
-    output: "Download the PDF with your chosen number format and position.",
+    output: "Download the PDF with your chosen number format, position and page targeting.",
     emphasis: "edit",
     related: [
       { label: "Merge PDF", href: "/merge-pdf", text: "Combine documents before numbering the final packet." },
@@ -996,7 +996,7 @@ Object.assign(premiumToolContent, {
         title: "Numbering readable documents",
         paragraphs: [
           "Page numbers are most useful when readers need to cite, review or print a document. Choose a bottom position for standard reports and a top position when the bottom margin contains important content.",
-          "Use formats like Page 1 of 10 when the total page count helps the reader understand the document size.",
+          "Use formats like Page 1 of 10 when the total page count helps the reader understand the document size. If the first page is a cover, skip it so the visible numbering starts where the actual document begins.",
         ],
       },
     ],

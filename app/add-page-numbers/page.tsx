@@ -6,7 +6,7 @@ import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Add Page Numbers to PDF Online | LiftPDF";
 const description =
-  "Add page numbers to PDF files online for free. Customize position, font, size and style in seconds.";
+  "Add page numbers to PDF files online for free. Customize position, style, start number and which pages receive numbers.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
@@ -25,9 +25,9 @@ export default function AddPageNumbersPage() {
   return (
     <ToolPageShell
       title="Add Page Numbers to PDF"
-      description="Add custom page numbers to your PDF with live preview, position controls, font choices and styling options."
+      description="Add custom page numbers to your PDF with live preview, position controls, font choices, styling options and page range targeting."
       seoTitle="Add page numbers online"
-      seoText="LiftPDF lets you add page numbers directly in your browser. Choose where numbers appear, customize the font, size, color and format, then download a numbered PDF without uploading files to a backend API."
+      seoText="LiftPDF lets you add page numbers directly in your browser. Choose where numbers appear, customize the font, size, color and format, skip a cover page or number only a page range, then download a numbered PDF without uploading files to a backend API."
       currentHref="/add-page-numbers"
       premiumContent={premiumToolContent.addPageNumbers}
       faq={[
@@ -45,6 +45,11 @@ export default function AddPageNumbersPage() {
           question: "Can I start numbering from a different number?",
           answer:
             "Yes. Set the start number to 1, 5, 10 or any positive number before generating the numbered PDF.",
+        },
+        {
+          question: "Can I skip the first page or number only selected pages?",
+          answer:
+            "Yes. You can number every page, skip the first page for cover sheets or type a page range such as 2-5 or 1,3,7.",
         },
         {
           question: "Can I preview the numbers before downloading?",

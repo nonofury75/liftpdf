@@ -42,6 +42,7 @@ type NumberFormat =
   | "page-number"
   | "number-total"
   | "page-number-total";
+type PageTargetMode = "all" | "skip-first" | "range";
 
 type SelectedPdf = {
   file: File;
@@ -65,6 +66,8 @@ type PageNumberOptions = {
   color: string;
   startNumber: number;
   format: NumberFormat;
+  pageTargetMode: PageTargetMode;
+  pageRange: string;
 };
 
 const numberedFileName = "numbered.pdf";
@@ -98,6 +101,28 @@ const formatOptions: Array<{ label: string; value: NumberFormat }> = [
   { label: "Page 1 of 10", value: "page-number-total" },
 ];
 
+const pageTargetOptions: Array<{
+  label: string;
+  value: PageTargetMode;
+  description: string;
+}> = [
+  {
+    label: "All pages",
+    value: "all",
+    description: "Number every page in the PDF.",
+  },
+  {
+    label: "Skip first page",
+    value: "skip-first",
+    description: "Leave the cover page clean and start on page 2.",
+  },
+  {
+    label: "Page range",
+    value: "range",
+    description: "Number only selected pages, for example 2-5 or 1,3,7.",
+  },
+];
+
 const colorOptions = [
   { label: "Black", value: "#111827" },
   { label: "Gray", value: "#4b5563" },
@@ -115,6 +140,8 @@ export function AddPageNumbersTool() {
     color: "#111827",
     startNumber: 1,
     format: "number",
+    pageTargetMode: "all",
+    pageRange: "",
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
@@ -130,12 +157,45 @@ export function AddPageNumbersTool() {
     route: "/add-page-numbers",
   });
 
+  const pageTargeting = useMemo(() => {
+    if (!selectedPdf) {
+      return {
+        pageNumbers: [] as number[],
+        pageSet: new Set<number>(),
+        error: null as string | null,
+      };
+    }
+
+    try {
+      const pageNumbers = getTargetPageNumbers({
+        mode: options.pageTargetMode,
+        pageRange: options.pageRange,
+        pageCount: selectedPdf.pageCount,
+      });
+
+      return {
+        pageNumbers,
+        pageSet: new Set(pageNumbers),
+        error: null,
+      };
+    } catch (caughtError) {
+      return {
+        pageNumbers: [] as number[],
+        pageSet: new Set<number>(),
+        error:
+          caughtError instanceof Error
+            ? caughtError.message
+            : "The selected page range is invalid.",
+      };
+    }
+  }, [options.pageRange, options.pageTargetMode, selectedPdf]);
+
   const previewTotalNumber = useMemo(
     () =>
-      selectedPdf
-        ? options.startNumber + selectedPdf.pageCount - 1
+      pageTargeting.pageNumbers.length
+        ? options.startNumber + pageTargeting.pageNumbers.length - 1
         : options.startNumber,
-    [options.startNumber, selectedPdf],
+    [options.startNumber, pageTargeting.pageNumbers.length],
   );
 
   useEffect(() => {
@@ -230,6 +290,18 @@ export function AddPageNumbersTool() {
       return;
     }
 
+    if (pageTargeting.error) {
+      setError(pageTargeting.error);
+      analytics.trackError({ errorCode: "invalid_page_range" });
+      return;
+    }
+
+    if (!pageTargeting.pageNumbers.length) {
+      setError("Choose at least one page to number.");
+      analytics.trackError({ errorCode: "empty_page_selection" });
+      return;
+    }
+
     setError(null);
     setIsGenerating(true);
     setProgress("Preparing PDF...");
@@ -244,12 +316,25 @@ export function AddPageNumbersTool() {
       const pdf = await PDFDocument.load(await selectedPdf.file.arrayBuffer());
       const font = await embedSelectedFont(pdf, options.font);
       const color = hexToRgb(options.color);
-      const totalNumber = options.startNumber + pdf.getPageCount() - 1;
+      const targetPages = getTargetPageNumbers({
+        mode: options.pageTargetMode,
+        pageRange: options.pageRange,
+        pageCount: pdf.getPageCount(),
+      });
+      const targetPageSet = new Set(targetPages);
+      const totalNumber = options.startNumber + targetPages.length - 1;
       const fontSize = sizeToPoints(options.size);
 
       setProgress("Adding page numbers...");
       pdf.getPages().forEach((page, index) => {
-        const pageNumber = options.startNumber + index;
+        const physicalPageNumber = index + 1;
+
+        if (!targetPageSet.has(physicalPageNumber)) {
+          return;
+        }
+
+        const sequenceIndex = targetPages.indexOf(physicalPageNumber);
+        const pageNumber = options.startNumber + sequenceIndex;
         const text = formatPageNumberText(
           pageNumber,
           totalNumber,
@@ -323,6 +408,8 @@ export function AddPageNumbersTool() {
       color: "#111827",
       startNumber: 1,
       format: "number",
+      pageTargetMode: "all",
+      pageRange: "",
     });
     setError(null);
     setProgress(null);
@@ -477,6 +564,59 @@ export function AddPageNumbersTool() {
                 </div>
               </FieldGroup>
             </div>
+
+            <FieldGroup label="Pages to number">
+              <div className="grid gap-2">
+                {pageTargetOptions.map((target) => (
+                  <button
+                    key={target.value}
+                    type="button"
+                    aria-pressed={options.pageTargetMode === target.value}
+                    className={cn(
+                      "rounded-xl border px-3 py-3 text-left transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm",
+                      options.pageTargetMode === target.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-background text-foreground hover:bg-muted",
+                    )}
+                    onClick={() =>
+                      updateOptions({ pageTargetMode: target.value })
+                    }
+                  >
+                    <span className="block text-sm font-semibold">
+                      {target.label}
+                    </span>
+                    <span className="mt-1 block text-sm leading-5 text-muted-foreground">
+                      {target.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </FieldGroup>
+
+            {options.pageTargetMode === "range" ? (
+              <label className="block">
+                <span className="text-sm font-semibold text-foreground">
+                  Page range
+                </span>
+                <input
+                  value={options.pageRange}
+                  onChange={(event) =>
+                    updateOptions({ pageRange: event.target.value })
+                  }
+                  placeholder="2-5 or 1,3,7"
+                  aria-invalid={Boolean(pageTargeting.error)}
+                  className="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/20"
+                />
+                <span className="mt-2 block text-sm leading-5 text-muted-foreground">
+                  Use commas for separate pages and hyphens for ranges.
+                </span>
+                {pageTargeting.error ? (
+                  <span className="mt-2 block text-sm font-medium text-red-600">
+                    {pageTargeting.error}
+                  </span>
+                ) : null}
+              </label>
+            ) : null}
           </div>
         </div>
 
@@ -493,7 +633,11 @@ export function AddPageNumbersTool() {
 
             <div className="mt-5 grid max-h-[760px] gap-4 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
               {pages.map((page) => {
-                const pageNumber = options.startNumber + page.pageNumber - 1;
+                const sequenceIndex = pageTargeting.pageNumbers.indexOf(
+                  page.pageNumber,
+                );
+                const isNumbered = pageTargeting.pageSet.has(page.pageNumber);
+                const pageNumber = options.startNumber + sequenceIndex;
                 const text = formatPageNumberText(
                   pageNumber,
                   previewTotalNumber,
@@ -518,6 +662,7 @@ export function AddPageNumbersTool() {
                         className={cn(
                           "absolute rounded-sm bg-white/85 px-1.5 py-0.5 font-semibold shadow-sm",
                           previewPositionClassName(options.position),
+                          !isNumbered && "hidden",
                         )}
                         style={{
                           color: options.color,
@@ -528,9 +673,21 @@ export function AddPageNumbersTool() {
                         {text}
                       </span>
                     </div>
-                    <p className="mt-3 text-sm font-semibold text-foreground">
-                      Page {page.pageNumber}
-                    </p>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-foreground">
+                        Page {page.pageNumber}
+                      </p>
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-1 text-xs font-semibold",
+                          isNumbered
+                            ? "bg-primary/10 text-primary"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {isNumbered ? "Numbered" : "Skipped"}
+                      </span>
+                    </div>
                   </article>
                 );
               })}
@@ -590,6 +747,14 @@ export function AddPageNumbersTool() {
           <PdfSummaryRow
             label="Start number"
             value={String(options.startNumber)}
+          />
+          <PdfSummaryRow
+            label="Pages numbered"
+            value={
+              selectedPdf
+                ? summarizePageTarget(options, pageTargeting.pageNumbers)
+                : "0"
+            }
           />
           <PdfSummaryRow label="Output" value={numberedFileName} />
         </div>
@@ -872,6 +1037,107 @@ function labelForPosition(position: NumberPosition) {
     positionOptions.find((option) => option.value === position)?.label ??
     "Bottom Center"
   );
+}
+
+function getTargetPageNumbers({
+  mode,
+  pageRange,
+  pageCount,
+}: {
+  mode: PageTargetMode;
+  pageRange: string;
+  pageCount: number;
+}) {
+  if (mode === "all") {
+    return Array.from({ length: pageCount }, (_, index) => index + 1);
+  }
+
+  if (mode === "skip-first") {
+    if (pageCount <= 1) {
+      throw new Error("This PDF has only one page, so there is no page after the cover to number.");
+    }
+
+    return Array.from({ length: pageCount - 1 }, (_, index) => index + 2);
+  }
+
+  return parsePageRange(pageRange, pageCount);
+}
+
+function parsePageRange(input: string, pageCount: number) {
+  const trimmedInput = input.trim();
+
+  if (!trimmedInput) {
+    throw new Error("Enter a page range such as 2-5 or 1,3,7.");
+  }
+
+  const pageNumbers: number[] = [];
+  const seenPages = new Set<number>();
+
+  for (const part of trimmedInput.split(",")) {
+    const token = part.trim();
+
+    if (!token) {
+      throw new Error("Enter a page range such as 2-5 or 1,3,7.");
+    }
+
+    const singlePageMatch = /^(\d+)$/.exec(token);
+
+    if (singlePageMatch) {
+      addPageNumber(Number(singlePageMatch[1]));
+      continue;
+    }
+
+    const rangeMatch = /^(\d+)-(\d+)$/.exec(token);
+
+    if (rangeMatch) {
+      const startPage = Number(rangeMatch[1]);
+      const endPage = Number(rangeMatch[2]);
+
+      if (startPage > endPage) {
+        throw new Error("Page ranges must go from low to high, for example 2-5.");
+      }
+
+      for (let pageNumber = startPage; pageNumber <= endPage; pageNumber += 1) {
+        addPageNumber(pageNumber);
+      }
+
+      continue;
+    }
+
+    throw new Error("Enter a page range such as 2-5 or 1,3,7.");
+  }
+
+  return pageNumbers;
+
+  function addPageNumber(pageNumber: number) {
+    if (pageNumber < 1 || pageNumber > pageCount) {
+      throw new Error("Page range cannot include pages outside this PDF.");
+    }
+
+    if (!seenPages.has(pageNumber)) {
+      seenPages.add(pageNumber);
+      pageNumbers.push(pageNumber);
+    }
+  }
+}
+
+function summarizePageTarget(
+  options: PageNumberOptions,
+  pageNumbers: number[],
+) {
+  if (!pageNumbers.length) {
+    return "0";
+  }
+
+  if (options.pageTargetMode === "all") {
+    return `${pageNumbers.length} pages`;
+  }
+
+  if (options.pageTargetMode === "skip-first") {
+    return `${pageNumbers.length} pages, cover skipped`;
+  }
+
+  return `${pageNumbers.length} pages (${options.pageRange.trim()})`;
 }
 
 function isPdfFile(file: File) {
