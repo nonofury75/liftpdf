@@ -101,6 +101,26 @@ Local production verification:
   - no page errors
   - no critical console errors
 
+Production verification:
+
+- Route tested: `https://liftpdf.com/compress-pdf`
+- Deployment: `https://liftpdf-iok8xflp3-rachator75010-5712s-projects.vercel.app`
+- Status: Vercel READY
+- Chromium production result:
+  - valid PDF
+  - 1 page
+  - `compressed.pdf`
+  - title metadata empty
+  - no page errors
+  - no critical failed requests
+- Firefox production result:
+  - valid PDF
+  - 1 page
+  - `compressed.pdf`
+  - title metadata empty
+- Mobile Chromium production result:
+  - metadata toggle visible and usable after upload
+
 ## Validation
 
 Commands run:
@@ -193,9 +213,9 @@ New dependency: NO
 
 Bundle impact: NONE OBSERVED
 
-Mobile verified: ROUTE COVERED BY E2E; heavy PDF workflow skipped by existing mobile policy
+Mobile verified: YES
 
-Firefox verified: NOT YET IN THIS PHASE
+Firefox verified: YES
 
 Lint: OK
 
@@ -205,6 +225,6 @@ Build: OK
 
 E2E: OK
 
-Production deployed: PENDING
+Production deployed: YES
 
 Next remaining P1: Protect PDF verified permission controls or Unlock PDF restriction-only behavior, depending on final roadmap priority review.
