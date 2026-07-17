@@ -221,6 +221,44 @@ Mobile Chromium:
 - range input usable
 - Rotate 180 action updates preview
 
+## Production Verification
+
+Route:
+
+- `https://liftpdf.com/rotate-pdf`
+
+Deployment:
+
+- `https://liftpdf-odr9us9o0-rachator75010-5712s-projects.vercel.app`
+
+Status:
+
+- Vercel READY
+
+Chromium production:
+
+- uploaded `phase45-markers.pdf`
+- selected Page range
+- entered `2-4,8`
+- applied Rotate 180 deg
+- generated `rotated.pdf`
+- verified rotations:
+  - page 1: 0
+  - page 2: 180
+  - page 3: 180
+  - page 4: 180
+  - page 5: 0
+  - page 8: 180
+- no page errors
+- no critical failed requests
+
+Mobile Chromium production:
+
+- route loaded
+- Page range mode usable
+- range input usable
+- Rotate 180 action updates preview
+
 ## Rejected In This Phase
 
 Arbitrary rotation angles:
@@ -289,6 +327,6 @@ Build: OK
 
 E2E: OK
 
-Production deployed: PENDING
+Production deployed: YES
 
 Next remaining P1: Protect PDF verified permission controls, Unlock PDF restriction-only behavior, or JPG/PNG EXIF handling depending on the next roadmap pass.
