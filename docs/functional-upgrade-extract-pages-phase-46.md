@@ -194,7 +194,30 @@ Local production:
 
 ## Production
 
-Production validation will be completed after the Phase 46 commit is pushed and Vercel reports READY.
+Production validation completed after commit `d382992` was pushed and Vercel reported READY.
+
+Deployment:
+
+- `https://liftpdf-dxw1kmwsg-rachator75010-5712s-projects.vercel.app`
+- Production route: `https://liftpdf.com/extract-pages`
+
+Production checks:
+
+- HTTP 200 on `/extract-pages`.
+- `Separate PDFs in ZIP` visible.
+- Selected pages 2, 4 and 6 exported.
+- Downloaded file name: `extracted-pages.zip`.
+- ZIP entries verified:
+  - `extracted-page-2.pdf`
+  - `extracted-page-4.pdf`
+  - `extracted-page-6.pdf`
+- Each ZIP entry parsed as a one-page PDF with `pdf-lib`.
+- Chromium desktop: OK.
+- Firefox desktop: OK.
+- Mobile Chromium: OK.
+- No pageerror.
+- No critical console.error.
+- No critical failed requests.
 
 ## Remaining Limitations
 
@@ -249,6 +272,6 @@ Build: OK
 
 E2E: OK
 
-Production deployed: PENDING
+Production deployed: YES
 
 Next remaining P1: Protect PDF permission controls or PDF to image memory guard, pending Phase 47 selection.
