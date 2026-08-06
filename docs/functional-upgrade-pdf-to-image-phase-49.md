@@ -375,7 +375,18 @@ Local production build:
 - Chromium smoke OK;
 - Firefox smoke OK.
 
-Remote production deployment must be performed after commit/push and Vercel READY.
+Remote production:
+
+- Commit: `2b6627d Harden PDF to image large document processing`;
+- Vercel deployment: `https://liftpdf-p2jg9x2gw-rachator75010-5712s-projects.vercel.app`;
+- Vercel status: READY;
+- Aliases: `https://liftpdf.com`, `https://www.liftpdf.com`;
+- `/pdf-to-jpg` production workflow OK in Chromium;
+- `/pdf-to-png` production workflow OK in Chromium;
+- `/pdf-to-jpg` production workflow OK in Firefox;
+- `/pdf-to-png` production workflow OK in Firefox;
+- 100-page workload warning verified on `https://liftpdf.com/pdf-to-jpg`;
+- no production page errors or critical failed requests observed during smoke tests.
 
 ## Summary Checklist
 
@@ -412,5 +423,5 @@ Lint: OK
 Typecheck: OK  
 Build: OK  
 E2E: OK  
-Production deployed: PENDING  
+Production deployed: YES  
 Next remaining P1: Use `docs/functional-upgrade-roadmap.md` after production validation.
