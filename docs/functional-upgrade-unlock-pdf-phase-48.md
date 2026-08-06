@@ -214,6 +214,39 @@ Validated with available browser environments:
 
 Adobe Acrobat Reader desktop was not available in this environment.
 
+## Production
+
+Commit deployed:
+
+- `e0d80eb Upgrade Unlock PDF restriction handling`
+
+Vercel:
+
+- deployment URL: `https://liftpdf-cceajbw0y-rachator75010-5712s-projects.vercel.app`
+- status: READY
+- production alias: `https://liftpdf.com`
+
+Production route:
+
+- `https://liftpdf.com/unlock-pdf`
+
+Production validation completed against the live domain:
+
+- Chromium desktop: OK
+- Firefox desktop: OK
+- Mobile Chromium: OK
+- `/unlock-pdf` HTTP 200
+- restriction-only fixture generated with production QPDF WASM
+- restricted input: `/Encrypt` present, `/P -3392`
+- wrong owner password rejected
+- valid owner password accepted
+- downloaded/generated `unlocked.pdf`
+- unlocked output: `/Encrypt` absent
+- form marker preserved
+- no pageerror
+- no critical console.error
+- no critical failed requests
+
 ## Remaining Limitations
 
 - Unlock PDF does not recover lost passwords.
@@ -295,6 +328,6 @@ Build: OK
 
 E2E: OK
 
-Production deployed: PENDING
+Production deployed: YES
 
 Next remaining P1: PDF to JPG / PDF to PNG memory guard and 100-page progress, pending Phase 49 selection.
