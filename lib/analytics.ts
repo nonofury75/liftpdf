@@ -24,6 +24,8 @@ export type ToolAnalyticsPayload = {
   printingMode?: string;
   copyingAllowed?: boolean;
   editingPreset?: string;
+  protectionType?: string;
+  passwordType?: string;
 };
 
 export type AnalyticsConsent = "accepted" | "rejected";
@@ -129,5 +131,7 @@ function sanitizePayload(payload: ToolAnalyticsPayload) {
     printing_mode: payload.printingMode,
     copying_allowed: payload.copyingAllowed,
     editing_preset: payload.editingPreset,
+    protection_type: payload.protectionType,
+    password_type: payload.passwordType,
   };
 }

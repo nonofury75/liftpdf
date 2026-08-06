@@ -124,6 +124,7 @@ export async function unlockPdfWithPassword(bytes: Uint8Array, password: string)
   const outputPath = `/unlocked-${fileId}.pdf`;
 
   try {
+    qpdfLastMessages = [];
     qpdf.FS.writeFile(inputPath, bytes);
     const exitCode = qpdf.callMain([
       `--password=${password}`,
@@ -139,7 +140,9 @@ export async function unlockPdfWithPassword(bytes: Uint8Array, password: string)
     const unlockedBytes = qpdf.FS.readFile(outputPath);
 
     if (hasPdfEncryptionDictionary(unlockedBytes)) {
-      throw new Error("QPDF produced an encrypted output file.");
+      throw new Error(
+        `QPDF produced an encrypted output file.${formatQpdfMessages(qpdfLastMessages)}`,
+      );
     }
 
     return unlockedBytes;

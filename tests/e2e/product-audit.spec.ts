@@ -490,14 +490,8 @@ test.describe("critical PDF workflows", () => {
     await page.getByRole("button", { name: /^Merge PDF$/ }).click();
     const mergeDownload = await mergeDownloadPromise;
     expect(mergeDownload.suggestedFilename()).toBe("merged.pdf");
-    const mergedFilePath = await mergeDownload.path();
-
-    if (!mergedFilePath) {
-      throw new Error("Downloaded merged PDF path is not available.");
-    }
-
-    const mergedBytes = fs.readFileSync(mergedFilePath);
     await expect(page.getByRole("link", { name: /^Download PDF$/ })).toBeVisible();
+    const mergedBytes = await readGeneratedFileBytes(page, "merged.pdf");
     const mergedPdf = await PDFDocument.load(mergedBytes);
     expect(mergedPdf.getPageCount()).toBe(11);
     await page.getByRole("button", { name: /^Start over$|^Reset$/i }).click();
@@ -515,14 +509,8 @@ test.describe("critical PDF workflows", () => {
     await page.getByRole("button", { name: /^Split PDF$/ }).click();
     const splitDownload = await splitDownloadPromise;
     expect(splitDownload.suggestedFilename()).toBe("split.pdf");
-    const splitFilePath = await splitDownload.path();
-
-    if (!splitFilePath) {
-      throw new Error("Downloaded split PDF path is not available.");
-    }
-
-    const splitBytes = fs.readFileSync(splitFilePath);
     await expect(page.getByRole("link", { name: /^Download PDF$/ })).toBeVisible();
+    const splitBytes = await readGeneratedFileBytes(page, "split.pdf");
     expect((await PDFDocument.load(splitBytes)).getPageCount()).toBe(3);
     await page.getByRole("textbox").fill("99");
     await expect(page.getByText(/Page 99 does not exist/i)).toBeVisible();
@@ -533,13 +521,9 @@ test.describe("critical PDF workflows", () => {
     await page.getByRole("button", { name: /^Split PDF$/ }).click();
     const splitZipDownload = await splitZipDownloadPromise;
     expect(splitZipDownload.suggestedFilename()).toBe("split-pages.zip");
-    const splitZipPath = await splitZipDownload.path();
-
-    if (!splitZipPath) {
-      throw new Error("Downloaded split ZIP path is not available.");
-    }
-
-    const splitZip = await JSZip.loadAsync(fs.readFileSync(splitZipPath));
+    const splitZip = await JSZip.loadAsync(
+      await readGeneratedFileBytes(page, "split-pages.zip"),
+    );
     expect(Object.keys(splitZip.files).filter((name) => name.endsWith(".pdf"))).toHaveLength(10);
 
     await page.goto("/delete-pages");
@@ -1237,6 +1221,106 @@ test.describe("critical PDF workflows", () => {
     ).toBeVisible();
   });
 
+  test("unlock PDF removes restriction-only owner-password protection", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "Deep QPDF restriction checks run once.");
+    const fixtures = await ensureFixtures();
+    const ownerPassword = "OwnerPass123!";
+    const restrictedPath = path.join(fixturesDir, "phase48-restriction-only.pdf");
+
+    await page.goto("/unlock-pdf");
+    const restrictedBytes = await createEncryptedPdfWithBrowserQpdf(
+      page,
+      fixtures.formPdf,
+      {
+        userPassword: "",
+        ownerPassword,
+        printing: "none",
+        allowExtraction: false,
+        modification: "none",
+      },
+    );
+    fs.writeFileSync(restrictedPath, restrictedBytes);
+    const restrictedInspection = inspectQpdfEncryption(restrictedBytes);
+    expect(restrictedInspection.encrypted).toBe(true);
+    expect(restrictedInspection.permissions.rawP).toBe(
+      getExpectedQpdfPermissionValue({
+        printing: "none",
+        allowExtraction: false,
+        modification: "none",
+      }),
+    );
+
+    await page.goto("/unlock-pdf");
+    await uploadFirstFile(page, restrictedPath);
+    await expect(
+      page.getByText(/opens without a password but contains usage restrictions/i),
+    ).toBeVisible();
+    await expect(page.getByLabel("Owner password", { exact: true })).toBeVisible();
+    await expect(page.getByText(/Usage restrictions detected/i)).toBeVisible();
+
+    await page.getByRole("button", { name: /^Unlock PDF$/ }).click();
+    await expect(page.getByText(/Please enter the owner password/i)).toBeVisible();
+
+    await page.getByLabel("Owner password", { exact: true }).fill("WrongPass123!");
+    await page.getByRole("button", { name: /^Unlock PDF$/ }).click();
+    await expect(page.getByText(/owner password is incorrect/i)).toBeVisible();
+
+    await page.getByLabel("Owner password", { exact: true }).fill(ownerPassword);
+    const unlockedBytes = await unlockAndReadGeneratedPdf(page);
+    expect(inspectQpdfEncryption(unlockedBytes).encrypted).toBe(false);
+    expect(Buffer.from(unlockedBytes).includes(Buffer.from("/Encrypt"))).toBe(
+      false,
+    );
+
+    const unlockedPdf = await PDFDocument.load(unlockedBytes);
+    expect(unlockedPdf.getPageCount()).toBe(1);
+    expect(unlockedPdf.getForm().getFields().length).toBeGreaterThan(0);
+    expect(await extractPdfPageText(unlockedBytes, 1)).toContain(
+      "LiftPDF QA Form Fixture",
+    );
+
+    const restrictedLinkPath = path.join(fixturesDir, "phase48-link-restricted.pdf");
+    const restrictedLinkBytes = await createEncryptedPdfWithBrowserQpdf(
+      page,
+      fixtures.annotatedPdf,
+      {
+        userPassword: "",
+        ownerPassword,
+        printing: "none",
+        allowExtraction: false,
+        modification: "none",
+      },
+    );
+    fs.writeFileSync(restrictedLinkPath, restrictedLinkBytes);
+
+    await page.goto("/unlock-pdf");
+    await uploadFirstFile(page, restrictedLinkPath);
+    await expect(
+      page.getByText(/opens without a password but contains usage restrictions/i),
+    ).toBeVisible();
+    await page.getByLabel("Owner password", { exact: true }).fill(ownerPassword);
+    const unlockedLinkBytes = await unlockAndReadGeneratedPdf(page);
+    expect(inspectQpdfEncryption(unlockedLinkBytes).encrypted).toBe(false);
+    const unlockedLinkSource = extractPdfStreamText(unlockedLinkBytes);
+    expect(unlockedLinkSource).toContain("/URI");
+    expect(unlockedLinkSource).toContain("https://liftpdf.com");
+
+    await page.getByRole("button", { name: /^Unlock another PDF$/ }).click();
+    await expect(page.getByLabel("Owner password", { exact: true })).toHaveCount(0);
+
+    await page.goto("/unlock-pdf");
+    await uploadFirstFile(page, fixtures.text1);
+    await expect(page.getByText(/This PDF is not password protected/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Unlock PDF$/ })).toBeDisabled();
+
+    await page.goto("/unlock-pdf");
+    await uploadFirstFile(page, fixtures.invalidPdf);
+    await expect(page.getByText(/could not be read/i)).toBeVisible();
+  });
+
   test("PDF to Text handles text, scanned, protected and invalid files", async ({
     page,
   }) => {
@@ -1890,20 +1974,91 @@ async function downloadBytes(
   buttonName: RegExp,
   expectedFileName?: string,
 ) {
-  const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: buttonName }).click();
-  const download = await downloadPromise;
-  const filePath = await download.path();
 
   if (expectedFileName) {
-    expect(download.suggestedFilename()).toBe(expectedFileName);
+    return readGeneratedFileBytes(page, expectedFileName);
   }
 
-  if (!filePath) {
-    throw new Error("Downloaded file path is not available.");
-  }
+  return readGeneratedFileBytes(page);
+}
 
-  return fs.readFileSync(filePath);
+async function createEncryptedPdfWithBrowserQpdf(
+  page: Page,
+  sourcePath: string,
+  options: {
+    userPassword: string;
+    ownerPassword: string;
+    printing: PdfPrintingPermission;
+    allowExtraction: boolean;
+    modification: PdfModificationPermission;
+  },
+) {
+  const sourceBytes = Array.from(fs.readFileSync(sourcePath));
+  const outputBytes = await page.evaluate(
+    async ({ bytes, qpdfOptions }) => {
+      // @ts-expect-error QPDF is served as a browser-only static asset.
+      const qpdfModule = (await import("/qpdf/qpdf.js")) as {
+        default: (options: {
+          locateFile: (fileName: string) => string;
+          print: () => void;
+          printErr: () => void;
+        }) => Promise<{
+          FS: {
+            writeFile: (path: string, data: Uint8Array) => void;
+            readFile: (path: string) => Uint8Array;
+            unlink?: (path: string) => void;
+          };
+          callMain: (args: string[]) => number;
+        }>;
+      };
+      const qpdf = await qpdfModule.default({
+        locateFile: (fileName) => `/qpdf/${fileName}`,
+        print: () => undefined,
+        printErr: () => undefined,
+      });
+      const inputPath = `/phase48-input-${crypto.randomUUID()}.pdf`;
+      const outputPath = `/phase48-output-${crypto.randomUUID()}.pdf`;
+
+      try {
+        qpdf.FS.writeFile(inputPath, new Uint8Array(bytes));
+        const exitCode = qpdf.callMain([
+          "--encrypt",
+          qpdfOptions.userPassword,
+          qpdfOptions.ownerPassword,
+          "256",
+          `--print=${qpdfOptions.printing}`,
+          `--extract=${qpdfOptions.allowExtraction ? "y" : "n"}`,
+          `--modify=${qpdfOptions.modification}`,
+          "--",
+          inputPath,
+          outputPath,
+        ]);
+
+        if (exitCode !== 0) {
+          throw new Error("QPDF fixture encryption failed.");
+        }
+
+        return Array.from(qpdf.FS.readFile(outputPath));
+      } finally {
+        try {
+          qpdf.FS.unlink?.(inputPath);
+        } catch {}
+        try {
+          qpdf.FS.unlink?.(outputPath);
+        } catch {}
+      }
+    },
+    { bytes: sourceBytes, qpdfOptions: options },
+  );
+
+  return Buffer.from(outputBytes);
+}
+
+async function unlockAndReadGeneratedPdf(page: Page) {
+  await page.getByRole("button", { name: /^Unlock PDF$/ }).click();
+
+  return readGeneratedFileBytes(page, "unlocked.pdf");
 }
 
 async function generateThenDownloadBytes(
@@ -1917,20 +2072,29 @@ async function generateThenDownloadBytes(
     name: downloadButtonName,
   });
   await expect(downloadButton).toBeVisible();
-  const downloadPromise = page.waitForEvent("download");
-  await downloadButton.click();
-  const download = await downloadPromise;
-  const filePath = await download.path();
 
   if (expectedFileName) {
-    expect(download.suggestedFilename()).toBe(expectedFileName);
+    return readGeneratedFileBytes(page, expectedFileName);
   }
 
-  if (!filePath) {
-    throw new Error("Downloaded file path is not available.");
-  }
+  return readGeneratedFileBytes(page);
+}
 
-  return fs.readFileSync(filePath);
+async function readGeneratedFileBytes(page: Page, expectedFileName?: string) {
+  const downloadLink = expectedFileName
+    ? page.locator(`a[download="${expectedFileName}"]`).last()
+    : page.locator("a[download]").last();
+  await expect(downloadLink).toBeVisible();
+
+  const bytes = await downloadLink.evaluate(async (link) => {
+    const href = (link as HTMLAnchorElement).href;
+    const response = await fetch(href);
+    const buffer = await response.arrayBuffer();
+
+    return Array.from(new Uint8Array(buffer));
+  });
+
+  return Buffer.from(bytes);
 }
 
 async function getFirstPageOrientation(pdfBytes: Buffer) {

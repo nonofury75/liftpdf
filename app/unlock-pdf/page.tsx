@@ -6,7 +6,7 @@ import { premiumToolContent } from "@/data/premium-tool-content";
 
 const title = "Unlock PDF Online Free | Remove PDF Password | LiftPDF";
 const description =
-  "Unlock a password-protected PDF online for free. Remove PDF password protection locally in your browser without uploading your file.";
+  "Unlock a password-protected or restricted PDF online for free. Remove PDF encryption or owner-password restrictions locally in your browser.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
@@ -25,9 +25,9 @@ export default function UnlockPdfPage() {
   return (
     <ToolPageShell
       title="Unlock PDF"
-      description="Remove password protection from a PDF locally in your browser when you know the correct password."
+      description="Remove PDF encryption or owner-password restrictions locally in your browser when you know the valid password."
       seoTitle="Unlock a password-protected PDF online"
-      seoText="LiftPDF uses QPDF compiled to WebAssembly to decrypt protected PDFs locally in your browser. Enter the current password, remove encryption and download an unlocked copy without uploading your file."
+      seoText="LiftPDF uses QPDF compiled to WebAssembly to decrypt protected PDFs and remove compatible-reader restrictions locally in your browser. Enter the valid open password or owner password, then download an unlocked copy without uploading your file."
       currentHref="/unlock-pdf"
       premiumContent={premiumToolContent.unlockPdf}
       faq={[
@@ -43,12 +43,17 @@ export default function UnlockPdfPage() {
         {
           question: "Do I need to know the password?",
           answer:
-            "Yes. LiftPDF cannot remove encryption without the correct PDF password.",
+            "Yes. LiftPDF cannot remove encryption or restrictions unless you know the valid open password or owner password.",
         },
         {
           question: "Does Unlock PDF remove encryption?",
           answer:
             "Yes. When the correct password is provided, LiftPDF exports a new PDF without the encryption dictionary.",
+        },
+        {
+          question: "Can Unlock PDF remove printing, copying or editing restrictions?",
+          answer:
+            "Yes, when the PDF opens normally but has usage restrictions, enter the valid owner password to create an unlocked copy. LiftPDF does not bypass unknown passwords.",
         },
         {
           question: "Is the unlocked PDF saved on your servers?",

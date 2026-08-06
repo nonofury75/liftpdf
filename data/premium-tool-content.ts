@@ -1323,9 +1323,9 @@ Object.assign(premiumToolContent, {
     left: "a protected PDF",
     right: "an unlocked PDF",
     purpose:
-      "Remove password encryption from a PDF when you know the correct password and have permission to unlock it.",
+      "Remove password encryption or owner-password restrictions from a PDF when you know the valid password and have permission to unlock it.",
     action: "Remove password",
-    output: "Download a copy that opens without the password.",
+    output: "Download a copy that opens without encryption or usage restrictions.",
     emphasis: "security",
     related: [
       { label: "Protect PDF", href: "/protect-pdf", text: "Add a new password after editing or sharing." },
@@ -1337,8 +1337,15 @@ Object.assign(premiumToolContent, {
       {
         title: "Unlock only authorized documents",
         paragraphs: [
-          "Unlock PDF is designed for files you own or are allowed to access. You still need the correct password; the tool does not bypass encryption.",
-          "The unlocked copy is created locally with QPDF WASM and can be used in other LiftPDF tools that cannot process encrypted PDFs directly.",
+          "Unlock PDF is designed for files you own or are allowed to access. You still need the valid open password or owner password; the tool does not bypass encryption.",
+          "The unlocked copy is created locally with QPDF WASM and can be used in other LiftPDF tools that cannot process encrypted or restricted PDFs directly.",
+        ],
+      },
+      {
+        title: "Owner password restrictions",
+        paragraphs: [
+          "Some PDFs open without a password but still restrict printing, copying or editing. LiftPDF detects this case and asks for the owner password before removing those restrictions.",
+          "The final PDF is verified before download so the output does not silently keep the encryption dictionary.",
         ],
       },
     ],

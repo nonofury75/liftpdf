@@ -22,6 +22,8 @@ import { PdfSummaryRow } from "@/components/tools/pdf/pdf-summary-row";
 import { loadPdfDocument } from "@/components/tools/pdf/pdfjs-client";
 import {
   hasPdfEncryptionDictionary,
+  inspectQpdfEncryption,
+  type QpdfEncryptionInspection,
   QpdfPasswordError,
   unlockPdfWithPassword,
 } from "@/components/tools/pdf/qpdf-client";
@@ -34,13 +36,19 @@ import { cn } from "@/lib/utils";
 type SelectedPdf = {
   file: File;
   pageCount: number | null;
-  isProtected: boolean;
+  protectionType: PdfProtectionType;
+  permissions: QpdfEncryptionInspection["permissions"] | null;
 };
 
 type GeneratedFile = {
   url: string;
   fileName: string;
 };
+
+type PdfProtectionType =
+  | "open_password"
+  | "restrictions_only"
+  | "unprotected";
 
 const outputFileName = "unlocked.pdf";
 
@@ -118,34 +126,64 @@ export function UnlockPdfTool() {
     try {
       const fileBytes = new Uint8Array(await file.arrayBuffer());
 
-      if (!hasPdfEncryptionDictionary(fileBytes)) {
+      const hasEncryption = hasPdfEncryptionDictionary(fileBytes);
+
+      if (!hasEncryption) {
         const pdf = await loadPdfDocument(file);
         setSelectedPdf({
           file,
           pageCount: pdf.numPages,
-          isProtected: false,
+          protectionType: "unprotected",
+          permissions: null,
         });
         await pdf.destroy();
-        setError("This PDF does not appear to be password protected.");
+        setError("This PDF is not password protected.");
         analytics.trackUploadCompleted({
           ...summarizeFilesForAnalytics([file]),
           pageCount: pdf.numPages,
           outputFormat: "pdf",
           status: "not_protected",
+          protectionType: "unprotected",
         });
         analytics.trackError({ errorCode: "not_protected" });
         return;
       }
 
+      const inspection = inspectQpdfEncryption(fileBytes);
+
+      try {
+        const pdf = await loadPdfDocument(file);
+        setSelectedPdf({
+          file,
+          pageCount: pdf.numPages,
+          protectionType: "restrictions_only",
+          permissions: inspection.permissions,
+        });
+        analytics.trackUploadCompleted({
+          ...summarizeFilesForAnalytics([file]),
+          pageCount: pdf.numPages,
+          outputFormat: "pdf",
+          status: "protected",
+          protectionType: "restrictions_only",
+        });
+        await pdf.destroy();
+        return;
+      } catch {
+        // If PDF.js cannot open an encrypted file without a password, treat it
+        // as an open-password PDF. The actual password is still verified by QPDF.
+      }
+
       setSelectedPdf({
         file,
         pageCount: null,
-        isProtected: true,
+        protectionType: "open_password",
+        permissions: inspection.permissions,
       });
       analytics.trackUploadCompleted({
         ...summarizeFilesForAnalytics([file]),
         outputFormat: "pdf",
         status: "protected",
+        protectionType: "open_password",
       });
     } catch {
       setSelectedPdf(null);
@@ -163,14 +201,18 @@ export function UnlockPdfTool() {
       return;
     }
 
-    if (!selectedPdf.isProtected) {
-      setError("This PDF does not appear to be password protected.");
+    if (selectedPdf.protectionType === "unprotected") {
+      setError("This PDF is not password protected.");
       analytics.trackError({ errorCode: "not_protected" });
       return;
     }
 
     if (!password) {
-      setError("Please enter the PDF password.");
+      setError(
+        selectedPdf.protectionType === "restrictions_only"
+          ? "Please enter the owner password."
+          : "Please enter the PDF password.",
+      );
       analytics.trackError({ errorCode: "missing_password" });
       return;
     }
@@ -188,13 +230,23 @@ export function UnlockPdfTool() {
     setProgress("Preparing PDF...");
     clearGeneratedFile();
     analytics.trackConversionStarted({
-      mode: "decrypt",
+      mode:
+        selectedPdf.protectionType === "restrictions_only"
+          ? "remove_restrictions"
+          : "decrypt",
       outputFormat: "pdf",
+      protectionType: selectedPdf.protectionType,
+      passwordType:
+        selectedPdf.protectionType === "restrictions_only" ? "owner" : "user",
     });
 
     try {
       const fileBuffer = await selectedPdf.file.arrayBuffer();
-      setProgress("Decrypting PDF...");
+      setProgress(
+        selectedPdf.protectionType === "restrictions_only"
+          ? "Removing restrictions..."
+          : "Decrypting PDF...",
+      );
       const unlockedBytes = await unlockPdfWithPassword(
         new Uint8Array(fileBuffer),
         password,
@@ -203,6 +255,20 @@ export function UnlockPdfTool() {
       const buffer = new ArrayBuffer(unlockedBytes.byteLength);
       new Uint8Array(buffer).set(unlockedBytes);
       const blob = new Blob([buffer], { type: "application/pdf" });
+
+      if (selectedPdf.pageCount !== null) {
+        const unlockedPdf = await loadPdfDocument(
+          new File([blob], outputFileName, { type: "application/pdf" }),
+        );
+
+        if (unlockedPdf.numPages !== selectedPdf.pageCount) {
+          await unlockedPdf.destroy();
+          throw new Error("Unlocked PDF page count changed.");
+        }
+
+        await unlockedPdf.destroy();
+      }
+
       const nextFile = {
         url: URL.createObjectURL(blob),
         fileName: outputFileName,
@@ -211,9 +277,15 @@ export function UnlockPdfTool() {
       setGeneratedFile(nextFile);
       setProgress("PDF unlocked successfully.");
       analytics.trackConversionCompleted({
-        mode: "decrypt",
+        mode:
+          selectedPdf.protectionType === "restrictions_only"
+            ? "remove_restrictions"
+            : "decrypt",
         outputFormat: "pdf",
         status: "success",
+        protectionType: selectedPdf.protectionType,
+        passwordType:
+          selectedPdf.protectionType === "restrictions_only" ? "owner" : "user",
       });
       analytics.trackDownloadStarted({ outputFormat: "pdf" });
       triggerDownload(nextFile.url, nextFile.fileName);
@@ -221,14 +293,19 @@ export function UnlockPdfTool() {
     } catch (caughtError) {
       setError(
         caughtError instanceof QpdfPasswordError
-          ? "The password is incorrect or the PDF could not be unlocked."
-          : "The PDF could not be unlocked. Please try another file.",
+          ? selectedPdf.protectionType === "restrictions_only"
+            ? "The owner password is incorrect or the restrictions could not be removed."
+            : "The password is incorrect or the PDF could not be unlocked."
+          : "The PDF was not downloaded because its encryption or restrictions could not be removed safely.",
       );
       analytics.trackError({
         errorCode:
           caughtError instanceof QpdfPasswordError
             ? "incorrect_password"
             : "unlock_failed",
+        protectionType: selectedPdf.protectionType,
+        passwordType:
+          selectedPdf.protectionType === "restrictions_only" ? "owner" : "user",
       });
       setProgress(null);
     } finally {
@@ -253,7 +330,7 @@ export function UnlockPdfTool() {
         <PdfUploadZone
           multiple={false}
           title="Drop your protected PDF here"
-          description="Upload one password-protected PDF file and unlock it locally in your browser."
+          description="Upload one protected or restricted PDF file and unlock it locally in your browser."
           buttonLabel="Choose PDF file"
           onFilesSelected={handleFilesSelected}
         />
@@ -276,6 +353,14 @@ export function UnlockPdfTool() {
           />
         ) : null}
 
+        {selectedPdf && selectedPdf.protectionType !== "unprotected" ? (
+          <StatusNotice>
+            {selectedPdf.protectionType === "restrictions_only"
+              ? "This PDF opens without a password but contains usage restrictions. Enter the valid owner password to remove them."
+              : "Open password required. Enter the valid PDF password to unlock this file."}
+          </StatusNotice>
+        ) : null}
+
         <section className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
           <div className="flex items-start gap-3">
             <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
@@ -283,7 +368,9 @@ export function UnlockPdfTool() {
             </span>
             <div>
               <h2 className="text-lg font-semibold text-foreground">
-                Password unlock
+                {selectedPdf?.protectionType === "restrictions_only"
+                  ? "Owner password unlock"
+                  : "Password unlock"}
               </h2>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
                 Your PDF is decrypted locally in your browser with QPDF WASM.
@@ -299,7 +386,11 @@ export function UnlockPdfTool() {
           <div className="mt-6">
             <PasswordField
               id="unlock-password"
-              label="PDF password"
+              label={
+                selectedPdf?.protectionType === "restrictions_only"
+                  ? "Owner password"
+                  : "PDF password"
+              }
               value={password}
               showPassword={showPassword}
               describedBy="unlock-password-help unlock-pdf-error"
@@ -314,8 +405,13 @@ export function UnlockPdfTool() {
               id="unlock-password-help"
               className="mt-2 text-sm leading-6 text-muted-foreground"
             >
-              Enter the current PDF password. LiftPDF cannot unlock a protected
-              PDF without the correct password.
+              {selectedPdf?.protectionType === "restrictions_only"
+                ? "This PDF opens without a password but has restrictions. Enter the valid owner password to remove them."
+                : "Enter the current PDF password. LiftPDF cannot unlock a protected PDF without the correct password."}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              You must know the valid PDF password or have permission to remove
+              its restrictions.
             </p>
           </div>
         </section>
@@ -331,7 +427,8 @@ export function UnlockPdfTool() {
               Unlock settings
             </h2>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              Remove encryption when you know the current password.
+              Remove encryption or restrictions when you know the valid
+              password.
             </p>
           </div>
         </div>
@@ -344,7 +441,8 @@ export function UnlockPdfTool() {
                 Private by design
               </p>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                Decryption runs locally. LiftPDF cannot see your PDF password.
+                Decryption runs locally. LiftPDF cannot see your PDF or
+                password.
               </p>
             </div>
           </div>
@@ -358,7 +456,11 @@ export function UnlockPdfTool() {
           <PdfSummaryRow
             label="Pages"
             value={
-              selectedPdf?.pageCount ? String(selectedPdf.pageCount) : "Locked"
+              selectedPdf?.pageCount
+                ? String(selectedPdf.pageCount)
+                : selectedPdf?.protectionType === "open_password"
+                  ? "Open password required"
+                  : "0"
             }
           />
           <PdfSummaryRow
@@ -366,8 +468,22 @@ export function UnlockPdfTool() {
             value={selectedPdf ? formatFileSize(selectedPdf.file.size) : "-"}
           />
           <PdfSummaryRow
-            label="Encrypted"
-            value={selectedPdf?.isProtected ? "Yes" : "No"}
+            label="Encryption"
+            value={
+              selectedPdf
+                ? selectedPdf.protectionType === "unprotected"
+                  ? "None"
+                  : "Present"
+                : "-"
+            }
+          />
+          <PdfSummaryRow
+            label="Restriction status"
+            value={formatRestrictionStatus(selectedPdf)}
+          />
+          <PdfSummaryRow
+            label="Password type required"
+            value={formatPasswordType(selectedPdf)}
           />
           <PdfSummaryRow label="Output" value={outputFileName} />
         </div>
@@ -390,7 +506,12 @@ export function UnlockPdfTool() {
           <Button
             type="button"
             onClick={handleUnlockPdf}
-            disabled={!selectedPdf || isReadingPdf || isUnlocking}
+            disabled={
+              !selectedPdf ||
+              selectedPdf.protectionType === "unprotected" ||
+              isReadingPdf ||
+              isUnlocking
+            }
             className="shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
           >
             {isUnlocking ? (
@@ -447,6 +568,48 @@ function isPdfFile(file: File) {
   return (
     file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
   );
+}
+
+function formatRestrictionStatus(selectedPdf: SelectedPdf | null) {
+  if (!selectedPdf) {
+    return "-";
+  }
+
+  if (selectedPdf.protectionType === "unprotected") {
+    return "None";
+  }
+
+  if (selectedPdf.protectionType === "open_password") {
+    return "Open password required";
+  }
+
+  const permissions = selectedPdf.permissions;
+
+  if (
+    permissions?.printing === "full" &&
+    permissions.allowExtraction === true &&
+    permissions.modification === "all"
+  ) {
+    return "Encrypted, no limited permissions detected";
+  }
+
+  return "Usage restrictions detected";
+}
+
+function formatPasswordType(selectedPdf: SelectedPdf | null) {
+  if (!selectedPdf) {
+    return "-";
+  }
+
+  if (selectedPdf.protectionType === "restrictions_only") {
+    return "Owner password";
+  }
+
+  if (selectedPdf.protectionType === "open_password") {
+    return "PDF password";
+  }
+
+  return "None";
 }
 
 function triggerDownload(url: string, fileName: string) {
