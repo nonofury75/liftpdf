@@ -1821,6 +1821,84 @@ test.describe("critical PDF workflows", () => {
     expect(Buffer.from(pngBytes).subarray(1, 4).toString()).toBe("PNG");
   });
 
+  test("PDF to image handles large documents with warnings and valid ZIP output", async ({
+    page,
+  }) => {
+    const fixtures = await ensureFixtures();
+
+    await page.goto("/pdf-to-jpg");
+    await uploadFirstFile(page, fixtures.text100);
+    await expect(page.getByText(/100 pages/i).first()).toBeVisible();
+    await page.getByRole("button", { name: /^Convert to JPG$/ }).click();
+    await expect(page.getByText(/High memory usage expected/i)).toBeVisible();
+    await expect(page.getByText(/This conversion may use significant memory/i)).toBeVisible();
+    await page.getByRole("button", { name: /^Continue$/ }).click();
+    await expect(page.getByText(/Rendering page \d+ of 100/i)).toBeVisible({
+      timeout: 15000,
+    });
+    const jpgZipBytes = await readGeneratedFileBytes(page, "pdf-to-jpg.zip");
+    const jpgZip = await JSZip.loadAsync(jpgZipBytes);
+    const jpgNames = getZipImageEntryNames(jpgZip, ".jpg");
+    expect(jpgNames).toHaveLength(100);
+    expect(jpgNames[0]).toBe("page-1.jpg");
+    expect(jpgNames[99]).toBe("page-100.jpg");
+    const firstJpg = await getZipImageBytes(jpgZip, "page-1.jpg");
+    const lastJpg = await getZipImageBytes(jpgZip, "page-100.jpg");
+    expect(firstJpg.subarray(0, 2).toString("hex")).toBe("ffd8");
+    expect(lastJpg.subarray(0, 2).toString("hex")).toBe("ffd8");
+    expect(getJpegDimensions(firstJpg)).toEqual({ width: 1190, height: 1684 });
+
+    await page.goto("/pdf-to-png");
+    await uploadFirstFile(page, fixtures.text100);
+    await expect(page.getByText(/100 pages/i).first()).toBeVisible();
+    await page.getByRole("button", { name: /^Convert to PNG$/ }).click();
+    await expect(page.getByText(/High memory usage expected/i)).toBeVisible();
+    await page.getByRole("button", { name: /^Continue$/ }).click();
+    const pngZipBytes = await readGeneratedFileBytes(page, "pdf-to-png.zip");
+    const pngZip = await JSZip.loadAsync(pngZipBytes);
+    const pngNames = getZipImageEntryNames(pngZip, ".png");
+    expect(pngNames).toHaveLength(100);
+    expect(pngNames[0]).toBe("page-1.png");
+    expect(pngNames[99]).toBe("page-100.png");
+    const firstPng = await getZipImageBytes(pngZip, "page-1.png");
+    expect(firstPng.subarray(1, 4).toString()).toBe("PNG");
+    expect(getPngDimensions(firstPng)).toEqual({ width: 1190, height: 1684 });
+
+    await page.goto("/pdf-to-jpg");
+    await uploadFirstFile(page, fixtures.text100);
+    await expect(page.getByText(/100 pages/i).first()).toBeVisible();
+    await page.getByRole("button", { name: /^Page range$/ }).click();
+    await page.getByLabel("Page range").fill("95-100");
+    const lateRangeZipBytes = await generateThenDownloadBytes(
+      page,
+      /^Convert to JPG$/,
+      /^Download ZIP$/,
+      "pdf-to-jpg.zip",
+    );
+    const lateRangeZip = await JSZip.loadAsync(lateRangeZipBytes);
+    expect(getZipImageEntryNames(lateRangeZip, ".jpg")).toEqual([
+      "page-95.jpg",
+      "page-96.jpg",
+      "page-97.jpg",
+      "page-98.jpg",
+      "page-99.jpg",
+      "page-100.jpg",
+    ]);
+
+    await page.goto("/pdf-to-jpg");
+    await uploadFirstFile(page, fixtures.text100);
+    await expect(page.getByText(/100 pages/i).first()).toBeVisible();
+    await page.getByRole("button", { name: /^High$/ }).click();
+    await page.getByRole("button", { name: /^Convert to JPG$/ }).click();
+    await expect(page.getByText(/High memory usage expected/i)).toBeVisible();
+    await page.getByRole("button", { name: /^Continue$/ }).click();
+    await expect(page.getByRole("button", { name: /^Cancel conversion$/ })).toBeVisible({
+      timeout: 15000,
+    });
+    await page.getByRole("button", { name: /^Cancel conversion$/ }).click();
+    await expect(page.getByRole("button", { name: /^Convert to JPG$/ })).toBeEnabled();
+  });
+
   test("edit tools generate valid PDFs", async ({ page }) => {
     const fixtures = await ensureFixtures();
 
@@ -2121,6 +2199,12 @@ function getPdfZipEntryNames(zip: JSZip) {
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 }
 
+function getZipImageEntryNames(zip: JSZip, extension: ".jpg" | ".png") {
+  return Object.keys(zip.files)
+    .filter((name) => name.endsWith(extension))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
 async function getZipPdfBytes(zip: JSZip, entryName: string) {
   const entry = zip.file(entryName);
 
@@ -2129,6 +2213,51 @@ async function getZipPdfBytes(zip: JSZip, entryName: string) {
   }
 
   return entry.async("nodebuffer");
+}
+
+async function getZipImageBytes(zip: JSZip, entryName: string) {
+  const entry = zip.file(entryName);
+
+  if (!entry) {
+    throw new Error(`Missing ZIP entry: ${entryName}`);
+  }
+
+  return entry.async("nodebuffer");
+}
+
+function getPngDimensions(bytes: Buffer) {
+  return {
+    width: bytes.readUInt32BE(16),
+    height: bytes.readUInt32BE(20),
+  };
+}
+
+function getJpegDimensions(bytes: Buffer) {
+  let offset = 2;
+
+  while (offset < bytes.length) {
+    if (bytes[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+
+    const marker = bytes[offset + 1];
+    const length = bytes.readUInt16BE(offset + 2);
+
+    if (
+      marker >= 0xc0 &&
+      marker <= 0xc3
+    ) {
+      return {
+        height: bytes.readUInt16BE(offset + 5),
+        width: bytes.readUInt16BE(offset + 7),
+      };
+    }
+
+    offset += 2 + length;
+  }
+
+  throw new Error("Could not read JPEG dimensions.");
 }
 
 async function expectExtractedPageMarker(

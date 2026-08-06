@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertTriangle,
   Download,
   FileCheck2,
   FileImage,
@@ -14,7 +15,9 @@ import { Button } from "@/components/ui/button";
 import { PdfUploadZone } from "@/components/tools/pdf-upload-zone";
 import { PdfFileSummary } from "@/components/tools/pdf/pdf-file-summary";
 import {
+  estimatePdfImageWorkload,
   exportPdfPagesAsImages,
+  type PdfImageWorkloadEstimate,
   PdfImageResolution,
 } from "@/components/tools/pdf/pdf-image-export";
 import {
@@ -46,6 +49,11 @@ type GeneratedFile = {
 };
 
 type PageSelectionMode = "all" | "single" | "range";
+
+type PendingWorkload = {
+  estimate: PdfImageWorkloadEstimate;
+  selectedPages: number[];
+};
 
 type PdfToImageToolProps = {
   format: "jpg" | "png";
@@ -99,11 +107,15 @@ export function PdfToImageTool({
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isConverting, setIsConverting] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
+  const [pendingWorkload, setPendingWorkload] =
+    useState<PendingWorkload | null>(null);
   const [generatedFile, setGeneratedFile] = useState<GeneratedFile | null>(
     null,
   );
   const generatedFileRef = useRef<GeneratedFile | null>(null);
   const pagesRef = useRef<PagePreview[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
   const isJpg = format === "jpg";
   const analytics = useToolAnalytics({
     tool: format === "jpg" ? "PDF to JPG" : "PDF to PNG",
@@ -143,6 +155,15 @@ export function PdfToImageTool({
     singlePageFileName,
     zipFileName,
   });
+  const currentWorkloadEstimate =
+    selectedPdf && selectedPages.length
+      ? estimatePdfImageWorkload({
+          pages,
+          selectedPageNumbers: selectedPages,
+          resolution,
+          deviceMemoryGb: getDeviceMemoryGb(),
+        })
+      : null;
 
   useEffect(() => {
     generatedFileRef.current = generatedFile;
@@ -154,6 +175,9 @@ export function PdfToImageTool({
 
   useEffect(() => {
     return () => {
+      isMountedRef.current = false;
+      abortControllerRef.current?.abort();
+
       if (generatedFileRef.current) {
         URL.revokeObjectURL(generatedFileRef.current.url);
       }
@@ -184,6 +208,7 @@ export function PdfToImageTool({
 
     clearGeneratedFile();
     clearPagePreviews();
+    setPendingWorkload(null);
     setProgress(null);
     setError(null);
     setIsLoadingPreview(true);
@@ -217,7 +242,9 @@ export function PdfToImageTool({
     }
   }
 
-  async function handleConvert() {
+  async function handleConvert({
+    skipWorkloadWarning = false,
+  }: { skipWorkloadWarning?: boolean } = {}) {
     if (!selectedPdf) {
       setError("Please choose one PDF file before converting.");
       analytics.trackError({ errorCode: "missing_file" });
@@ -225,13 +252,7 @@ export function PdfToImageTool({
     }
 
     setError(null);
-    setIsConverting(true);
     clearGeneratedFile();
-    setProgress("Preparing PDF...");
-    analytics.trackConversionStarted({
-      mode: pageSelectionMode,
-      outputFormat: format,
-    });
 
     try {
       const selectedPages = parseSelectedPages({
@@ -240,37 +261,103 @@ export function PdfToImageTool({
         pageRange,
         singlePage,
       });
-      const pdf = await loadPdfDocument(selectedPdf.file);
-      const result = await exportPdfPagesAsImages({
-        pdf,
-        singlePageFileName,
-        zipFileName,
-        options: {
-          format,
-          quality,
-          resolution,
-          pageNumbers: selectedPages,
-          transparentBackground,
-          onProgress: (currentPage, pageCount) => {
-            setProgress(
-              `Generating ${format.toUpperCase()} ${currentPage} of ${pageCount}`,
-            );
-          },
-        },
+      const workloadEstimate = estimatePdfImageWorkload({
+        pages,
+        selectedPageNumbers: selectedPages,
+        resolution,
+        deviceMemoryGb: getDeviceMemoryGb(),
       });
 
+      if (
+        workloadEstimate.className !== "SAFE" &&
+        !skipWorkloadWarning
+      ) {
+        setPendingWorkload({ estimate: workloadEstimate, selectedPages });
+        setProgress(null);
+        return;
+      }
+
+      setPendingWorkload(null);
+      setIsConverting(true);
+      setProgress("Preparing PDF");
+      analytics.trackConversionStarted({
+        mode: pageSelectionMode,
+        outputFormat: format,
+        pageCount: selectedPages.length,
+        selectedPageCount: selectedPages.length,
+        quality: resolution,
+        workloadClass: workloadEstimate.className.toLowerCase(),
+      });
+
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+      const pdf = await loadPdfDocument(selectedPdf.file);
+      let result;
+
+      try {
+        result = await exportPdfPagesAsImages({
+          pdf,
+          singlePageFileName,
+          zipFileName,
+          options: {
+            format,
+            quality,
+            resolution,
+            pageNumbers: selectedPages,
+            transparentBackground,
+            signal: abortController.signal,
+            onStageChange: (stage) => {
+              if (!isMountedRef.current || abortController.signal.aborted) {
+                return;
+              }
+
+              setProgress(formatExportStage(stage));
+            },
+            onProgress: (currentPage, pageCount) => {
+              if (!isMountedRef.current || abortController.signal.aborted) {
+                return;
+              }
+
+              const percent = Math.round((currentPage / pageCount) * 100);
+              setProgress(
+                `Rendering page ${currentPage} of ${pageCount} (${percent}%)`,
+              );
+            },
+          },
+        });
+      } finally {
+        await pdf.destroy();
+      }
+
+      if (abortController.signal.aborted || !isMountedRef.current) {
+        return;
+      }
+
+      abortControllerRef.current = null;
       setGeneratedFile({
         url: URL.createObjectURL(result.blob),
         fileName: result.fileName,
       });
+      setProgress(null);
       analytics.trackConversionCompleted({
         pageCount: selectedPages.length,
+        selectedPageCount: selectedPages.length,
         outputFormat: format,
+        quality: resolution,
+        workloadClass: workloadEstimate.className.toLowerCase(),
         status: "success",
       });
-      await pdf.destroy();
-      setProgress(null);
     } catch (conversionError) {
+      if (isAbortError(conversionError)) {
+        analytics.trackConversionCompleted({
+          outputFormat: format,
+          status: "cancelled",
+          cancelled: true,
+        });
+        setProgress(null);
+        return;
+      }
+
       setError(
         conversionError instanceof Error
           ? conversionError.message
@@ -279,8 +366,21 @@ export function PdfToImageTool({
       analytics.trackError({ errorCode: "conversion_failed" });
       setProgress(null);
     } finally {
-      setIsConverting(false);
+      if (abortControllerRef.current?.signal.aborted) {
+        abortControllerRef.current = null;
+      }
+
+      if (isMountedRef.current) {
+        setIsConverting(false);
+      }
     }
+  }
+
+  function handleCancelConversion() {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsConverting(false);
+    setProgress(null);
   }
 
   function handleReset() {
@@ -293,6 +393,10 @@ export function PdfToImageTool({
     setTransparentBackground(false);
     setError(null);
     setProgress(null);
+    setPendingWorkload(null);
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsConverting(false);
     clearGeneratedFile();
     clearPagePreviews();
   }
@@ -449,6 +553,14 @@ export function PdfToImageTool({
             }
           />
           <PdfSummaryRow label="Selected pages" value={selectedPagesLabel} />
+          <PdfSummaryRow
+            label="Workload"
+            value={
+              currentWorkloadEstimate
+                ? formatWorkloadClass(currentWorkloadEstimate.className)
+                : "Not calculated"
+            }
+          />
           <PdfSummaryRow
             label="Output"
             value={generatedFile?.fileName ?? expectedOutputName}
@@ -611,10 +723,63 @@ export function PdfToImageTool({
           ) : null}
         </div>
 
+        {pendingWorkload ? (
+          <div
+            role="alert"
+            className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 shadow-sm"
+          >
+            <div className="flex items-start gap-2 font-semibold">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              High memory usage expected
+            </div>
+            <p className="mt-2 leading-6">
+              This conversion may use significant memory. Selecting fewer pages
+              or Standard quality can improve reliability on this device.
+            </p>
+            <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-amber-800">
+              {pendingWorkload.selectedPages.length} pages ·{" "}
+              {formatWorkloadClass(pendingWorkload.estimate.className)}
+            </p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleConvert({ skipWorkloadWarning: true })}
+              >
+                Continue
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={resolution === "standard"}
+                onClick={() => {
+                  setResolution("standard");
+                  if (isJpg) {
+                    setQuality(85);
+                  }
+                  setPendingWorkload(null);
+                  clearGeneratedFile();
+                }}
+              >
+                Use Standard quality
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setPendingWorkload(null)}
+              >
+                Change page selection
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         <div className="mt-7 grid gap-3">
           <Button
             type="button"
-            onClick={handleConvert}
+            onClick={() => handleConvert()}
             disabled={!selectedPdf || isConverting}
             className="h-12 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-lg"
           >
@@ -625,6 +790,17 @@ export function PdfToImageTool({
             )}
             {actionLabel}
           </Button>
+
+          {isConverting ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancelConversion}
+              className="transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm"
+            >
+              Cancel conversion
+            </Button>
+          ) : null}
 
           {generatedFile ? (
             <Button
@@ -869,6 +1045,54 @@ function labelFor<T extends string>(
   value: T,
 ) {
   return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function formatExportStage(stage: string) {
+  if (stage === "preparing_zip") {
+    return "Preparing ZIP";
+  }
+
+  if (stage === "generating_download") {
+    return "Generating download";
+  }
+
+  if (stage === "rendering_pages") {
+    return "Rendering pages";
+  }
+
+  return "Preparing PDF";
+}
+
+function formatWorkloadClass(className: PdfImageWorkloadEstimate["className"]) {
+  if (className === "VERY_HEAVY") {
+    return "Very heavy";
+  }
+
+  if (className === "HEAVY") {
+    return "Heavy";
+  }
+
+  return "Safe";
+}
+
+function getDeviceMemoryGb() {
+  if (typeof navigator === "undefined") {
+    return undefined;
+  }
+
+  const memory = (navigator as Navigator & { deviceMemory?: number })
+    .deviceMemory;
+
+  return typeof memory === "number" ? memory : undefined;
+}
+
+function isAbortError(error: unknown) {
+  return (
+    error instanceof DOMException && error.name === "AbortError"
+  ) || (
+    error instanceof Error &&
+    /cancelled|aborted/i.test(`${error.name} ${error.message}`)
+  );
 }
 
 function getPdfLoadErrorMessage(error: unknown) {

@@ -26,6 +26,10 @@ export type ToolAnalyticsPayload = {
   editingPreset?: string;
   protectionType?: string;
   passwordType?: string;
+  quality?: string;
+  selectedPageCount?: number;
+  workloadClass?: string;
+  cancelled?: boolean;
 };
 
 export type AnalyticsConsent = "accepted" | "rejected";
@@ -133,5 +137,9 @@ function sanitizePayload(payload: ToolAnalyticsPayload) {
     editing_preset: payload.editingPreset,
     protection_type: payload.protectionType,
     password_type: payload.passwordType,
+    quality: payload.quality,
+    selected_page_count: payload.selectedPageCount,
+    workload_class: payload.workloadClass,
+    cancelled: payload.cancelled,
   };
 }
