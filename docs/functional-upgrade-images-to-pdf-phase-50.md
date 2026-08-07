@@ -216,7 +216,28 @@ Production-local checks:
 
 ## Production
 
-Pending until commit, push and Vercel READY.
+Commit:
+
+- `7e60f06 Upgrade Images to PDF functional depth`
+
+Vercel:
+
+- deployment: `https://liftpdf-amurln6ke-rachator75010-5712s-projects.vercel.app`
+- status: READY
+- aliases: `https://liftpdf.com`, `https://www.liftpdf.com`
+
+Production checks on `https://liftpdf.com/images-to-pdf`:
+
+- HTTP 200 verified through browser navigation;
+- custom output filename field visible;
+- custom filename `phase50 production proof.pdf` applied to the generated download;
+- generated PDF parsed successfully;
+- Chromium OK;
+- Firefox OK;
+- mobile Chromium OK;
+- no page errors observed;
+- no critical console errors observed;
+- no critical failed requests observed.
 
 ## Remaining Limits
 
@@ -245,6 +266,6 @@ Lint: OK
 Typecheck: OK  
 Build: OK  
 E2E: OK  
-Production deployed: PENDING  
+Production deployed: YES  
 Remaining P1 count: 5 meaningful candidates after this phase  
 Next remaining P1: Merge PDF editable output filename or Merge PDF per-file protected error, depending on whether the next phase prioritizes output polish or error precision.
