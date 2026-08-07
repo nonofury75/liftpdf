@@ -173,9 +173,16 @@ Production build local:
 
 ## Production
 
-- Commit: pending
-- Vercel deployment: pending
-- Production URL tested: pending
+- Implementation commit: `d593145 Harden Merge PDF per-file validation`
+- Vercel deployment: `https://liftpdf-7xzrnc97o-rachator75010-5712s-projects.vercel.app`
+- Vercel status: READY
+- Production aliases: `https://liftpdf.com`, `https://www.liftpdf.com`
+- Production URL tested: `https://liftpdf.com/merge-pdf`
+- Production scenario: 2 valid PDFs + 1 invalid PDF
+- Result: invalid file identified on its own card; valid files preserved; Merge blocked while issue remained; invalid file removed; Merge re-enabled; `merged.pdf` downloaded and parsed with 2 pages
+- Chromium mobile production test: OK
+- Firefox mobile production test: OK
+- Critical console/page/request errors: none observed
 
 ## Remaining Limitations
 
@@ -214,6 +221,6 @@ Lint: OK
 Typecheck: OK
 Build: OK
 E2E: OK
-Production deployed: PENDING
+Production deployed: YES
 Remaining P1 count: 4
 Next remaining P1: Merge PDF editable output filename
