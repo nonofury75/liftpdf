@@ -4,8 +4,10 @@ import Image from "next/image";
 import {
   ArrowDown,
   ArrowUp,
+  AlertTriangle,
   FileText,
   GripVertical,
+  LockKeyhole,
   Loader2,
   Plus,
   Trash2,
@@ -20,7 +22,8 @@ export type UploadedPdf = {
   previewHeight: number | null;
   previewUrl: string | null;
   previewWidth: number | null;
-  status: "loading" | "ready" | "error";
+  status: "checking" | "ready" | "protected" | "invalid" | "empty" | "error";
+  errorMessage?: string;
 };
 
 type PdfFileListProps = {
@@ -105,11 +108,12 @@ function PdfFileCard({
   onReorder,
 }: PdfFileCardProps) {
   const pageLabel =
-    pdf.status === "loading"
-      ? "Reading pages..."
+    pdf.status === "checking"
+      ? "Checking PDF..."
       : pdf.pageCount === null
         ? "Preview unavailable"
         : `${pdf.pageCount} ${pdf.pageCount === 1 ? "page" : "pages"}`;
+  const issue = getPdfIssue(pdf);
 
   return (
     <li
@@ -152,10 +156,14 @@ function PdfFileCard({
           />
         ) : (
           <div className="grid size-full place-items-center text-primary">
-            {pdf.status === "loading" ? (
+            {pdf.status === "checking" ? (
               <Loader2 className="size-6 animate-spin" aria-hidden="true" />
-            ) : (
+            ) : pdf.status === "protected" ? (
+              <LockKeyhole className="size-7" aria-hidden="true" />
+            ) : pdf.status === "ready" ? (
               <FileText className="size-7" aria-hidden="true" />
+            ) : (
+              <AlertTriangle className="size-7" aria-hidden="true" />
             )}
           </div>
         )}
@@ -181,6 +189,16 @@ function PdfFileCard({
           <span className="rounded-md bg-muted px-2 py-1">
             {pageLabel}
           </span>
+          {pdf.status === "ready" ? (
+            <span className="rounded-md bg-emerald-50 px-2 py-1 text-emerald-700">
+              Ready
+            </span>
+          ) : null}
+          {issue ? (
+            <span className="rounded-md bg-red-50 px-2 py-1 text-red-700">
+              {issue.label}
+            </span>
+          ) : null}
           <span className="rounded-md bg-muted px-2 py-1">
             {formatFileSize(pdf.file.size)}
           </span>
@@ -193,6 +211,23 @@ function PdfFileCard({
         <p className="mt-3 text-xs text-muted-foreground">
           Position {index + 1} in the merged PDF
         </p>
+        {issue ? (
+          <div
+            className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs leading-5 text-red-700"
+            aria-live="polite"
+          >
+            <p className="font-semibold">{issue.label}</p>
+            <p>{issue.message}</p>
+            {pdf.status === "protected" ? (
+              <a
+                href="/unlock-pdf"
+                className="mt-2 inline-flex font-semibold text-red-800 underline underline-offset-2"
+              >
+                Unlock PDF
+              </a>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-3 gap-2 self-center justify-self-start sm:grid-cols-1 sm:justify-self-end">
@@ -231,6 +266,38 @@ function PdfFileCard({
       </div>
     </li>
   );
+}
+
+function getPdfIssue(pdf: UploadedPdf) {
+  if (pdf.status === "protected") {
+    return {
+      label: "Password protected",
+      message: "This PDF must be unlocked before it can be merged.",
+    };
+  }
+
+  if (pdf.status === "invalid") {
+    return {
+      label: "Invalid PDF",
+      message: "This file could not be read as a valid PDF.",
+    };
+  }
+
+  if (pdf.status === "empty") {
+    return {
+      label: "Empty file",
+      message: "This PDF file is empty.",
+    };
+  }
+
+  if (pdf.status === "error") {
+    return {
+      label: "Unreadable PDF",
+      message: pdf.errorMessage ?? "This file could not be read safely.",
+    };
+  }
+
+  return null;
 }
 
 function formatFileSize(bytes: number) {

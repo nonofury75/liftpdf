@@ -598,6 +598,116 @@ test.describe("critical PDF workflows", () => {
     expect((await PDFDocument.load(compressedBytes)).getPageCount()).toBe(10);
   });
 
+  test("merge PDF isolates invalid protected and empty files without losing valid files", async ({
+    page,
+  }) => {
+    const fixtures = await ensureFixtures();
+
+    await page.goto("/merge-pdf");
+    await uploadFirstFile(page, [
+      fixtures.phase51A,
+      fixtures.phase51B,
+      fixtures.phase51C,
+    ]);
+    await expect(page.getByText("phase51-a.pdf")).toBeVisible();
+    await expect(readyMergeFileCards(page)).toHaveCount(3);
+    await expect(page.getByRole("button", { name: /^Merge PDF$/ })).toBeEnabled();
+    const threeReadyBytes = await generateThenDownloadBytes(
+      page,
+      /^Merge PDF$/,
+      /^Download PDF$/,
+      "merged.pdf",
+    );
+    expect((await PDFDocument.load(threeReadyBytes)).getPageCount()).toBe(3);
+    expect(await extractPdfPageText(threeReadyBytes, 1)).toContain("PHASE51-A");
+    expect(await extractPdfPageText(threeReadyBytes, 2)).toContain("PHASE51-B");
+    expect(await extractPdfPageText(threeReadyBytes, 3)).toContain("PHASE51-C");
+
+    await page.goto("/protect-pdf");
+    await uploadFirstFile(page, fixtures.phase51C);
+    await page.getByLabel("Password", { exact: true }).fill("MergePass123");
+    await page
+      .getByLabel("Confirm password", { exact: true })
+      .fill("MergePass123");
+    const protectedBytes = await downloadBytes(
+      page,
+      /^Protect PDF$/,
+      "protected.pdf",
+    );
+    const protectedPath = path.join(fixturesDir, "phase51-protected.pdf");
+    fs.writeFileSync(protectedPath, protectedBytes);
+
+    await page.goto("/merge-pdf");
+    await uploadFirstFile(page, [fixtures.phase51A, protectedPath, fixtures.phase51B]);
+    await expect(page.getByText("phase51-a.pdf")).toBeVisible();
+    await expect(page.getByText("phase51-b.pdf")).toBeVisible();
+    await expect(page.getByText("Password protected").first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Unlock PDF$/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Merge PDF$/ })).toBeDisabled();
+    await page.getByRole("button", { name: /Remove phase51-protected.pdf/i }).click();
+    await expect(page.getByText("Password protected")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Merge PDF$/ })).toBeEnabled();
+    const afterProtectedRemoval = await generateThenDownloadBytes(
+      page,
+      /^Merge PDF$/,
+      /^Download PDF$/,
+      "merged.pdf",
+    );
+    expect((await PDFDocument.load(afterProtectedRemoval)).getPageCount()).toBe(2);
+    const protectedRemovalText = `${await extractPdfPageText(
+      afterProtectedRemoval,
+      1,
+    )} ${await extractPdfPageText(afterProtectedRemoval, 2)}`;
+    expect(protectedRemovalText).toContain("PHASE51-A");
+    expect(protectedRemovalText).toContain("PHASE51-B");
+    expect(protectedRemovalText).not.toContain("PHASE51-C");
+
+    await page.goto("/merge-pdf");
+    await uploadFirstFile(page, [fixtures.phase51A, fixtures.phase51B]);
+    await expect(readyMergeFileCards(page)).toHaveCount(2);
+    await page.getByLabel("Add more PDF files").setInputFiles(fixtures.invalidPdf);
+    await expect(page.getByText("Invalid PDF").first()).toBeVisible();
+    await expect(page.getByText("phase51-a.pdf")).toBeVisible();
+    await expect(page.getByText("phase51-b.pdf")).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Merge PDF$/ })).toBeDisabled();
+    await page.getByRole("button", { name: /Remove invalid.pdf/i }).click();
+    await expect(page.getByRole("button", { name: /^Merge PDF$/ })).toBeEnabled();
+    const afterInvalidRemoval = await generateThenDownloadBytes(
+      page,
+      /^Merge PDF$/,
+      /^Download PDF$/,
+      "merged.pdf",
+    );
+    expect((await PDFDocument.load(afterInvalidRemoval)).getPageCount()).toBe(2);
+    expect(await extractPdfPageText(afterInvalidRemoval, 1)).toContain("PHASE51-A");
+    expect(await extractPdfPageText(afterInvalidRemoval, 2)).toContain("PHASE51-B");
+
+    await page.goto("/merge-pdf");
+    await uploadFirstFile(page, [fixtures.phase51A, fixtures.emptyPdf, fixtures.phase51B]);
+    await expect(page.getByText("Empty file").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Merge PDF$/ })).toBeDisabled();
+    await page.getByRole("button", { name: /Remove empty.pdf/i }).click();
+    await expect(page.getByRole("button", { name: /^Merge PDF$/ })).toBeEnabled();
+
+    const batchPaths = Array.from({ length: 10 }, (_, index) => {
+      const batchPath = path.join(fixturesDir, `phase51-valid-${index + 1}.pdf`);
+      fs.copyFileSync(fixtures.phase51A, batchPath);
+      return batchPath;
+    });
+    await page.goto("/merge-pdf");
+    await uploadFirstFile(page, [...batchPaths, fixtures.invalidPdf]);
+    await expect(page.getByText("Invalid PDF").first()).toBeVisible();
+    await expect(readyMergeFileCards(page)).toHaveCount(10);
+    await page.getByRole("button", { name: /Remove invalid.pdf/i }).click();
+    const tenValidBytes = await generateThenDownloadBytes(
+      page,
+      /^Merge PDF$/,
+      /^Download PDF$/,
+      "merged.pdf",
+    );
+    expect((await PDFDocument.load(tenValidBytes)).getPageCount()).toBe(10);
+  });
+
   test("compress PDF exposes real QPDF modes with measurable outputs", async ({
     page,
   }) => {
@@ -2065,7 +2175,11 @@ test.describe("error states and mobile usability", () => {
       await uploadFirstFile(page, fixtures.invalidPdf);
 
       if (route === "/merge-pdf") {
-        await page.getByRole("button", { name: /^Merge PDF$/ }).click();
+        await expect(page.getByText("Invalid PDF").first()).toBeVisible();
+        await expect(
+          page.getByRole("button", { name: /^Merge PDF$/ }),
+        ).toBeDisabled();
+        continue;
       }
 
       await expect(
@@ -2091,6 +2205,10 @@ test.describe("error states and mobile usability", () => {
 
 async function uploadFirstFile(page: Page, filePath: string | string[]) {
   await page.locator('input[type="file"]').first().setInputFiles(filePath);
+}
+
+function readyMergeFileCards(page: Page) {
+  return page.locator("li").filter({ hasText: "Ready" });
 }
 
 async function downloadBytes(

@@ -28,6 +28,9 @@ export type FixturePaths = {
   phase44Markers: string;
   phase45Markers: string;
   phase46Markers: string;
+  phase51A: string;
+  phase51B: string;
+  phase51C: string;
   imageHeavy: string;
   imageOnly: string;
   transparentPdf: string;
@@ -64,6 +67,9 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     phase44Markers: path.join(fixturesDir, "phase44-markers.pdf"),
     phase45Markers: path.join(fixturesDir, "phase45-markers.pdf"),
     phase46Markers: path.join(fixturesDir, "phase46-markers.pdf"),
+    phase51A: path.join(fixturesDir, "phase51-a.pdf"),
+    phase51B: path.join(fixturesDir, "phase51-b.pdf"),
+    phase51C: path.join(fixturesDir, "phase51-c.pdf"),
     imageHeavy: path.join(fixturesDir, "image-heavy.pdf"),
     imageOnly: path.join(fixturesDir, "image-only.pdf"),
     transparentPdf: path.join(fixturesDir, "transparent-content.pdf"),
@@ -97,6 +103,9 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     createPhase44MarkerPdf(paths.phase44Markers),
     createPhase45MarkerPdf(paths.phase45Markers),
     createPhase46MarkerPdf(paths.phase46Markers),
+    createPhase51MarkerPdf(paths.phase51A, "PHASE51-A"),
+    createPhase51MarkerPdf(paths.phase51B, "PHASE51-B"),
+    createPhase51MarkerPdf(paths.phase51C, "PHASE51-C"),
     createImageHeavyPdf(paths.imageHeavy),
     createImageOnlyPdf(paths.imageOnly),
     createTransparentPdf(paths.transparentPdf),
@@ -256,6 +265,30 @@ async function createPhase46MarkerPdf(filePath: string) {
       color: rgb(0.2, 0.2, 0.2),
     });
   }
+
+  await writeFileAtomic(filePath, Buffer.from(await pdf.save()));
+}
+
+async function createPhase51MarkerPdf(filePath: string, marker: string) {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdf.embedFont(StandardFonts.HelveticaBold);
+
+  const page = pdf.addPage([595, 842]);
+  page.drawText(marker, {
+    x: 72,
+    y: 760,
+    size: 24,
+    font: boldFont,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+  page.drawText(`Merge isolation marker for ${marker}.`, {
+    x: 72,
+    y: 720,
+    size: 14,
+    font,
+    color: rgb(0.2, 0.2, 0.2),
+  });
 
   await writeFileAtomic(filePath, Buffer.from(await pdf.save()));
 }

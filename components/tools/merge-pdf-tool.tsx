@@ -24,6 +24,8 @@ import { createClientId } from "@/lib/create-client-id";
 
 const mergedFileName = "merged.pdf";
 
+type MergeIssueStatus = "protected" | "invalid" | "empty" | "error";
+
 export function MergePdfTool() {
   const [files, setFiles] = useState<UploadedPdf[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -46,8 +48,20 @@ export function MergePdfTool() {
       ),
     [files],
   );
-  const isReadingFiles = files.some((file) => file.status === "loading");
-  const hasUnreadableFiles = files.some((file) => file.status === "error");
+  const readyFiles = useMemo(
+    () => files.filter((file) => file.status === "ready"),
+    [files],
+  );
+  const issueFiles = useMemo(
+    () =>
+      files.filter((file) =>
+        ["protected", "invalid", "empty", "error"].includes(file.status),
+      ),
+    [files],
+  );
+  const isCheckingFiles = files.some((file) => file.status === "checking");
+  const canMerge =
+    readyFiles.length >= 2 && issueFiles.length === 0 && !isCheckingFiles;
 
   useEffect(() => {
     mergedPdfUrlRef.current = mergedPdfUrl;
@@ -96,7 +110,9 @@ export function MergePdfTool() {
       previewHeight: null,
       previewUrl: null,
       previewWidth: null,
-      status: "loading" as const,
+      status: file.size === 0 ? ("empty" as const) : ("checking" as const),
+      errorMessage:
+        file.size === 0 ? "This PDF file is empty." : undefined,
     }));
 
     setFiles((currentFiles) => [
@@ -109,7 +125,9 @@ export function MergePdfTool() {
     });
 
     pendingFiles.forEach((pdf) => {
-      void hydratePdfMetadata(pdf.id, pdf.file);
+      if (pdf.status !== "empty") {
+        void hydratePdfMetadata(pdf.id, pdf.file);
+      }
     });
   }
 
@@ -125,15 +143,37 @@ export function MergePdfTool() {
 
   function handleRemove(id: string) {
     clearMergedPdfUrl();
-    setFiles((currentFiles) => {
-      const fileToRemove = currentFiles.find((file) => file.id === id);
+    const currentFiles = filesRef.current;
+    const fileToRemove = currentFiles.find((file) => file.id === id);
+    const nextFiles = currentFiles.filter((file) => file.id !== id);
 
-      if (fileToRemove?.previewUrl) {
-        URL.revokeObjectURL(fileToRemove.previewUrl);
-      }
+    if (fileToRemove?.previewUrl) {
+      URL.revokeObjectURL(fileToRemove.previewUrl);
+    }
 
-      return currentFiles.filter((file) => file.id !== id);
-    });
+    setFiles(nextFiles);
+
+    if (
+      fileToRemove &&
+      ["protected", "invalid", "empty", "error"].includes(fileToRemove.status)
+    ) {
+      const nextIssueCount = nextFiles.filter((file) =>
+        ["protected", "invalid", "empty", "error"].includes(file.status),
+      ).length;
+      const nextReadyCount = nextFiles.filter(
+        (file) => file.status === "ready",
+      ).length;
+
+      setError(
+        nextIssueCount > 0
+          ? formatIssueSummary(nextIssueCount)
+          : nextReadyCount >= 2
+            ? "File removed. Merge is ready."
+            : null,
+      );
+    } else {
+      setError(null);
+    }
   }
 
   function handleMove(id: string, direction: "up" | "down") {
@@ -184,15 +224,21 @@ export function MergePdfTool() {
       return;
     }
 
-    if (isReadingFiles) {
+    if (isCheckingFiles) {
       setError("Please wait until the selected PDFs are ready.");
       analytics.trackError({ errorCode: "files_not_ready" });
       return;
     }
 
-    if (hasUnreadableFiles) {
-      setError("One of the selected PDFs could not be read. Remove it and try another file.");
-      analytics.trackError({ errorCode: "pdf_read_failed" });
+    if (issueFiles.length > 0) {
+      setError(formatIssueSummary(issueFiles.length));
+      analytics.trackError({ errorCode: "merge_blocked_file_issue" });
+      return;
+    }
+
+    if (readyFiles.length < 2) {
+      setError("Add at least two ready PDF files before merging.");
+      analytics.trackError({ errorCode: "not_enough_ready_files" });
       return;
     }
 
@@ -208,14 +254,22 @@ export function MergePdfTool() {
     try {
       const mergedPdf = await PDFDocument.create();
 
-      for (const pdf of files) {
-        const sourcePdf = await PDFDocument.load(await pdf.file.arrayBuffer());
-        const copiedPages = await mergedPdf.copyPages(
-          sourcePdf,
-          sourcePdf.getPageIndices(),
-        );
+      for (const pdf of readyFiles) {
+        try {
+          const sourcePdf = await PDFDocument.load(await pdf.file.arrayBuffer());
+          const copiedPages = await mergedPdf.copyPages(
+            sourcePdf,
+            sourcePdf.getPageIndices(),
+          );
 
-        copiedPages.forEach((page) => mergedPdf.addPage(page));
+          copiedPages.forEach((page) => mergedPdf.addPage(page));
+        } catch (fileMergeError) {
+          const issue = classifyPdfError(fileMergeError);
+          markFileIssue(pdf.id, issue.status, issue.message);
+          throw new Error(
+            `${pdf.file.name} could not be merged. Remove it and try again.`,
+          );
+        }
       }
 
       const mergedBytes = await mergedPdf.save();
@@ -226,7 +280,7 @@ export function MergePdfTool() {
       const url = URL.createObjectURL(blob);
       setMergedPdfUrl(url);
       analytics.trackConversionCompleted({
-        fileCount: files.length,
+        fileCount: readyFiles.length,
         pageCount: totalPages,
         outputFormat: "pdf",
         status: "success",
@@ -235,13 +289,10 @@ export function MergePdfTool() {
       triggerDownload(url, mergedFileName);
       analytics.trackDownloadCompleted({ outputFormat: "pdf" });
     } catch (mergeError) {
-      const message =
-        mergeError instanceof Error &&
-        /encrypted|password|protected/i.test(mergeError.message)
-          ? "One of the selected PDFs is password protected. Unlock it first, then try merging again."
-          : "The selected PDFs could not be merged. Please try different PDF files.";
       setError(
-        message,
+        mergeError instanceof Error
+          ? mergeError.message
+          : "Merge failed. The PDFs could not be combined safely. Your files are still available so you can try again.",
       );
       analytics.trackError({ errorCode: "merge_failed" });
     } finally {
@@ -301,7 +352,7 @@ export function MergePdfTool() {
         ),
       );
       await pdf.destroy();
-    } catch {
+    } catch (loadError) {
       if (pdf) {
         await pdf.destroy();
       }
@@ -310,22 +361,42 @@ export function MergePdfTool() {
         URL.revokeObjectURL(previewUrl);
       }
 
+      const issue = classifyPdfError(loadError);
       setFiles((currentFiles) =>
         currentFiles.map((currentFile) =>
           currentFile.id === id
             ? {
                 ...currentFile,
+                errorMessage: issue.message,
                 pageCount: null,
                 previewHeight: null,
                 previewUrl: null,
                 previewWidth: null,
-                status: "error",
+                status: issue.status,
               }
             : currentFile,
         ),
       );
-      setError("One of the selected PDFs could not be read. Remove it and try another file.");
+      setError(issue.message);
     }
+  }
+
+  function markFileIssue(
+    id: string,
+    status: MergeIssueStatus,
+    errorMessage: string,
+  ) {
+    setFiles((currentFiles) =>
+      currentFiles.map((currentFile) =>
+        currentFile.id === id
+          ? {
+              ...currentFile,
+              errorMessage,
+              status,
+            }
+          : currentFile,
+      ),
+    );
   }
 
   return (
@@ -365,10 +436,14 @@ export function MergePdfTool() {
 
         <div className="mt-5 space-y-3 rounded-xl border border-border bg-muted/25 p-4 text-sm">
           <SummaryRow label="Files" value={String(files.length)} />
+          <SummaryRow label="Ready" value={String(readyFiles.length)} />
+          {issueFiles.length > 0 ? (
+            <SummaryRow label="Issues" value={String(issueFiles.length)} />
+          ) : null}
           <SummaryRow
             label="Pages"
             value={
-              isReadingFiles
+              isCheckingFiles
                 ? "Reading..."
                 : totalPages > 0
                   ? String(totalPages)
@@ -379,11 +454,20 @@ export function MergePdfTool() {
           <SummaryRow label="Output filename" value={mergedFileName} />
         </div>
 
+        {issueFiles.length > 0 ? (
+          <p
+            className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800"
+            aria-live="polite"
+          >
+            {formatIssueSummary(issueFiles.length)}
+          </p>
+        ) : null}
+
         <div className="mt-7 grid gap-3">
           <Button
             type="button"
             onClick={handleMerge}
-            disabled={isMerging}
+            disabled={isMerging || !canMerge}
             className="h-12 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
           >
             {isMerging ? (
@@ -462,6 +546,50 @@ function isPdfFile(file: File) {
   return (
     file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
   );
+}
+
+function classifyPdfError(error: unknown): {
+  status: MergeIssueStatus;
+  message: string;
+} {
+  const name = error instanceof Error ? error.name.toLowerCase() : "";
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  if (
+    name.includes("password") ||
+    message.includes("password") ||
+    message.includes("encrypted") ||
+    message.includes("protected")
+  ) {
+    return {
+      status: "protected",
+      message: "This PDF must be unlocked before it can be merged.",
+    };
+  }
+
+  if (
+    name.includes("invalid") ||
+    message.includes("invalid") ||
+    message.includes("corrupt") ||
+    message.includes("pdf header") ||
+    message.includes("no pdf")
+  ) {
+    return {
+      status: "invalid",
+      message: "This file could not be read as a valid PDF.",
+    };
+  }
+
+  return {
+    status: "error",
+    message: "This file could not be read safely.",
+  };
+}
+
+function formatIssueSummary(issueCount: number) {
+  return issueCount === 1
+    ? "Remove or unlock 1 file before merging."
+    : `Remove or unlock ${issueCount} files before merging.`;
 }
 
 function triggerDownload(url: string, fileName: string) {
