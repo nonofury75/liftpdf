@@ -30,6 +30,7 @@ type ImageToPdfToolProps = {
   acceptedImageTypes?: string[];
   addMoreAriaLabel?: string;
   allowIndividualRotation?: boolean;
+  enableOutputFileName?: boolean;
   invalidFileMessage?: string;
   presentation?: "standard" | "showcase";
   uploadButtonLabel?: string;
@@ -84,6 +85,7 @@ export function ImageToPdfTool({
   acceptedImageTypes = defaultAcceptedImageTypes,
   addMoreAriaLabel = "Add more images",
   allowIndividualRotation = false,
+  enableOutputFileName = false,
   invalidFileMessage = "Only JPG, JPEG, PNG and WEBP files are supported.",
   presentation = "standard",
   uploadButtonLabel = "Choose files",
@@ -98,6 +100,10 @@ export function ImageToPdfTool({
   const [error, setError] = useState<string | null>(null);
   const [isConverting, setIsConverting] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [outputFileNameInput, setOutputFileNameInput] = useState(
+    getOutputFileNameBase(downloadFileName),
+  );
+  const [generatedFileName, setGeneratedFileName] = useState(downloadFileName);
   const imagesRef = useRef<UploadedImage[]>([]);
   const pdfUrlRef = useRef<string | null>(null);
   const addMoreInputRef = useRef<HTMLInputElement>(null);
@@ -115,6 +121,9 @@ export function ImageToPdfTool({
   const effectiveMargin = margin ?? "none";
   const effectiveOrientation = orientation ?? "auto";
   const effectivePageSize = pageSize ?? "auto";
+  const expectedOutputFileName = enableOutputFileName
+    ? getSafeOutputFileNameOrFallback(outputFileNameInput, downloadFileName)
+    : downloadFileName;
 
   const totalSize = useMemo(
     () => images.reduce((sum, image) => sum + image.file.size, 0),
@@ -279,6 +288,9 @@ export function ImageToPdfTool({
     });
 
     try {
+      const finalOutputFileName = enableOutputFileName
+        ? parseOutputFileName(outputFileNameInput, downloadFileName)
+        : downloadFileName;
       const pdfDocument = await PDFDocument.create();
 
       for (const image of images) {
@@ -333,6 +345,7 @@ export function ImageToPdfTool({
       new Uint8Array(pdfBuffer).set(pdfBytes);
 
       const blob = new Blob([pdfBuffer], { type: "application/pdf" });
+      setGeneratedFileName(finalOutputFileName);
       setPdfUrl(URL.createObjectURL(blob));
       analytics.trackConversionCompleted({
         fileCount: images.length,
@@ -342,8 +355,12 @@ export function ImageToPdfTool({
         outputFormat: "pdf",
         status: "success",
       });
-    } catch {
-      setError("The PDF could not be created. Please try another image file.");
+    } catch (conversionError) {
+      setError(
+        conversionError instanceof Error
+          ? conversionError.message
+          : "The PDF could not be created. Please try another image file.",
+      );
       analytics.trackError({ errorCode: "conversion_failed" });
     } finally {
       setIsConverting(false);
@@ -357,6 +374,8 @@ export function ImageToPdfTool({
     setOrientation(null);
     setMargin(null);
     setFitMode(null);
+    setOutputFileNameInput(getOutputFileNameBase(downloadFileName));
+    setGeneratedFileName(downloadFileName);
     setError(null);
     clearPdfUrl();
   }
@@ -444,9 +463,36 @@ export function ImageToPdfTool({
             value={formatFileSize(totalSize)}
             presentation={presentation}
           />
+          {enableOutputFileName ? (
+            <SummaryRow
+              label="Output"
+              value={expectedOutputFileName}
+              presentation={presentation}
+            />
+          ) : null}
         </div>
 
         <div className="mt-7 space-y-7">
+          {enableOutputFileName ? (
+            <label className="block">
+              <span className="text-sm font-semibold text-foreground">
+                Output file name
+              </span>
+              <input
+                value={outputFileNameInput}
+                onChange={(event) => {
+                  clearPdfUrl();
+                  setOutputFileNameInput(event.target.value);
+                }}
+                placeholder={getOutputFileNameBase(downloadFileName)}
+                className="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/20"
+              />
+              <span className="mt-2 block text-xs leading-5 text-muted-foreground">
+                Use a simple PDF file name. LiftPDF adds .pdf when needed.
+              </span>
+            </label>
+          ) : null}
+
           <OptionGroup
             label="Page orientation"
             options={orientationOptions}
@@ -508,7 +554,7 @@ export function ImageToPdfTool({
               >
                 <a
                   href={pdfUrl}
-                  download={downloadFileName}
+                  download={generatedFileName}
                   onClick={() => {
                     analytics.trackDownloadStarted({ outputFormat: "pdf" });
                     analytics.trackDownloadCompleted({ outputFormat: "pdf" });
@@ -1102,4 +1148,37 @@ function getToolNameFromFileName(fileName: string) {
   }
 
   return "Images to PDF";
+}
+
+function getOutputFileNameBase(fileName: string) {
+  return fileName.replace(/\.pdf$/i, "");
+}
+
+function getSafeOutputFileNameOrFallback(value: string, fallbackFileName: string) {
+  try {
+    return parseOutputFileName(value, fallbackFileName);
+  } catch {
+    return fallbackFileName;
+  }
+}
+
+function parseOutputFileName(value: string, fallbackFileName: string) {
+  const trimmed = value.trim();
+  const candidate = trimmed || getOutputFileNameBase(fallbackFileName);
+
+  if (/[<>:"/\\|?*\u0000-\u001f]/.test(candidate)) {
+    throw new Error(
+      'File name cannot contain < > : " / \\ | ? * or control characters.',
+    );
+  }
+
+  const withoutExtension = candidate.replace(/\.pdf$/i, "").trim();
+
+  if (!withoutExtension || /^\.+$/.test(withoutExtension)) {
+    throw new Error("Please enter a valid PDF file name.");
+  }
+
+  return candidate.toLowerCase().endsWith(".pdf")
+    ? candidate
+    : `${candidate}.pdf`;
 }

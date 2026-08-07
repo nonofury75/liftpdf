@@ -45,6 +45,7 @@ export default function ImagesToPdfPage() {
       allowIndividualRotation
       compactHero
       compactRelatedTools
+      enableOutputFileName
       presentation="showcase"
       faq={[
         {

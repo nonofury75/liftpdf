@@ -19,6 +19,7 @@ type ImageToPdfPageProps = {
   allowIndividualRotation?: boolean;
   compactHero?: boolean;
   compactRelatedTools?: boolean;
+  enableOutputFileName?: boolean;
   invalidFileMessage?: string;
   presentation?: "standard" | "showcase";
   premiumContent?: PremiumToolContentData;
@@ -39,6 +40,7 @@ export function ImageToPdfPage({
   allowIndividualRotation,
   compactHero,
   compactRelatedTools,
+  enableOutputFileName,
   invalidFileMessage,
   presentation,
   premiumContent,
@@ -63,6 +65,7 @@ export function ImageToPdfPage({
         addMoreAriaLabel={addMoreAriaLabel}
         allowIndividualRotation={allowIndividualRotation}
         downloadFileName={downloadFileName}
+        enableOutputFileName={enableOutputFileName}
         invalidFileMessage={invalidFileMessage}
         presentation={presentation}
         uploadButtonLabel={uploadButtonLabel}

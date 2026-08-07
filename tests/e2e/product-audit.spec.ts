@@ -1899,6 +1899,52 @@ test.describe("critical PDF workflows", () => {
     await expect(page.getByRole("button", { name: /^Convert to JPG$/ })).toBeEnabled();
   });
 
+  test("Images to PDF supports a custom output filename without changing JPG or PNG tools", async ({
+    page,
+  }) => {
+    const fixtures = await ensureFixtures();
+
+    await page.goto("/images-to-pdf");
+    await uploadFirstFile(page, [fixtures.widePng, fixtures.squarePng]);
+    await expect(page.getByText(/wide-2x1.png/i)).toBeVisible();
+    await page.getByLabel("Output file name").fill("client scan packet");
+    const customNamedPdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "client scan packet.pdf",
+    );
+    expect((await PDFDocument.load(customNamedPdf)).getPageCount()).toBe(2);
+
+    await page.getByLabel("Output file name").fill("bad/name");
+    await page.getByRole("button", { name: /^Convert to PDF$/ }).click();
+    await expect(
+      page.getByText(/File name cannot contain/i),
+    ).toBeVisible();
+
+    await page.goto("/jpg-to-pdf");
+    await uploadFirstFile(page, fixtures.jpg);
+    await expect(page.getByLabel("Output file name")).toHaveCount(0);
+    const jpgDefaultNamePdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "jpg-to-pdf.pdf",
+    );
+    expect((await PDFDocument.load(jpgDefaultNamePdf)).getPageCount()).toBe(1);
+
+    await page.goto("/png-to-pdf");
+    await uploadFirstFile(page, fixtures.png);
+    await expect(page.getByLabel("Output file name")).toHaveCount(0);
+    const pngDefaultNamePdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "png-to-pdf.pdf",
+    );
+    expect((await PDFDocument.load(pngDefaultNamePdf)).getPageCount()).toBe(1);
+  });
+
   test("edit tools generate valid PDFs", async ({ page }) => {
     const fixtures = await ensureFixtures();
 
