@@ -21,6 +21,10 @@ import {
   useToolAnalytics,
 } from "@/hooks/use-tool-analytics";
 import { createClientId } from "@/lib/create-client-id";
+import {
+  getPdfOutputFileNameBase,
+  parsePdfOutputFileName,
+} from "@/lib/output-filename";
 
 const mergedFileName = "merged.pdf";
 
@@ -31,6 +35,10 @@ export function MergePdfTool() {
   const [error, setError] = useState<string | null>(null);
   const [isMerging, setIsMerging] = useState(false);
   const [mergedPdfUrl, setMergedPdfUrl] = useState<string | null>(null);
+  const [outputFileNameInput, setOutputFileNameInput] = useState(
+    getPdfOutputFileNameBase(mergedFileName),
+  );
+  const [generatedFileName, setGeneratedFileName] = useState(mergedFileName);
   const addMoreInputRef = useRef<HTMLInputElement>(null);
   const filesRef = useRef<UploadedPdf[]>([]);
   const mergedPdfUrlRef = useRef<string | null>(null);
@@ -60,8 +68,27 @@ export function MergePdfTool() {
     [files],
   );
   const isCheckingFiles = files.some((file) => file.status === "checking");
+  const outputFileNameValidation = useMemo(() => {
+    try {
+      return {
+        error: null,
+        fileName: parsePdfOutputFileName(outputFileNameInput, mergedFileName),
+      };
+    } catch (validationError) {
+      return {
+        error:
+          validationError instanceof Error
+            ? validationError.message
+            : "Enter a valid file name.",
+        fileName: null,
+      };
+    }
+  }, [outputFileNameInput]);
   const canMerge =
-    readyFiles.length >= 2 && issueFiles.length === 0 && !isCheckingFiles;
+    readyFiles.length >= 2 &&
+    issueFiles.length === 0 &&
+    !isCheckingFiles &&
+    !outputFileNameValidation.error;
 
   useEffect(() => {
     mergedPdfUrlRef.current = mergedPdfUrl;
@@ -242,6 +269,12 @@ export function MergePdfTool() {
       return;
     }
 
+    if (!outputFileNameValidation.fileName) {
+      setError(outputFileNameValidation.error ?? "Enter a valid file name.");
+      analytics.trackError({ errorCode: "invalid_output_filename" });
+      return;
+    }
+
     setError(null);
     setIsMerging(true);
     clearMergedPdfUrl();
@@ -278,6 +311,7 @@ export function MergePdfTool() {
 
       const blob = new Blob([mergedBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
+      setGeneratedFileName(outputFileNameValidation.fileName);
       setMergedPdfUrl(url);
       analytics.trackConversionCompleted({
         fileCount: readyFiles.length,
@@ -286,7 +320,7 @@ export function MergePdfTool() {
         status: "success",
       });
       analytics.trackDownloadStarted({ outputFormat: "pdf" });
-      triggerDownload(url, mergedFileName);
+      triggerDownload(url, outputFileNameValidation.fileName);
       analytics.trackDownloadCompleted({ outputFormat: "pdf" });
     } catch (mergeError) {
       setError(
@@ -308,6 +342,8 @@ export function MergePdfTool() {
     });
     setFiles([]);
     setError(null);
+    setOutputFileNameInput(getPdfOutputFileNameBase(mergedFileName));
+    setGeneratedFileName(mergedFileName);
     clearMergedPdfUrl();
   }
 
@@ -451,8 +487,49 @@ export function MergePdfTool() {
             }
           />
           <SummaryRow label="Total size" value={formatFileSize(totalSize)} />
-          <SummaryRow label="Output filename" value={mergedFileName} />
+          <SummaryRow
+            label="Output filename"
+            value={outputFileNameValidation.fileName ?? mergedFileName}
+          />
         </div>
+
+        <label className="mt-7 block">
+          <span className="text-sm font-semibold text-foreground">
+            Output file name
+          </span>
+          <input
+            value={outputFileNameInput}
+            onChange={(event) => {
+              clearMergedPdfUrl();
+              setGeneratedFileName(mergedFileName);
+              setOutputFileNameInput(event.target.value);
+            }}
+            aria-describedby={
+              outputFileNameValidation.error
+                ? "merge-output-file-name-error"
+                : "merge-output-file-name-help"
+            }
+            aria-invalid={outputFileNameValidation.error ? "true" : "false"}
+            placeholder={getPdfOutputFileNameBase(mergedFileName)}
+            className="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/20"
+          />
+          {outputFileNameValidation.error ? (
+            <span
+              id="merge-output-file-name-error"
+              className="mt-2 block text-xs font-semibold leading-5 text-red-700"
+              aria-live="polite"
+            >
+              {outputFileNameValidation.error}
+            </span>
+          ) : (
+            <span
+              id="merge-output-file-name-help"
+              className="mt-2 block text-xs leading-5 text-muted-foreground"
+            >
+              Use a simple PDF file name. LiftPDF adds .pdf when needed.
+            </span>
+          )}
+        </label>
 
         {issueFiles.length > 0 ? (
           <p
@@ -494,7 +571,7 @@ export function MergePdfTool() {
               >
                 <a
                   href={mergedPdfUrl}
-                  download={mergedFileName}
+                  download={generatedFileName}
                   onClick={() => {
                     analytics.trackDownloadStarted({ outputFormat: "pdf" });
                     analytics.trackDownloadCompleted({ outputFormat: "pdf" });

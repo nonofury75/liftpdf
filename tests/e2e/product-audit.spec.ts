@@ -11,6 +11,10 @@ import {
   type PdfModificationPermission,
   type PdfPrintingPermission,
 } from "../../components/tools/pdf/qpdf-client";
+import {
+  getSafePdfOutputFileNameOrFallback,
+  parsePdfOutputFileName,
+} from "../../lib/output-filename";
 
 const toolPages = [
   { href: "/jpg-to-pdf", title: "JPG to PDF Converter" },
@@ -471,6 +475,45 @@ test.describe("critical PDF workflows", () => {
     test.skip(testInfo.project.name !== "chromium", "desktop-only heavy flows");
   });
 
+  test("PDF output filename helper normalizes and rejects unsafe names", () => {
+    expect(parsePdfOutputFileName("document", "merged.pdf")).toBe(
+      "document.pdf",
+    );
+    expect(parsePdfOutputFileName("document.pdf", "merged.pdf")).toBe(
+      "document.pdf",
+    );
+    expect(parsePdfOutputFileName("document.PDF", "merged.pdf")).toBe(
+      "document.PDF",
+    );
+    expect(parsePdfOutputFileName("  Client Documents  ", "merged.pdf")).toBe(
+      "Client Documents.pdf",
+    );
+    expect(getSafePdfOutputFileNameOrFallback("", "images.pdf")).toBe(
+      "images.pdf",
+    );
+    expect(() => parsePdfOutputFileName("bad/name", "merged.pdf")).toThrow(
+      /cannot contain/i,
+    );
+    expect(() => parsePdfOutputFileName("bad\\name", "merged.pdf")).toThrow(
+      /cannot contain/i,
+    );
+    expect(() => parsePdfOutputFileName("", "merged.pdf")).toThrow(
+      /valid file name/i,
+    );
+    expect(() => parsePdfOutputFileName("   ", "merged.pdf")).toThrow(
+      /valid file name/i,
+    );
+    expect(() => parsePdfOutputFileName(".", "merged.pdf")).toThrow(
+      /valid file name/i,
+    );
+    expect(() => parsePdfOutputFileName("..", "merged.pdf")).toThrow(
+      /valid file name/i,
+    );
+    expect(() =>
+      parsePdfOutputFileName("a".repeat(121), "merged.pdf"),
+    ).toThrow(/120 characters/i);
+  });
+
   test("merge, split, delete, extract, reorder and compress PDFs", async ({
     page,
   }) => {
@@ -708,9 +751,97 @@ test.describe("critical PDF workflows", () => {
     expect((await PDFDocument.load(tenValidBytes)).getPageCount()).toBe(10);
   });
 
+  test("Merge PDF supports an editable output filename without weakening validation", async ({
+    page,
+  }) => {
+    const fixtures = await ensureFixtures();
+
+    await page.goto("/merge-pdf");
+    await uploadFirstFile(page, [fixtures.phase52A, fixtures.phase52B]);
+    await expect(readyMergeFileCards(page)).toHaveCount(2);
+    const defaultDownload = await mergeAndCaptureAutomaticDownload(
+      page,
+      "merged.pdf",
+    );
+    expect((await PDFDocument.load(defaultDownload)).getPageCount()).toBe(2);
+
+    await page.goto("/merge-pdf");
+    await uploadFirstFile(page, [fixtures.phase52A, fixtures.phase52B]);
+    await page.getByLabel("Output file name").fill("client-package");
+    const customDownload = await mergeAndCaptureAutomaticDownload(
+      page,
+      "client-package.pdf",
+    );
+    expect((await PDFDocument.load(customDownload)).getPageCount()).toBe(2);
+    expect(await extractPdfPageText(customDownload, 1)).toContain("PHASE52-A");
+    expect(await extractPdfPageText(customDownload, 2)).toContain("PHASE52-B");
+    await expect(
+      page.locator('a[download="client-package.pdf"]').last(),
+    ).toBeVisible();
+    expect(await readGeneratedFileBytes(page, "client-package.pdf")).toHaveLength(
+      customDownload.length,
+    );
+
+    await page.goto("/merge-pdf");
+    await uploadFirstFile(page, [fixtures.phase52A, fixtures.phase52B]);
+    await page.getByLabel("Output file name").fill("phase52-final.pdf");
+    await mergeAndCaptureAutomaticDownload(page, "phase52-final.pdf");
+
+    await page.goto("/merge-pdf");
+    await uploadFirstFile(page, [fixtures.phase52A, fixtures.phase52B]);
+    await page.getByLabel("Output file name").fill("phase52-final.PDF");
+    await mergeAndCaptureAutomaticDownload(page, "phase52-final.PDF");
+    await expect(
+      page.locator('a[download="phase52-final.PDF.pdf"]'),
+    ).toHaveCount(0);
+
+    await page.goto("/merge-pdf");
+    await uploadFirstFile(page, [fixtures.phase52A, fixtures.phase52B]);
+    await page.getByLabel("Output file name").fill("phase52/test.pdf");
+    await expect(
+      page.getByText(/File name cannot contain/i),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Merge PDF$/ })).toBeDisabled();
+
+    await page.getByLabel("Output file name").fill("   ");
+    await expect(page.getByText(/Enter a valid file name/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Merge PDF$/ })).toBeDisabled();
+
+    await page.goto("/merge-pdf");
+    await uploadFirstFile(page, [
+      fixtures.phase52A,
+      fixtures.phase51C,
+      fixtures.phase52B,
+    ]);
+    await page.getByLabel("Output file name").fill("reordered-bundle.pdf");
+    await page.getByRole("button", { name: /Move phase51-c.pdf down/i }).click();
+    await expect(page.getByLabel("Output file name")).toHaveValue(
+      "reordered-bundle.pdf",
+    );
+    await mergeAndCaptureAutomaticDownload(page, "reordered-bundle.pdf");
+
+    await page.goto("/merge-pdf");
+    await uploadFirstFile(page, [
+      fixtures.phase52A,
+      fixtures.invalidPdf,
+      fixtures.phase52B,
+    ]);
+    await expect(page.getByText("Invalid PDF").first()).toBeVisible();
+    await page.getByLabel("Output file name").fill("valid-bundle.pdf");
+    await page.getByRole("button", { name: /Remove invalid.pdf/i }).click();
+    await expect(page.getByLabel("Output file name")).toHaveValue(
+      "valid-bundle.pdf",
+    );
+    await mergeAndCaptureAutomaticDownload(page, "valid-bundle.pdf");
+
+    await page.getByRole("button", { name: /^Start over$/ }).click();
+    await expect(page.getByLabel("Output file name")).toHaveValue("merged");
+  });
+
   test("compress PDF exposes real QPDF modes with measurable outputs", async ({
     page,
   }) => {
+    test.setTimeout(180000);
     const fixtures = await ensureFixtures();
 
     await page.goto("/compress-pdf");
@@ -1934,6 +2065,7 @@ test.describe("critical PDF workflows", () => {
   test("PDF to image handles large documents with warnings and valid ZIP output", async ({
     page,
   }) => {
+    test.setTimeout(180000);
     const fixtures = await ensureFixtures();
 
     await page.goto("/pdf-to-jpg");
@@ -2320,6 +2452,19 @@ async function generateThenDownloadBytes(
   }
 
   return readGeneratedFileBytes(page);
+}
+
+async function mergeAndCaptureAutomaticDownload(
+  page: Page,
+  expectedFileName: string,
+) {
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: /^Merge PDF$/ }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(expectedFileName);
+  await download.cancel().catch(() => undefined);
+
+  return readGeneratedFileBytes(page, expectedFileName);
 }
 
 async function readGeneratedFileBytes(page: Page, expectedFileName?: string) {

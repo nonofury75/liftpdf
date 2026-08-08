@@ -31,6 +31,8 @@ export type FixturePaths = {
   phase51A: string;
   phase51B: string;
   phase51C: string;
+  phase52A: string;
+  phase52B: string;
   imageHeavy: string;
   imageOnly: string;
   transparentPdf: string;
@@ -70,6 +72,8 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     phase51A: path.join(fixturesDir, "phase51-a.pdf"),
     phase51B: path.join(fixturesDir, "phase51-b.pdf"),
     phase51C: path.join(fixturesDir, "phase51-c.pdf"),
+    phase52A: path.join(fixturesDir, "phase52-a.pdf"),
+    phase52B: path.join(fixturesDir, "phase52-b.pdf"),
     imageHeavy: path.join(fixturesDir, "image-heavy.pdf"),
     imageOnly: path.join(fixturesDir, "image-only.pdf"),
     transparentPdf: path.join(fixturesDir, "transparent-content.pdf"),
@@ -106,6 +110,8 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     createPhase51MarkerPdf(paths.phase51A, "PHASE51-A"),
     createPhase51MarkerPdf(paths.phase51B, "PHASE51-B"),
     createPhase51MarkerPdf(paths.phase51C, "PHASE51-C"),
+    createMarkerPdf(paths.phase52A, "PHASE52-A"),
+    createMarkerPdf(paths.phase52B, "PHASE52-B"),
     createImageHeavyPdf(paths.imageHeavy),
     createImageOnlyPdf(paths.imageOnly),
     createTransparentPdf(paths.transparentPdf),
@@ -270,6 +276,10 @@ async function createPhase46MarkerPdf(filePath: string) {
 }
 
 async function createPhase51MarkerPdf(filePath: string, marker: string) {
+  await createMarkerPdf(filePath, marker);
+}
+
+async function createMarkerPdf(filePath: string, marker: string) {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdf.embedFont(StandardFonts.HelveticaBold);

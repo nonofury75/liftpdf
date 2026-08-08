@@ -23,6 +23,11 @@ import {
   useToolAnalytics,
 } from "@/hooks/use-tool-analytics";
 import { createClientId } from "@/lib/create-client-id";
+import {
+  getPdfOutputFileNameBase,
+  getSafePdfOutputFileNameOrFallback,
+  parsePdfOutputFileName,
+} from "@/lib/output-filename";
 import { cn } from "@/lib/utils";
 
 type ImageToPdfToolProps = {
@@ -101,7 +106,7 @@ export function ImageToPdfTool({
   const [isConverting, setIsConverting] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [outputFileNameInput, setOutputFileNameInput] = useState(
-    getOutputFileNameBase(downloadFileName),
+    getPdfOutputFileNameBase(downloadFileName),
   );
   const [generatedFileName, setGeneratedFileName] = useState(downloadFileName);
   const imagesRef = useRef<UploadedImage[]>([]);
@@ -122,7 +127,7 @@ export function ImageToPdfTool({
   const effectiveOrientation = orientation ?? "auto";
   const effectivePageSize = pageSize ?? "auto";
   const expectedOutputFileName = enableOutputFileName
-    ? getSafeOutputFileNameOrFallback(outputFileNameInput, downloadFileName)
+    ? getSafePdfOutputFileNameOrFallback(outputFileNameInput, downloadFileName)
     : downloadFileName;
 
   const totalSize = useMemo(
@@ -289,7 +294,9 @@ export function ImageToPdfTool({
 
     try {
       const finalOutputFileName = enableOutputFileName
-        ? parseOutputFileName(outputFileNameInput, downloadFileName)
+        ? parsePdfOutputFileName(outputFileNameInput, downloadFileName, {
+            allowEmptyFallback: true,
+          })
         : downloadFileName;
       const pdfDocument = await PDFDocument.create();
 
@@ -374,7 +381,7 @@ export function ImageToPdfTool({
     setOrientation(null);
     setMargin(null);
     setFitMode(null);
-    setOutputFileNameInput(getOutputFileNameBase(downloadFileName));
+    setOutputFileNameInput(getPdfOutputFileNameBase(downloadFileName));
     setGeneratedFileName(downloadFileName);
     setError(null);
     clearPdfUrl();
@@ -484,7 +491,7 @@ export function ImageToPdfTool({
                   clearPdfUrl();
                   setOutputFileNameInput(event.target.value);
                 }}
-                placeholder={getOutputFileNameBase(downloadFileName)}
+                placeholder={getPdfOutputFileNameBase(downloadFileName)}
                 className="mt-2 h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/20"
               />
               <span className="mt-2 block text-xs leading-5 text-muted-foreground">
@@ -1148,37 +1155,4 @@ function getToolNameFromFileName(fileName: string) {
   }
 
   return "Images to PDF";
-}
-
-function getOutputFileNameBase(fileName: string) {
-  return fileName.replace(/\.pdf$/i, "");
-}
-
-function getSafeOutputFileNameOrFallback(value: string, fallbackFileName: string) {
-  try {
-    return parseOutputFileName(value, fallbackFileName);
-  } catch {
-    return fallbackFileName;
-  }
-}
-
-function parseOutputFileName(value: string, fallbackFileName: string) {
-  const trimmed = value.trim();
-  const candidate = trimmed || getOutputFileNameBase(fallbackFileName);
-
-  if (/[<>:"/\\|?*\u0000-\u001f]/.test(candidate)) {
-    throw new Error(
-      'File name cannot contain < > : " / \\ | ? * or control characters.',
-    );
-  }
-
-  const withoutExtension = candidate.replace(/\.pdf$/i, "").trim();
-
-  if (!withoutExtension || /^\.+$/.test(withoutExtension)) {
-    throw new Error("Please enter a valid PDF file name.");
-  }
-
-  return candidate.toLowerCase().endsWith(".pdf")
-    ? candidate
-    : `${candidate}.pdf`;
 }
