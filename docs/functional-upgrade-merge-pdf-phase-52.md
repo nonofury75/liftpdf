@@ -151,9 +151,16 @@ The filename remains only in client component state:
 
 ## Production
 
-- Commit: pending
-- Vercel deployment: pending
-- Production URL tested: pending
+- Implementation commit: `17c7474 Upgrade Merge PDF output filename`
+- Vercel deployment: `https://liftpdf-bilhj3jpu-rachator75010-5712s-projects.vercel.app`
+- Vercel status: READY
+- Production aliases: `https://liftpdf.com`, `https://www.liftpdf.com`
+- Production URL tested: `https://liftpdf.com/merge-pdf`
+- Chromium mobile production test: OK
+- Firefox production test: OK
+- Scenario 1: 2 valid PDFs, custom filename, reorder, merge, custom automatic/manual filename verified, PDF parsed as 2 pages
+- Scenario 2: custom filename, invalid file added, invalid file removed, filename preserved, merge, PDF parsed as 2 pages
+- Critical console/page/request errors: none observed
 
 ## Remaining P1
 
@@ -198,6 +205,6 @@ Lint: OK
 Typecheck: OK
 Build: OK
 E2E: OK
-Production deployed: PENDING
+Production deployed: YES
 Remaining P1 count: 3
 Next remaining P1: JPG/PNG/Images to PDF EXIF orientation handling
