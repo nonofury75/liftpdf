@@ -68,7 +68,16 @@ No file content, file name, page order, or page numbers are sent to analytics. T
 
 ## Production
 
-Pending deployment for the Phase 57 code commit.
+- Commit: `a8fb8e3 Upgrade Reorder Pages reverse order`
+- Vercel deployment: `https://liftpdf-b1lemsas9-rachator75010-5712s-projects.vercel.app`
+- Vercel status: READY
+- Production route tested: `https://liftpdf.com/reorder-pages`
+- HTTP 200: YES
+- Chromium desktop production smoke: OK
+- Firefox desktop production smoke: OK
+- Chromium mobile-size production smoke: OK
+- Downloaded filename: `pages-reordered.pdf`
+- Critical console/page/request errors: none observed
 
 ## Remaining Limits
 
@@ -93,5 +102,6 @@ Lint: OK
 Typecheck: OK  
 Build: OK  
 E2E: OK  
-Production deployed: PENDING  
+Production deployed: YES  
+Production smoke: OK  
 Next remaining P2: Delete Pages undo last deletion
