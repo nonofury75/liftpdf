@@ -41,6 +41,7 @@ This roadmap is based on `docs/functional-depth-audit.md`. It prioritizes profes
 | Reorder Pages | Keyboard reordering | Accessibility and power use | UI/event handling | Completed in Phase 59 | Medium | Keyboard e2e | No privacy impact |
 | Reorder Pages | Reverse order | Useful for scanned stacks | Array transform | Completed in Phase 57 | Low | Order fixture | No privacy impact |
 | Delete Pages | Undo last selection/delete | Prevents user mistakes | UI state | Completed in Phase 58 | Medium | Selection state e2e | No privacy impact |
+| Add Page Numbers | Odd/even targeting | Useful for duplex reports and page-side workflows | Existing pdf-lib draw loop | Completed in Phase 60 | Medium | Odd/even text extraction | No privacy impact |
 | Compress PDF | Approximate target size | Only if controlled loop proves reliable | QPDF quality loop or new engine | 3-5 days | High | Size convergence, quality checks | More CPU/memory |
 
 ## P3 — Optional / Later

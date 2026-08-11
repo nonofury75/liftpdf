@@ -42,7 +42,7 @@ type NumberFormat =
   | "page-number"
   | "number-total"
   | "page-number-total";
-type PageTargetMode = "all" | "skip-first" | "range";
+type PageTargetMode = "all" | "skip-first" | "odd" | "even" | "range";
 
 type SelectedPdf = {
   file: File;
@@ -115,6 +115,16 @@ const pageTargetOptions: Array<{
     label: "Skip first page",
     value: "skip-first",
     description: "Leave the cover page clean and start on page 2.",
+  },
+  {
+    label: "Odd pages",
+    value: "odd",
+    description: "Number pages 1, 3, 5 and other odd-numbered pages.",
+  },
+  {
+    label: "Even pages",
+    value: "even",
+    description: "Number pages 2, 4, 6 and other even-numbered pages.",
   },
   {
     label: "Page range",
@@ -1060,6 +1070,25 @@ function getTargetPageNumbers({
     return Array.from({ length: pageCount - 1 }, (_, index) => index + 2);
   }
 
+  if (mode === "odd") {
+    return Array.from({ length: pageCount }, (_, index) => index + 1).filter(
+      (pageNumber) => pageNumber % 2 === 1,
+    );
+  }
+
+  if (mode === "even") {
+    const evenPages = Array.from(
+      { length: pageCount },
+      (_, index) => index + 1,
+    ).filter((pageNumber) => pageNumber % 2 === 0);
+
+    if (!evenPages.length) {
+      throw new Error("This PDF has only one page, so there are no even pages to number.");
+    }
+
+    return evenPages;
+  }
+
   return parsePageRange(pageRange, pageCount);
 }
 
@@ -1135,6 +1164,14 @@ function summarizePageTarget(
 
   if (options.pageTargetMode === "skip-first") {
     return `${pageNumbers.length} pages, cover skipped`;
+  }
+
+  if (options.pageTargetMode === "odd") {
+    return `${pageNumbers.length} odd pages`;
+  }
+
+  if (options.pageTargetMode === "even") {
+    return `${pageNumbers.length} even pages`;
   }
 
   return `${pageNumbers.length} pages (${options.pageRange.trim()})`;

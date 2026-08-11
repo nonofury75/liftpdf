@@ -2512,6 +2512,42 @@ test.describe("critical PDF workflows", () => {
     expect(await extractPdfPageText(rangeBytes, 3)).toContain("Page 701");
     expect(await extractPdfPageText(rangeBytes, 4)).not.toContain("Page 702");
 
+    await page.goto("/add-page-numbers");
+    await uploadFirstFile(page, fixtures.text10);
+    await expect(page.getByText(/10 pages/i).first()).toBeVisible();
+    await page.getByRole("button", { name: /^Page 1$/ }).click();
+    await page.getByLabel("Start number").fill("300");
+    await page.getByRole("button", { name: /Odd pages/i }).click();
+    const oddNumberedBytes = await generateThenDownloadBytes(
+      page,
+      /^Add page numbers$/,
+      /^Download numbered PDF$/,
+      "numbered.pdf",
+    );
+    expect(await extractPdfPageText(oddNumberedBytes, 1)).toContain("Page 300");
+    expect(await extractPdfPageText(oddNumberedBytes, 2)).not.toContain(
+      "Page 301",
+    );
+    expect(await extractPdfPageText(oddNumberedBytes, 3)).toContain("Page 301");
+
+    await page.goto("/add-page-numbers");
+    await uploadFirstFile(page, fixtures.text10);
+    await expect(page.getByText(/10 pages/i).first()).toBeVisible();
+    await page.getByRole("button", { name: /^Page 1$/ }).click();
+    await page.getByLabel("Start number").fill("400");
+    await page.getByRole("button", { name: /Even pages/i }).click();
+    const evenNumberedBytes = await generateThenDownloadBytes(
+      page,
+      /^Add page numbers$/,
+      /^Download numbered PDF$/,
+      "numbered.pdf",
+    );
+    expect(await extractPdfPageText(evenNumberedBytes, 1)).not.toContain(
+      "Page 400",
+    );
+    expect(await extractPdfPageText(evenNumberedBytes, 2)).toContain("Page 400");
+    expect(await extractPdfPageText(evenNumberedBytes, 4)).toContain("Page 401");
+
     await page.goto("/watermark-pdf");
     await uploadFirstFile(page, fixtures.text10);
     await expect(page.getByText(/10 pages/i).first()).toBeVisible();
