@@ -1070,6 +1070,32 @@ test.describe("critical PDF workflows", () => {
     await expectExtractedPageMarker(resetBytes, 12, "PHASE44-PAGE-12");
   });
 
+  test("reorder pages supports keyboard arrow reordering", async ({ page }) => {
+    const fixtures = await ensureFixtures();
+
+    await page.goto("/reorder-pages");
+    await uploadFirstFile(page, fixtures.phase44Markers);
+    const pageTenCard = page.locator(
+      'article[aria-label="Original page 10, position 10"]',
+    );
+    await expect(pageTenCard).toBeVisible();
+    await pageTenCard.focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect(
+      page.locator('article[aria-label="Original page 10, position 9"]'),
+    ).toBeVisible();
+
+    const reorderedBytes = await generateThenDownloadBytes(
+      page,
+      /^Reorder PDF$/,
+      /^Download PDF$/,
+      "pages-reordered.pdf",
+    );
+    expect((await PDFDocument.load(reorderedBytes)).getPageCount()).toBe(12);
+    await expectExtractedPageMarker(reorderedBytes, 9, "PHASE44-PAGE-10");
+    await expectExtractedPageMarker(reorderedBytes, 10, "PHASE44-PAGE-9");
+  });
+
   test("delete pages can undo the last deletion before export", async ({
     page,
   }) => {

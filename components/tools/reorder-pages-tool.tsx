@@ -395,9 +395,9 @@ export function ReorderPagesTool() {
                 <h2 className="text-lg font-semibold text-foreground">
                   Page order
                 </h2>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  Drag pages on desktop or use the move buttons for keyboard and
-                  mobile control.
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  Drag pages on desktop, focus a page and use the arrow keys, or
+                  use the move buttons for mobile control.
                 </p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -581,8 +581,24 @@ const ReorderPageCard = memo(function ReorderPageCard({
       onDragOver={onDragOver}
       onDrop={onDrop}
       onDragEnd={onDragEnd}
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.currentTarget !== event.target) {
+          return;
+        }
+
+        if (event.key === "ArrowLeft" && position > 1) {
+          event.preventDefault();
+          onMoveLeft();
+        }
+
+        if (event.key === "ArrowRight" && position < totalPages) {
+          event.preventDefault();
+          onMoveRight();
+        }
+      }}
       className={cn(
-        "rounded-2xl border border-border bg-background p-3 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md",
+        "rounded-2xl border border-border bg-background p-3 shadow-sm transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring",
         isDragging && "border-primary opacity-75 ring-2 ring-primary/20",
       )}
       aria-label={`Original page ${page.pageNumber}, position ${position}`}
