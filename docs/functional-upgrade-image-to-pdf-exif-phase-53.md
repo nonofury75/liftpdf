@@ -144,7 +144,18 @@ Production local smoke on `npm run start`:
 
 ## Production
 
-Production deployment: pending at report creation. This section must be updated after GitHub push and Vercel READY verification.
+Commit: `b331f52`  
+Vercel deployment URL: `https://liftpdf-5br8ccw66-rachator75010-5712s-projects.vercel.app`  
+Vercel status: READY  
+Production domain: `https://liftpdf.com`
+
+Production smoke results:
+
+- `https://liftpdf.com/jpg-to-pdf`: HTTP 200, EXIF JPEG conversion OK in Chromium and Firefox.
+- `https://liftpdf.com/images-to-pdf`: HTTP 200, mixed EXIF JPEG + PNG conversion OK in Chromium and Firefox.
+- `https://liftpdf.com/png-to-pdf`: HTTP 200, PNG conversion regression OK in Chromium and Firefox.
+
+No page errors, critical console errors or critical failed requests were observed during the production smoke. A non-blocking Vercel/browser resource 402 console message was filtered as unrelated to the tool workflow.
 
 ## Summary
 
@@ -180,5 +191,5 @@ Lint: OK
 Typecheck: OK  
 Build: OK  
 E2E: OK  
-Production deployed: PENDING  
+Production deployed: YES  
 Next remaining P1: Merge PDF bookmarks from filenames or another still-open P1 from the roadmap, to be selected in Phase 54.
