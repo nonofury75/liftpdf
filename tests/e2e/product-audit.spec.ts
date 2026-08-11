@@ -1070,6 +1070,51 @@ test.describe("critical PDF workflows", () => {
     await expectExtractedPageMarker(resetBytes, 12, "PHASE44-PAGE-12");
   });
 
+  test("delete pages can undo the last deletion before export", async ({
+    page,
+  }) => {
+    const fixtures = await ensureFixtures();
+
+    await page.goto("/delete-pages");
+    await uploadFirstFile(page, fixtures.phase44Markers);
+    const undoButton = page.getByRole("button", {
+      name: /^Undo last deletion$/,
+    });
+    await expect(undoButton).toBeDisabled();
+
+    await page.getByRole("button", { name: "Select page 2", exact: true }).click();
+    await page.getByRole("button", { name: "Select page 3", exact: true }).click();
+    await page.getByRole("button", { name: /^Remove Selected$/ }).click();
+    await expect(
+      page.getByRole("button", { name: "Select page 2", exact: true }),
+    ).toHaveCount(0);
+    await expect(undoButton).toBeEnabled();
+
+    await undoButton.click();
+    await expect(
+      page.getByRole("button", { name: "Select page 2", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Select page 3", exact: true }),
+    ).toBeVisible();
+    await expect(undoButton).toBeDisabled();
+
+    await page.getByRole("button", { name: /^Delete page 4$/ }).click();
+    const deletedBytes = await generateThenDownloadBytes(
+      page,
+      /^Delete Pages$/,
+      /^Download PDF$/,
+      "pages-deleted.pdf",
+    );
+
+    expect((await PDFDocument.load(deletedBytes)).getPageCount()).toBe(11);
+    await expectPdfTextMarkers(
+      deletedBytes,
+      [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12],
+      [4],
+    );
+  });
+
   test("split PDF creates fixed interval ZIP groups with explicit names", async ({
     page,
   }) => {

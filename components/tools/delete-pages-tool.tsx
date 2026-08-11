@@ -12,6 +12,7 @@ import {
   RotateCcw,
   ShieldCheck,
   Trash2,
+  Undo2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PdfUploadZone } from "@/components/tools/pdf-upload-zone";
@@ -48,6 +49,7 @@ export function DeletePagesTool() {
   const [pages, setPages] = useState<PdfPageThumbnail[]>([]);
   const [selectedPages, setSelectedPages] = useState<number[]>([]);
   const [deletedPages, setDeletedPages] = useState<number[]>([]);
+  const [deletedPageHistory, setDeletedPageHistory] = useState<number[][]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -86,6 +88,7 @@ export function DeletePagesTool() {
     [deletedPageSet, pages],
   );
   const remainingPageCount = visiblePages.length;
+  const canUndoLastDeletion = deletedPageHistory.length > 0 && !isExporting;
 
   const clearGeneratedFile = useCallback(() => {
     setGeneratedFile((currentFile) => {
@@ -107,6 +110,7 @@ export function DeletePagesTool() {
   const resetSelectionState = useCallback(() => {
     setSelectedPages([]);
     setDeletedPages([]);
+    setDeletedPageHistory([]);
   }, []);
 
   async function handleFilesSelected(files: File[]) {
@@ -222,9 +226,9 @@ export function DeletePagesTool() {
         return;
       }
 
-      const uniquePageNumbers = [...new Set(pageNumbers)].filter(
-        (pageNumber) => !deletedPageSet.has(pageNumber),
-      );
+      const uniquePageNumbers = [...new Set(pageNumbers)]
+        .filter((pageNumber) => !deletedPageSet.has(pageNumber))
+        .sort((a, b) => a - b);
 
       if (!uniquePageNumbers.length) {
         setError("Select at least one page to delete.");
@@ -242,6 +246,10 @@ export function DeletePagesTool() {
       setDeletedPages((currentPages) =>
         [...currentPages, ...uniquePageNumbers].sort((a, b) => a - b),
       );
+      setDeletedPageHistory((currentHistory) => [
+        ...currentHistory,
+        uniquePageNumbers,
+      ]);
       setSelectedPages((currentPages) =>
         currentPages.filter((pageNumber) => !uniquePageNumbers.includes(pageNumber)),
       );
@@ -257,6 +265,27 @@ export function DeletePagesTool() {
   const handleDeleteSelected = useCallback(() => {
     handleDeletePages(selectedPages);
   }, [handleDeletePages, selectedPages]);
+
+  const handleUndoLastDeletion = useCallback(() => {
+    const lastDeletedPages = deletedPageHistory.at(-1);
+
+    if (!lastDeletedPages?.length) {
+      return;
+    }
+
+    const restoredPageSet = new Set(lastDeletedPages);
+
+    clearGeneratedFile();
+    setError(null);
+    setProgress("Last deletion restored.");
+    setDeletedPages((currentPages) =>
+      currentPages.filter((pageNumber) => !restoredPageSet.has(pageNumber)),
+    );
+    setSelectedPages((currentPages) =>
+      currentPages.filter((pageNumber) => !restoredPageSet.has(pageNumber)),
+    );
+    setDeletedPageHistory((currentHistory) => currentHistory.slice(0, -1));
+  }, [clearGeneratedFile, deletedPageHistory]);
 
   const handleDeleteSinglePage = useCallback(
     (pageNumber: number) => {
@@ -478,6 +507,10 @@ export function DeletePagesTool() {
           <PdfSummaryRow label="Removed" value={String(deletedPages.length)} />
           <PdfSummaryRow label="Remaining" value={String(remainingPageCount)} />
           <PdfSummaryRow
+            label="Undo"
+            value={canUndoLastDeletion ? "Available" : "None"}
+          />
+          <PdfSummaryRow
             label="File size"
             value={selectedPdf ? formatFileSize(selectedPdf.file.size) : "-"}
           />
@@ -494,6 +527,16 @@ export function DeletePagesTool() {
         ) : null}
 
         <div className="mt-6 grid gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleUndoLastDeletion}
+            disabled={!canUndoLastDeletion}
+          >
+            <Undo2 className="size-4" aria-hidden="true" />
+            Undo last deletion
+          </Button>
+
           <Button
             type="button"
             onClick={handleExportPdf}
