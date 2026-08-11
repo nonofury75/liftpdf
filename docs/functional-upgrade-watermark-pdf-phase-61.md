@@ -79,7 +79,18 @@ No file content, file name, watermark text, target pages, or page-side choice is
 
 ## Production
 
-Pending deployment for the Phase 61 code commit.
+- Commit: `8893b03 Upgrade Watermark PDF odd even targeting`
+- Vercel deployment: `https://liftpdf-2xp1blcx3-rachator75010-5712s-projects.vercel.app`
+- Vercel status: READY
+- Production route tested: `https://liftpdf.com/watermark-pdf`
+- HTTP 200: YES
+- Chromium desktop production smoke: OK
+- Firefox desktop production smoke: OK
+- Chromium mobile-size production smoke: OK
+- Odd pages summary visible: YES
+- Even pages summary visible: YES
+- Download link generated: YES
+- Critical console/page/request errors: none observed
 
 ## Remaining Limits
 
@@ -107,5 +118,6 @@ Lint: OK
 Typecheck: OK  
 Build: OK  
 E2E: OK  
-Production deployed: PENDING  
+Production deployed: YES  
+Production smoke: OK  
 Next remaining P2: no clearly safe high-value autonomous P2; remaining items require human prioritization or deeper engine work
