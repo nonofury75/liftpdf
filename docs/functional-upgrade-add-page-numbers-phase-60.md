@@ -77,7 +77,18 @@ No file content, file name, page range, or page-side choice is sent to analytics
 
 ## Production
 
-Pending deployment for the Phase 60 code commit.
+- Commit: `28d59b3 Upgrade Add Page Numbers odd even targeting`
+- Vercel deployment: `https://liftpdf-mepxd2w5s-rachator75010-5712s-projects.vercel.app`
+- Vercel status: READY
+- Production route tested: `https://liftpdf.com/add-page-numbers`
+- HTTP 200: YES
+- Chromium desktop production smoke: OK
+- Firefox desktop production smoke: OK
+- Chromium mobile-size production smoke: OK
+- Odd pages summary visible: YES
+- Even pages summary visible: YES
+- Download link generated: YES
+- Critical console/page/request errors: none observed
 
 ## Remaining Limits
 
@@ -104,5 +115,6 @@ Lint: OK
 Typecheck: OK  
 Build: OK  
 E2E: OK after rerun  
-Production deployed: PENDING  
+Production deployed: YES  
+Production smoke: OK  
 Next remaining P2: Watermark PDF layer above/below toggle
