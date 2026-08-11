@@ -42,6 +42,7 @@ This roadmap is based on `docs/functional-depth-audit.md`. It prioritizes profes
 | Reorder Pages | Reverse order | Useful for scanned stacks | Array transform | Completed in Phase 57 | Low | Order fixture | No privacy impact |
 | Delete Pages | Undo last selection/delete | Prevents user mistakes | UI state | Completed in Phase 58 | Medium | Selection state e2e | No privacy impact |
 | Add Page Numbers | Odd/even targeting | Useful for duplex reports and page-side workflows | Existing pdf-lib draw loop | Completed in Phase 60 | Medium | Odd/even text extraction | No privacy impact |
+| Watermark PDF | Odd/even targeting | Useful for duplex reports and scanned sets | Existing pdf-lib draw loop | Completed in Phase 61 | Medium | Odd/even text extraction | No privacy impact |
 | Compress PDF | Approximate target size | Only if controlled loop proves reliable | QPDF quality loop or new engine | 3-5 days | High | Size convergence, quality checks | More CPU/memory |
 
 ## P3 — Optional / Later
@@ -52,7 +53,7 @@ This roadmap is based on `docs/functional-depth-audit.md`. It prioritizes profes
 | PDF to JPG/PNG | Embedded image extraction | It is a different tool and must not be faked |
 | Merge PDF | Bookmarks from file names | Nice for long merged reports but not required for V1 |
 | Add Page Numbers | Roman numerals/chapters | Power-user feature that adds complexity |
-| Watermark PDF | Layer above/below toggle | Useful but less urgent than page range |
+| Watermark PDF | Layer above/below toggle | `REJECTED_MISLEADING_CURRENT_ENGINE` without deterministic below-content support in the current pdf-lib append draw flow |
 | PDF to Text | Preserve layout mode | Hard to do reliably; can disappoint on columns/tables |
 
 ## Rejected

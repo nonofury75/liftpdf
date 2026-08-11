@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
 
 type WatermarkMode = "text" | "image";
 type FontChoice = "helvetica" | "times" | "courier";
-type PageTargetMode = "all" | "range";
+type PageTargetMode = "all" | "odd" | "even" | "range";
 type WatermarkPosition =
   | "center"
   | "top-left"
@@ -102,6 +102,16 @@ const pageTargetOptions: Array<{
     label: "All pages",
     value: "all",
     description: "Apply the watermark to every page.",
+  },
+  {
+    label: "Odd pages",
+    value: "odd",
+    description: "Apply only to pages 1, 3, 5 and other odd-numbered pages.",
+  },
+  {
+    label: "Even pages",
+    value: "even",
+    description: "Apply only to pages 2, 4, 6 and other even-numbered pages.",
   },
   {
     label: "Page range",
@@ -1470,6 +1480,25 @@ function getTargetPageNumbers({
     return Array.from({ length: pageCount }, (_, index) => index + 1);
   }
 
+  if (mode === "odd") {
+    return Array.from({ length: pageCount }, (_, index) => index + 1).filter(
+      (pageNumber) => pageNumber % 2 === 1,
+    );
+  }
+
+  if (mode === "even") {
+    const evenPages = Array.from(
+      { length: pageCount },
+      (_, index) => index + 1,
+    ).filter((pageNumber) => pageNumber % 2 === 0);
+
+    if (!evenPages.length) {
+      throw new Error("This PDF has only one page, so there are no even pages to watermark.");
+    }
+
+    return evenPages;
+  }
+
   return parsePageRange(pageRange, pageCount);
 }
 
@@ -1542,6 +1571,14 @@ function summarizePageTarget(
 
   if (mode === "all") {
     return `${pageNumbers.length} pages`;
+  }
+
+  if (mode === "odd") {
+    return `${pageNumbers.length} odd pages`;
+  }
+
+  if (mode === "even") {
+    return `${pageNumbers.length} even pages`;
   }
 
   return `${pageNumbers.length} pages (${pageRange.trim()})`;

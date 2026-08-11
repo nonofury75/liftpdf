@@ -2589,6 +2589,48 @@ test.describe("critical PDF workflows", () => {
     expect(await extractPdfPageText(rangeWatermarkedBytes, 4)).not.toContain(
       "PHASE40-WATERMARK",
     );
+
+    await page.goto("/watermark-pdf");
+    await uploadFirstFile(page, fixtures.text10);
+    await expect(page.getByText(/10 pages/i).first()).toBeVisible();
+    await page.getByLabel(/Watermark text/i).fill("PHASE61-WM");
+    await page.getByRole("button", { name: /Odd pages/i }).click();
+    const oddWatermarkedBytes = await generateThenDownloadBytes(
+      page,
+      /^Add watermark$/,
+      /^Download watermarked PDF$/,
+      "watermarked.pdf",
+    );
+    expect(await extractPdfPageText(oddWatermarkedBytes, 1)).toContain(
+      "PHASE61-WM",
+    );
+    expect(await extractPdfPageText(oddWatermarkedBytes, 2)).not.toContain(
+      "PHASE61-WM",
+    );
+    expect(await extractPdfPageText(oddWatermarkedBytes, 3)).toContain(
+      "PHASE61-WM",
+    );
+
+    await page.goto("/watermark-pdf");
+    await uploadFirstFile(page, fixtures.text10);
+    await expect(page.getByText(/10 pages/i).first()).toBeVisible();
+    await page.getByLabel(/Watermark text/i).fill("PHASE61-WM");
+    await page.getByRole("button", { name: /Even pages/i }).click();
+    const evenWatermarkedBytes = await generateThenDownloadBytes(
+      page,
+      /^Add watermark$/,
+      /^Download watermarked PDF$/,
+      "watermarked.pdf",
+    );
+    expect(await extractPdfPageText(evenWatermarkedBytes, 1)).not.toContain(
+      "PHASE61-WM",
+    );
+    expect(await extractPdfPageText(evenWatermarkedBytes, 2)).toContain(
+      "PHASE61-WM",
+    );
+    expect(await extractPdfPageText(evenWatermarkedBytes, 4)).toContain(
+      "PHASE61-WM",
+    );
   });
 });
 
