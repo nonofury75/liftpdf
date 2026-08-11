@@ -73,7 +73,16 @@ No file content, file name, deleted page numbers, or undo history are sent to an
 
 ## Production
 
-Pending deployment for the Phase 58 code commit.
+- Commit: `da65c2d Upgrade Delete Pages undo deletion`
+- Vercel deployment: `https://liftpdf-lox3wfjls-rachator75010-5712s-projects.vercel.app`
+- Vercel status: READY
+- Production route tested: `https://liftpdf.com/delete-pages`
+- HTTP 200: YES
+- Chromium desktop production smoke: OK
+- Firefox desktop production smoke: OK
+- Chromium mobile-size production smoke: OK
+- Downloaded filename: `pages-deleted.pdf`
+- Critical console/page/request errors: none observed
 
 ## Remaining Limits
 
@@ -101,5 +110,6 @@ Lint: OK
 Typecheck: OK  
 Build: OK  
 E2E: OK  
-Production deployed: PENDING  
+Production deployed: YES  
+Production smoke: OK  
 Next remaining P2: Reorder Pages keyboard reordering
