@@ -1038,6 +1038,38 @@ test.describe("critical PDF workflows", () => {
     expect(formPdf.getForm().getFields().length).toBeGreaterThanOrEqual(2);
   });
 
+  test("reorder pages can reverse the full document order", async ({ page }) => {
+    const fixtures = await ensureFixtures();
+
+    await page.goto("/reorder-pages");
+    await uploadFirstFile(page, fixtures.phase44Markers);
+    await expect(
+      page.getByRole("button", { name: /Reverse order/i }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: /Reverse order/i }).click();
+    await expect(page.getByRole("button", { name: /^Reset order$/ })).toBeEnabled();
+
+    const reversedBytes = await generateThenDownloadBytes(
+      page,
+      /^Reorder PDF$/,
+      /^Download PDF$/,
+      "pages-reordered.pdf",
+    );
+    expect((await PDFDocument.load(reversedBytes)).getPageCount()).toBe(12);
+    await expectExtractedPageMarker(reversedBytes, 1, "PHASE44-PAGE-12");
+    await expectExtractedPageMarker(reversedBytes, 12, "PHASE44-PAGE-1");
+
+    await page.getByRole("button", { name: /^Reset order$/ }).click();
+    const resetBytes = await generateThenDownloadBytes(
+      page,
+      /^Reorder PDF$/,
+      /^Download PDF$/,
+      "pages-reordered.pdf",
+    );
+    await expectExtractedPageMarker(resetBytes, 1, "PHASE44-PAGE-1");
+    await expectExtractedPageMarker(resetBytes, 12, "PHASE44-PAGE-12");
+  });
+
   test("split PDF creates fixed interval ZIP groups with explicit names", async ({
     page,
   }) => {

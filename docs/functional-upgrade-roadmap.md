@@ -39,7 +39,7 @@ This roadmap is based on `docs/functional-depth-audit.md`. It prioritizes profes
 | Split PDF | Split by bookmarks | Useful but requires outline parsing | PDF outline inspection | 2-4 days | High | Bookmark fixture | No privacy impact |
 | Extract Pages | Export each selected page separately as ZIP | Common admin workflow | pdf-lib + JSZip | 1 day | Medium | ZIP names/count | No privacy impact |
 | Reorder Pages | Keyboard reordering | Accessibility and power use | UI/event handling | 1 day | Medium | Keyboard e2e | No privacy impact |
-| Reorder Pages | Reverse order | Useful for scanned stacks | Array transform | 0.5 day | Low | Order fixture | No privacy impact |
+| Reorder Pages | Reverse order | Useful for scanned stacks | Array transform | Completed in Phase 57 | Low | Order fixture | No privacy impact |
 | Delete Pages | Undo last selection/delete | Prevents user mistakes | UI state | 1 day | Medium | Selection state e2e | No privacy impact |
 | Compress PDF | Approximate target size | Only if controlled loop proves reliable | QPDF quality loop or new engine | 3-5 days | High | Size convergence, quality checks | More CPU/memory |
 

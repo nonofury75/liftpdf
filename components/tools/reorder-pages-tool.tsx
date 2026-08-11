@@ -255,6 +255,15 @@ export function ReorderPagesTool() {
     );
   }, [clearGeneratedFile]);
 
+  const handleReverseOrder = useCallback(() => {
+    clearGeneratedFile();
+    setError(null);
+    setStatus(null);
+    setProgress(null);
+    setDraggedPageNumber(null);
+    setPages((currentPages) => currentPages.slice().reverse());
+  }, [clearGeneratedFile]);
+
   async function handleExportPdf() {
     if (!selectedPdf) {
       setError("Please choose a PDF file before reordering pages.");
@@ -391,15 +400,26 @@ export function ReorderPagesTool() {
                   mobile control.
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleResetOrder}
-                disabled={!hasOrderChanged}
-              >
-                <RotateCcw className="size-4" aria-hidden="true" />
-                Reset order
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleResetOrder}
+                  disabled={!hasOrderChanged}
+                >
+                  <RotateCcw className="size-4" aria-hidden="true" />
+                  Reset order
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleReverseOrder}
+                  disabled={pages.length < 2}
+                >
+                  <ArrowLeft className="size-4" aria-hidden="true" />
+                  Reverse order
+                </Button>
+              </div>
             </div>
 
             <div className="grid max-h-[780px] gap-4 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
