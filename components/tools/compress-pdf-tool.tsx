@@ -44,6 +44,9 @@ type CompressionResult = {
   finalSize: number;
   mode: QpdfCompressionMode;
   removeMetadata: boolean;
+  previewUrl: string | null;
+  previewWidth: number | null;
+  previewHeight: number | null;
 };
 
 const compressedFileName = "compressed.pdf";
@@ -192,6 +195,7 @@ export function CompressPdfTool() {
       const compressedBuffer = new ArrayBuffer(compressedBytes.byteLength);
       new Uint8Array(compressedBuffer).set(compressedBytes);
       const blob = new Blob([compressedBuffer], { type: "application/pdf" });
+      const compressedPreview = await createCompressedPreview(blob);
 
       setResult({
         url: URL.createObjectURL(blob),
@@ -200,6 +204,9 @@ export function CompressPdfTool() {
         finalSize: blob.size,
         mode: compressionMode,
         removeMetadata,
+        previewHeight: compressedPreview?.height ?? null,
+        previewUrl: compressedPreview?.previewUrl ?? null,
+        previewWidth: compressedPreview?.width ?? null,
       });
       setCompressionStep("Compressed PDF created successfully.");
       analytics.trackConversionCompleted({
@@ -233,6 +240,10 @@ export function CompressPdfTool() {
     setResult((currentResult) => {
       if (currentResult) {
         URL.revokeObjectURL(currentResult.url);
+
+        if (currentResult.previewUrl) {
+          URL.revokeObjectURL(currentResult.previewUrl);
+        }
       }
 
       return null;
@@ -284,6 +295,13 @@ export function CompressPdfTool() {
         </div>
 
         {selectedPdf ? <PdfPreviewPanel selectedPdf={selectedPdf} /> : null}
+
+        {selectedPdf && result ? (
+          <CompressionComparisonPanel
+            result={result}
+            selectedPdf={selectedPdf}
+          />
+        ) : null}
 
         <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-start justify-between gap-4">
@@ -551,6 +569,100 @@ function PdfPreviewPanel({ selectedPdf }: PdfPreviewPanelProps) {
   );
 }
 
+type CompressionComparisonPanelProps = {
+  selectedPdf: SelectedPdf;
+  result: CompressionResult;
+};
+
+function CompressionComparisonPanel({
+  selectedPdf,
+  result,
+}: CompressionComparisonPanelProps) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">
+            Before and after preview
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            Compare the first page before downloading. The preview is local and
+            helps catch obvious visual changes after compression.
+          </p>
+        </div>
+        <span className="w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+          {getCompressionModeLabel(result.mode)}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <ComparisonPreviewCard
+          label="Original"
+          size={formatFileSize(result.originalSize)}
+          previewUrl={selectedPdf.previewUrl}
+          previewWidth={selectedPdf.previewWidth}
+          previewHeight={selectedPdf.previewHeight}
+          alt={`Original first page preview for ${selectedPdf.file.name}`}
+        />
+        <ComparisonPreviewCard
+          label="Compressed"
+          size={formatFileSize(result.finalSize)}
+          previewUrl={result.previewUrl}
+          previewWidth={result.previewWidth}
+          previewHeight={result.previewHeight}
+          alt="Compressed first page preview"
+        />
+      </div>
+    </section>
+  );
+}
+
+type ComparisonPreviewCardProps = {
+  alt: string;
+  label: string;
+  previewHeight: number | null;
+  previewUrl: string | null;
+  previewWidth: number | null;
+  size: string;
+};
+
+function ComparisonPreviewCard({
+  alt,
+  label,
+  previewHeight,
+  previewUrl,
+  previewWidth,
+  size,
+}: ComparisonPreviewCardProps) {
+  return (
+    <article className="rounded-2xl border border-border bg-muted/30 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-foreground">{label}</h3>
+        <span className="rounded-full bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+          {size}
+        </span>
+      </div>
+      <div className="mt-4 grid min-h-72 place-items-center rounded-xl border border-border bg-slate-100 p-4">
+        {previewUrl ? (
+          <Image
+            src={previewUrl}
+            alt={alt}
+            width={previewWidth ?? 320}
+            height={previewHeight ?? 420}
+            unoptimized
+            className="max-h-[360px] w-auto rounded-md bg-white object-contain shadow-xl ring-1 ring-black/10"
+          />
+        ) : (
+          <p className="max-w-60 text-center text-sm leading-6 text-muted-foreground">
+            Preview unavailable. The compressed PDF is still validated before
+            download.
+          </p>
+        )}
+      </div>
+    </article>
+  );
+}
+
 type InfoTileProps = {
   label: string;
   value: string;
@@ -611,6 +723,24 @@ function isPdfFile(file: File) {
   return (
     file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
   );
+}
+
+async function createCompressedPreview(blob: Blob) {
+  let pdf: Awaited<ReturnType<typeof loadPdfDocument>> | null = null;
+
+  try {
+    const compressedFile = new File([blob], compressedFileName, {
+      type: "application/pdf",
+    });
+
+    pdf = await loadPdfDocument(compressedFile);
+
+    return await renderPdfPageThumbnail(pdf, 1);
+  } catch {
+    return null;
+  } finally {
+    await pdf?.destroy();
+  }
 }
 
 function getCompressionModeLabel(mode: QpdfCompressionMode) {

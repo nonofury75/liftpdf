@@ -861,6 +861,18 @@ test.describe("critical PDF workflows", () => {
       );
       outputs[mode] = bytes;
       expect((await PDFDocument.load(bytes)).getPageCount()).toBe(6);
+      await expect(
+        page.getByRole("heading", { name: /^Before and after preview$/ }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: /^Original$/ }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: /^Compressed$/ }),
+      ).toBeVisible();
+      await expect(
+        page.getByAltText(/^Compressed first page preview$/),
+      ).toBeVisible();
     }
 
     expect(outputs["Preserve quality"].byteLength).not.toBe(
