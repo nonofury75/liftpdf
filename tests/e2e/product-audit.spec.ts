@@ -15,6 +15,7 @@ import {
   getSafePdfOutputFileNameOrFallback,
   parsePdfOutputFileName,
 } from "../../lib/output-filename";
+import { parseExifOrientation } from "../../lib/image-orientation";
 
 const toolPages = [
   { href: "/jpg-to-pdf", title: "JPG to PDF Converter" },
@@ -2141,6 +2142,115 @@ test.describe("critical PDF workflows", () => {
     await expect(page.getByRole("button", { name: /^Convert to JPG$/ })).toBeEnabled();
   });
 
+  test("Image to PDF applies EXIF orientation consistently across JPG PNG and Images tools", async ({
+    page,
+  }) => {
+    test.setTimeout(180000);
+    const fixtures = await ensureFixtures();
+
+    for (const [orientation, expected] of Object.entries(
+      phase53ExpectedCorners,
+    )) {
+      const sourcePath = fixtures.phase53Exif[orientation];
+      expect(
+        parseExifOrientation(bufferToExactArrayBuffer(fs.readFileSync(sourcePath))),
+      ).toBe(Number(orientation));
+
+      await page.goto("/jpg-to-pdf");
+      await uploadFirstFile(page, sourcePath);
+      await expect(page.getByLabel("Output file name")).toHaveCount(0);
+      await expect(
+        page.getByText(
+          new RegExp(`phase53-orientation-${orientation}\\.jpg`, "i"),
+        ),
+      ).toBeVisible();
+      const pdfBytes = await generateThenDownloadBytes(
+        page,
+        /^Convert to PDF$/,
+        /^Download PDF$/,
+        "jpg-to-pdf.pdf",
+      );
+      const pdf = await PDFDocument.load(pdfBytes);
+      expect(pdf.getPageCount()).toBe(1);
+      expect(await roundPdfPageSize(pdfBytes)).toEqual(expected.dimensions);
+      await expectPdfRenderedCorners(page, pdfBytes, expected.corners);
+    }
+
+    await page.goto("/jpg-to-pdf");
+    await uploadFirstFile(page, fixtures.phase53CorruptExif);
+    const corruptPdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "jpg-to-pdf.pdf",
+    );
+    expect(await roundPdfPageSize(corruptPdf)).toEqual({
+      height: 80,
+      width: 120,
+    });
+    await expectPdfRenderedCorners(
+      page,
+      corruptPdf,
+      phase53ExpectedCorners[1].corners,
+    );
+
+    await page.goto("/jpg-to-pdf");
+    await uploadFirstFile(page, fixtures.phase53NoExif);
+    const noExifPdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "jpg-to-pdf.pdf",
+    );
+    expect(await roundPdfPageSize(noExifPdf)).toEqual({
+      height: 80,
+      width: 120,
+    });
+    await expectPdfRenderedCorners(
+      page,
+      noExifPdf,
+      phase53ExpectedCorners[1].corners,
+    );
+
+    await page.goto("/images-to-pdf");
+    await uploadFirstFile(page, [
+      fixtures.phase53Exif["6"],
+      fixtures.transparentPng,
+      fixtures.phase53Exif["3"],
+      fixtures.webp,
+      fixtures.phase53Exif["8"],
+    ]);
+    await expect(page.getByText(/phase53-orientation-6\.jpg/i)).toBeVisible();
+    await page
+      .getByRole("button", { name: /Move phase53-orientation-8\.jpg up/i })
+      .click();
+    await page
+      .getByRole("button", { name: /Remove phase53-orientation-3\.jpg/i })
+      .click();
+    await page
+      .getByRole("button", { name: /Rotate phase53-orientation-8\.jpg right/i })
+      .click();
+    await page.getByLabel("Output file name").fill("phase53 mixed batch");
+    const mixedPdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "phase53 mixed batch.pdf",
+    );
+    expect((await PDFDocument.load(mixedPdf)).getPageCount()).toBe(4);
+
+    await page.goto("/png-to-pdf");
+    await uploadFirstFile(page, fixtures.transparentPng);
+    await expect(page.getByLabel("Output file name")).toHaveCount(0);
+    const transparentPdf = await generateThenDownloadBytes(
+      page,
+      /^Convert to PDF$/,
+      /^Download PDF$/,
+      "png-to-pdf.pdf",
+    );
+    expect((await PDFDocument.load(transparentPdf)).getPageCount()).toBe(1);
+  });
+
   test("Images to PDF supports a custom output filename without changing JPG or PNG tools", async ({
     page,
   }) => {
@@ -2343,6 +2453,63 @@ function readyMergeFileCards(page: Page) {
   return page.locator("li").filter({ hasText: "Ready" });
 }
 
+const phase53ExpectedCorners: Record<
+  string,
+  {
+    dimensions: { height: number; width: number };
+    corners: PngCornerColors;
+  }
+> = {
+  1: {
+    dimensions: { height: 80, width: 120 },
+    corners: { bottomLeft: "blue", bottomRight: "yellow", topLeft: "red", topRight: "green" },
+  },
+  2: {
+    dimensions: { height: 80, width: 120 },
+    corners: { bottomLeft: "yellow", bottomRight: "blue", topLeft: "green", topRight: "red" },
+  },
+  3: {
+    dimensions: { height: 80, width: 120 },
+    corners: { bottomLeft: "green", bottomRight: "red", topLeft: "yellow", topRight: "blue" },
+  },
+  4: {
+    dimensions: { height: 80, width: 120 },
+    corners: { bottomLeft: "red", bottomRight: "green", topLeft: "blue", topRight: "yellow" },
+  },
+  5: {
+    dimensions: { height: 120, width: 80 },
+    corners: { bottomLeft: "green", bottomRight: "yellow", topLeft: "red", topRight: "blue" },
+  },
+  6: {
+    dimensions: { height: 120, width: 80 },
+    corners: { bottomLeft: "yellow", bottomRight: "green", topLeft: "blue", topRight: "red" },
+  },
+  7: {
+    dimensions: { height: 120, width: 80 },
+    corners: { bottomLeft: "blue", bottomRight: "red", topLeft: "yellow", topRight: "green" },
+  },
+  8: {
+    dimensions: { height: 120, width: 80 },
+    corners: { bottomLeft: "red", bottomRight: "blue", topLeft: "green", topRight: "yellow" },
+  },
+};
+
+type PngCornerColors = {
+  bottomLeft: Phase53ColorName;
+  bottomRight: Phase53ColorName;
+  topLeft: Phase53ColorName;
+  topRight: Phase53ColorName;
+};
+
+type Phase53ColorName = "blue" | "green" | "red" | "yellow";
+
+const phase53Colors: Record<Phase53ColorName, [number, number, number]> = {
+  blue: [20, 60, 240],
+  green: [20, 200, 40],
+  red: [240, 20, 20],
+  yellow: [245, 220, 20],
+};
+
 async function downloadBytes(
   page: Page,
   buttonName: RegExp,
@@ -2539,6 +2706,195 @@ function getPngDimensions(bytes: Buffer) {
     width: bytes.readUInt32BE(16),
     height: bytes.readUInt32BE(20),
   };
+}
+
+function bufferToExactArrayBuffer(bytes: Buffer) {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+
+  return copy.buffer;
+}
+
+function roundPdfPageSize(pdfBytes: Buffer) {
+  return PDFDocument.load(pdfBytes).then((pdf) => {
+    const size = pdf.getPage(0).getSize();
+    return {
+      height: Math.round(size.height),
+      width: Math.round(size.width),
+    };
+  });
+}
+
+async function expectPdfRenderedCorners(
+  page: Page,
+  pdfBytes: Buffer,
+  expectedCorners: PngCornerColors,
+) {
+  const pdfPath = path.join(fixturesDir, `phase53-render-${crypto.randomUUID()}.pdf`);
+  fs.writeFileSync(pdfPath, pdfBytes);
+  await page.goto("/pdf-to-png");
+  await uploadFirstFile(page, pdfPath);
+  const pngBytes = await generateThenDownloadBytes(
+    page,
+    /^Convert to PNG$/,
+    /^Download PNG$/,
+    "page-1.png",
+  );
+  const png = decodePngRgb(pngBytes);
+  const samples = {
+    bottomLeft: samplePngRgb(png, 0.12, 0.88),
+    bottomRight: samplePngRgb(png, 0.88, 0.88),
+    topLeft: samplePngRgb(png, 0.12, 0.12),
+    topRight: samplePngRgb(png, 0.88, 0.12),
+  };
+
+  for (const corner of Object.keys(expectedCorners) as Array<
+    keyof PngCornerColors
+  >) {
+    expectColorClose(
+      samples[corner],
+      phase53Colors[expectedCorners[corner]],
+      `${corner} should be ${expectedCorners[corner]}`,
+    );
+  }
+}
+
+function decodePngRgb(bytes: Buffer) {
+  const signature = bytes.subarray(0, 8).toString("hex");
+
+  if (signature !== "89504e470d0a1a0a") {
+    throw new Error("Expected PNG bytes.");
+  }
+
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let colorType = 0;
+  const idatChunks: Buffer[] = [];
+
+  while (offset + 8 <= bytes.length) {
+    const length = bytes.readUInt32BE(offset);
+    const type = bytes.subarray(offset + 4, offset + 8).toString("ascii");
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+
+    if (dataEnd + 4 > bytes.length) {
+      throw new Error("Invalid PNG chunk length.");
+    }
+
+    if (type === "IHDR") {
+      width = bytes.readUInt32BE(dataStart);
+      height = bytes.readUInt32BE(dataStart + 4);
+      colorType = bytes[dataStart + 9];
+    } else if (type === "IDAT") {
+      idatChunks.push(bytes.subarray(dataStart, dataEnd));
+    } else if (type === "IEND") {
+      break;
+    }
+
+    offset = dataEnd + 4;
+  }
+
+  const bytesPerPixel = colorType === 6 ? 4 : colorType === 2 ? 3 : 0;
+
+  if (!width || !height || !bytesPerPixel) {
+    throw new Error(`Unsupported PNG color type ${colorType}.`);
+  }
+
+  const inflated = inflateSync(Buffer.concat(idatChunks));
+  const stride = width * bytesPerPixel;
+  const pixels = Buffer.alloc(width * height * 3);
+  let inputOffset = 0;
+  let previous = Buffer.alloc(stride);
+
+  for (let y = 0; y < height; y += 1) {
+    const filter = inflated[inputOffset];
+    inputOffset += 1;
+    const row = Buffer.from(inflated.subarray(inputOffset, inputOffset + stride));
+    inputOffset += stride;
+    unfilterPngRow(row, previous, bytesPerPixel, filter);
+
+    for (let x = 0; x < width; x += 1) {
+      const source = x * bytesPerPixel;
+      const target = (y * width + x) * 3;
+      pixels[target] = row[source];
+      pixels[target + 1] = row[source + 1];
+      pixels[target + 2] = row[source + 2];
+    }
+
+    previous = row;
+  }
+
+  return { height, pixels, width };
+}
+
+function unfilterPngRow(
+  row: Buffer,
+  previous: Buffer,
+  bytesPerPixel: number,
+  filter: number,
+) {
+  for (let index = 0; index < row.length; index += 1) {
+    const left = index >= bytesPerPixel ? row[index - bytesPerPixel] : 0;
+    const up = previous[index] ?? 0;
+    const upLeft = index >= bytesPerPixel ? previous[index - bytesPerPixel] : 0;
+
+    if (filter === 1) {
+      row[index] = (row[index] + left) & 0xff;
+    } else if (filter === 2) {
+      row[index] = (row[index] + up) & 0xff;
+    } else if (filter === 3) {
+      row[index] = (row[index] + Math.floor((left + up) / 2)) & 0xff;
+    } else if (filter === 4) {
+      row[index] = (row[index] + paethPredictor(left, up, upLeft)) & 0xff;
+    } else if (filter !== 0) {
+      throw new Error(`Unsupported PNG filter ${filter}.`);
+    }
+  }
+}
+
+function paethPredictor(left: number, up: number, upLeft: number) {
+  const estimate = left + up - upLeft;
+  const leftDistance = Math.abs(estimate - left);
+  const upDistance = Math.abs(estimate - up);
+  const upLeftDistance = Math.abs(estimate - upLeft);
+
+  if (leftDistance <= upDistance && leftDistance <= upLeftDistance) {
+    return left;
+  }
+
+  return upDistance <= upLeftDistance ? up : upLeft;
+}
+
+function samplePngRgb(
+  png: { height: number; pixels: Buffer; width: number },
+  xRatio: number,
+  yRatio: number,
+) {
+  const x = Math.max(0, Math.min(png.width - 1, Math.round(png.width * xRatio)));
+  const y = Math.max(0, Math.min(png.height - 1, Math.round(png.height * yRatio)));
+  const offset = (y * png.width + x) * 3;
+
+  return [
+    png.pixels[offset],
+    png.pixels[offset + 1],
+    png.pixels[offset + 2],
+  ] as [number, number, number];
+}
+
+function expectColorClose(
+  actual: [number, number, number],
+  expected: [number, number, number],
+  message: string,
+) {
+  const distance = Math.sqrt(
+    (actual[0] - expected[0]) ** 2 +
+      (actual[1] - expected[1]) ** 2 +
+      (actual[2] - expected[2]) ** 2,
+  );
+  expect(distance, `${message}; actual rgb ${actual.join(",")}`).toBeLessThan(
+    95,
+  );
 }
 
 function getJpegDimensions(bytes: Buffer) {

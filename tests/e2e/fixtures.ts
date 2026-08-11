@@ -18,6 +18,26 @@ const onePixelJpg =
   "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAH/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAEFAqf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/ASP/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/ASP/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAY/Aqf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/IV//2gAMAwEAAgADAAAAEP/EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQMBAT8QH//EABQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQIBAT8QH//EABQQAQAAAAAAAAAAAAAAAAAAABD/2gAIAQEAAT8QH//Z";
 const onePixelWebp =
   "UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA";
+const phase53BaseJpg =
+  "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAIBAQEBAQIBAQECAgICAgQDAgICAgUEBAMEBgUGBgYFBgYGBwkIBgcJBwYGCAsICQoK" +
+  "CgoKBggLDAsKDAkKCgr/2wBDAQICAgICAgUDAwUKBwYHCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoK" +
+  "CgoKCgoKCgr/wAARCABQAHgDAREAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUF" +
+  "BAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVW" +
+  "V1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi" +
+  "4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAEC" +
+  "AxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVm" +
+  "Z2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq" +
+  "8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD5fr+bz/awKACgAoAKACgAoA9O/Zy/5jP/AG7/APtWvJzT7Hz/AEP8lf2pH/NI/wDc/wD+" +
+  "6R6dXkn+SoUAFABQAUAFABQB8x19Yf8AWoFABQAUAFABQAUAenfs5f8AMZ/7d/8A2rXk5p9j5/of5K/tSP8Amkf+5/8A90j06vJP" +
+  "8lQoAKACgAoAKACgD5jr6w/61AoAKACgAoAKACgD079nL/mM/wDbv/7Vryc0+x8/0P8AJX9qR/zSP/c//wC6R6dXkn+SoUAFABQA" +
+  "UAFABQB8x19Yf9agUAFABQAUAFABQB6d+zl/zGf+3f8A9q15OafY+f6H+Sv7Uj/mkf8Auf8A/dI9OryT/JUKACgAoAKACgAoA+Y6" +
+  "+sP+tQKACgAoAKACgAoA9O/Zy/5jP/bv/wC1a8nNPsfP9D/JX9qR/wA0j/3P/wDukenV5J/kqFABQAUAFABQAUAfGdf9DB/SgUAF" +
+  "ABQAUAFABQB96f8ABEX/AJqd/wBwX/2/r/I39qf/AM0h/wB1D/3SP6G8Bv8AmY/9wf8A3Kfelf5Gn9DBQAUAFABQAUAFAH4L1/1y" +
+  "H+eYUAFABQAUAFABQB96f8ERf+anf9wX/wBv6/yN/an/APNIf91D/wB0j+hvAb/mY/8AcH/3Kfelf5Gn9DBQAUAFABQAUAFAH4L1" +
+  "/wBch/nmFABQAUAFABQAUAfen/BEX/mp3/cF/wDb+v8AI39qf/zSH/dQ/wDdI/obwG/5mP8A3B/9yn3pX+Rp/QwUAFABQAUAFABQ" +
+  "B+C9f9ch/nmFABQAUAFABQAUAfen/BEX/mp3/cF/9v6/yN/an/8ANIf91D/3SP6G8Bv+Zj/3B/8Acp96V/kaf0MFABQAUAFABQAU" +
+  "AfgvX/XIf55hQAUAFABQAUAFAH3p/wAERf8Amp3/AHBf/b+v8jf2p/8AzSH/AHUP/dI/obwG/wCZj/3B/wDcp96V/kaf0MFABQAU" +
+  "AFABQAUAf//Z";
 
 export type FixturePaths = {
   text1: string;
@@ -33,6 +53,9 @@ export type FixturePaths = {
   phase51C: string;
   phase52A: string;
   phase52B: string;
+  phase53Exif: Record<string, string>;
+  phase53CorruptExif: string;
+  phase53NoExif: string;
   imageHeavy: string;
   imageOnly: string;
   transparentPdf: string;
@@ -74,6 +97,17 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     phase51C: path.join(fixturesDir, "phase51-c.pdf"),
     phase52A: path.join(fixturesDir, "phase52-a.pdf"),
     phase52B: path.join(fixturesDir, "phase52-b.pdf"),
+    phase53Exif: Object.fromEntries(
+      Array.from({ length: 8 }, (_, index) => {
+        const orientation = index + 1;
+        return [
+          String(orientation),
+          path.join(fixturesDir, `phase53-orientation-${orientation}.jpg`),
+        ];
+      }),
+    ) as Record<string, string>,
+    phase53CorruptExif: path.join(fixturesDir, "phase53-corrupt-exif.jpg"),
+    phase53NoExif: path.join(fixturesDir, "phase53-no-exif.jpg"),
     imageHeavy: path.join(fixturesDir, "image-heavy.pdf"),
     imageOnly: path.join(fixturesDir, "image-only.pdf"),
     transparentPdf: path.join(fixturesDir, "transparent-content.pdf"),
@@ -112,6 +146,14 @@ export async function ensureFixtures(): Promise<FixturePaths> {
     createPhase51MarkerPdf(paths.phase51C, "PHASE51-C"),
     createMarkerPdf(paths.phase52A, "PHASE52-A"),
     createMarkerPdf(paths.phase52B, "PHASE52-B"),
+    ...Object.entries(paths.phase53Exif).map(([orientation, filePath]) =>
+      writeFileAtomic(
+        filePath,
+        createJpegWithExifOrientation(Number(orientation)),
+      ),
+    ),
+    writeFileAtomic(paths.phase53CorruptExif, createCorruptExifJpeg()),
+    writeFileAtomic(paths.phase53NoExif, Buffer.from(phase53BaseJpg, "base64")),
     createImageHeavyPdf(paths.imageHeavy),
     createImageOnlyPdf(paths.imageOnly),
     createTransparentPdf(paths.transparentPdf),
@@ -301,6 +343,54 @@ async function createMarkerPdf(filePath: string, marker: string) {
   });
 
   await writeFileAtomic(filePath, Buffer.from(await pdf.save()));
+}
+
+function createJpegWithExifOrientation(orientation: number) {
+  return insertJpegApp1Segment(
+    Buffer.from(phase53BaseJpg, "base64"),
+    createExifOrientationSegment(orientation),
+  );
+}
+
+function createCorruptExifJpeg() {
+  return insertJpegApp1Segment(
+    Buffer.from(phase53BaseJpg, "base64"),
+    createExifOrientationSegment(99),
+  );
+}
+
+function insertJpegApp1Segment(jpeg: Buffer, app1Segment: Buffer) {
+  if (jpeg[0] !== 0xff || jpeg[1] !== 0xd8) {
+    throw new Error("Expected JPEG SOI marker.");
+  }
+
+  return Buffer.concat([jpeg.subarray(0, 2), app1Segment, jpeg.subarray(2)]);
+}
+
+function createExifOrientationSegment(orientation: number) {
+  const exifPayload = Buffer.alloc(38);
+  exifPayload.write("Exif\0\0", 0, "ascii");
+  exifPayload.write("II", 6, "ascii");
+  exifPayload.writeUInt16LE(42, 8);
+  exifPayload.writeUInt32LE(8, 10);
+  exifPayload.writeUInt16LE(1, 14);
+  exifPayload.writeUInt16LE(0x0112, 16);
+  exifPayload.writeUInt16LE(3, 18);
+  exifPayload.writeUInt32LE(1, 20);
+  exifPayload.writeUInt16LE(orientation, 24);
+  exifPayload.writeUInt16LE(0, 26);
+  exifPayload.writeUInt32LE(0, 28);
+  // Extra bytes deliberately resemble unrelated sensitive metadata. The parser
+  // must ignore everything except the Orientation tag.
+  exifPayload.write("GPS", 32, "ascii");
+
+  const segment = Buffer.alloc(4 + exifPayload.length);
+  segment[0] = 0xff;
+  segment[1] = 0xe1;
+  segment.writeUInt16BE(exifPayload.length + 2, 2);
+  exifPayload.copy(segment, 4);
+
+  return segment;
 }
 
 async function createImageOnlyPdf(filePath: string) {

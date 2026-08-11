@@ -11,12 +11,18 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { ExifOrientation } from "@/lib/image-orientation";
 import { cn } from "@/lib/utils";
 
 export type UploadedImage = {
   id: string;
   file: File;
   previewUrl: string;
+  exportBytes?: ArrayBuffer;
+  exportType?: "png";
+  metadataOrientation: ExifOrientation;
+  rawHeight: number;
+  rawWidth: number;
   width: number;
   height: number;
   rotation: ImageRotation;

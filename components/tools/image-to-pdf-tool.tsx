@@ -28,6 +28,12 @@ import {
   getSafePdfOutputFileNameOrFallback,
   parsePdfOutputFileName,
 } from "@/lib/output-filename";
+import {
+  ExifOrientation,
+  getRotatedImageDimensions,
+  normalizeImageRotation,
+  parseExifOrientation,
+} from "@/lib/image-orientation";
 import { cn } from "@/lib/utils";
 
 type ImageToPdfToolProps = {
@@ -301,7 +307,7 @@ export function ImageToPdfTool({
       const pdfDocument = await PDFDocument.create();
 
       for (const image of images) {
-        let imageBytes = await getEmbeddableImageBytes(image.file);
+        let imageBytes = await getEmbeddableImageBytes(image);
         let embeddedImage =
           imageBytes.type === "jpg"
             ? await pdfDocument.embedJpg(imageBytes.bytes)
@@ -887,12 +893,28 @@ async function createUploadedImage(file: File): Promise<UploadedImage> {
   const previewUrl = URL.createObjectURL(file);
 
   try {
+    if (file.type === "image/jpeg") {
+      const bytes = await file.arrayBuffer();
+      const metadataOrientation = parseExifOrientation(bytes);
+
+      if (metadataOrientation !== 1) {
+        return createExifOrientedUploadedImage({
+          file,
+          metadataOrientation,
+          sourceUrl: previewUrl,
+        });
+      }
+    }
+
     const dimensions = await readImageDimensions(previewUrl);
 
     return {
       id: createClientId("image"),
       file,
+      metadataOrientation: 1,
       previewUrl,
+      rawHeight: dimensions.height,
+      rawWidth: dimensions.width,
       width: dimensions.width,
       height: dimensions.height,
       rotation: 0,
@@ -903,7 +925,74 @@ async function createUploadedImage(file: File): Promise<UploadedImage> {
   }
 }
 
-async function getEmbeddableImageBytes(file: File) {
+async function createExifOrientedUploadedImage({
+  file,
+  metadataOrientation,
+  sourceUrl,
+}: {
+  file: File;
+  metadataOrientation: ExifOrientation;
+  sourceUrl: string;
+}): Promise<UploadedImage> {
+  try {
+    const image = await loadImageElement(sourceUrl);
+    const rawWidth = image.naturalWidth;
+    const rawHeight = image.naturalHeight;
+    const canvas = document.createElement("canvas");
+    canvas.width = rawWidth;
+    canvas.height = rawHeight;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("Canvas is not available");
+    }
+
+    context.drawImage(image, 0, 0);
+
+    const blob = await canvasToBlob(canvas, "image/png");
+    const exportBytes = await blob.arrayBuffer();
+
+    canvas.width = 0;
+    canvas.height = 0;
+
+    return {
+      id: createClientId("image"),
+      exportBytes,
+      exportType: "png",
+      file,
+      height: rawHeight,
+      metadataOrientation,
+      previewUrl: URL.createObjectURL(blob),
+      rawHeight,
+      rawWidth,
+      rotation: 0,
+      width: rawWidth,
+    };
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
+async function loadImageElement(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Invalid image"));
+    image.src = src;
+  });
+}
+
+async function getEmbeddableImageBytes(image: UploadedImage) {
+  const file = image.file;
+
+  if (image.exportBytes && image.exportType === "png") {
+    return {
+      type: "png" as const,
+      bytes: image.exportBytes,
+    };
+  }
+
   if (file.type === "image/jpeg") {
     return {
       type: "jpg" as const,
@@ -941,15 +1030,7 @@ async function convertImageToPngBytes(file: File) {
 
     context.drawImage(image, 0, 0);
 
-    const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((result) => {
-        if (result) {
-          resolve(result);
-        } else {
-          reject(new Error("Image conversion failed"));
-        }
-      }, "image/png");
-    });
+    const blob = await canvasToBlob(canvas, "image/png");
 
     return blob.arrayBuffer();
   } finally {
@@ -963,6 +1044,18 @@ async function loadHtmlImage(src: string) {
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error("Image could not load"));
     image.src = src;
+  });
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, type: string) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((result) => {
+      if (result) {
+        resolve(result);
+      } else {
+        reject(new Error("Image conversion failed"));
+      }
+    }, type);
   });
 }
 
@@ -980,20 +1073,6 @@ type ImagePlacement = {
   pageHeight: number;
   pageWidth: number;
 };
-
-function getRotatedImageDimensions({
-  height,
-  rotation,
-  width,
-}: {
-  height: number;
-  rotation: ImageRotation;
-  width: number;
-}) {
-  return rotation === 90 || rotation === 270
-    ? { height: width, width: height }
-    : { height, width };
-}
 
 function getRotatedImageDrawOptions({
   placement,
@@ -1100,10 +1179,6 @@ function calculateImagePlacement({
     pageHeight: pageBox.height,
     pageWidth: pageBox.width,
   };
-}
-
-function normalizeImageRotation(rotation: number): ImageRotation {
-  return (((rotation % 360) + 360) % 360) as ImageRotation;
 }
 
 function orientPageBox(
