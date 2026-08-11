@@ -3,7 +3,7 @@ import path from "node:path";
 import { inflateSync } from "node:zlib";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import JSZip from "jszip";
-import { PDFDocument } from "pdf-lib";
+import { PDFArray, PDFDict, PDFName, PDFDocument, PDFString } from "pdf-lib";
 import { ensureFixtures, fixturesDir } from "./fixtures";
 import {
   getExpectedQpdfPermissionValue,
@@ -1002,6 +1002,40 @@ test.describe("critical PDF workflows", () => {
     await uploadFirstFile(page, fixtures.metadataRich);
     await page.getByRole("button", { name: /Strong/i }).click();
     await expect(page.getByLabel(/Remove document metadata/i)).toBeChecked();
+  });
+
+  test("compress PDF preserves forms links and annotations", async ({
+    page,
+  }) => {
+    const fixtures = await ensureFixtures();
+
+    await page.goto("/compress-pdf");
+    await uploadFirstFile(page, fixtures.annotatedPdf);
+    await page.getByRole("button", { name: /Preserve quality/i }).click();
+    const annotatedBytes = await generateThenDownloadBytes(
+      page,
+      /^Compress PDF$/,
+      /^Download compressed PDF$/,
+      "compressed.pdf",
+    );
+    expect((await PDFDocument.load(annotatedBytes)).getPageCount()).toBe(1);
+    expect(await pdfHasLinkAnnotation(annotatedBytes, "https://liftpdf.com")).toBe(
+      true,
+    );
+
+    await page.goto("/compress-pdf");
+    await uploadFirstFile(page, fixtures.formPdf);
+    await page.getByRole("button", { name: /Preserve quality/i }).click();
+    const formBytes = await generateThenDownloadBytes(
+      page,
+      /^Compress PDF$/,
+      /^Download compressed PDF$/,
+      "compressed.pdf",
+    );
+    const formPdf = await PDFDocument.load(formBytes);
+    expect(formPdf.getPageCount()).toBe(1);
+    expect(pdfHasAcroForm(formPdf)).toBe(true);
+    expect(formPdf.getForm().getFields().length).toBeGreaterThanOrEqual(2);
   });
 
   test("split PDF creates fixed interval ZIP groups with explicit names", async ({
@@ -2679,6 +2713,40 @@ async function readPdfMetadata(pdfBytes: Buffer) {
     creator: pdf.getCreator(),
     producer: pdf.getProducer(),
   };
+}
+
+async function pdfHasLinkAnnotation(pdfBytes: Buffer, expectedUri: string) {
+  const pdf = await PDFDocument.load(pdfBytes);
+  const annotations = pdf.getPage(0).node.Annots();
+
+  if (!annotations || !(annotations instanceof PDFArray)) {
+    return false;
+  }
+
+  for (let index = 0; index < annotations.size(); index += 1) {
+    const annotation = pdf.context.lookup(annotations.get(index), PDFDict);
+    const subtype = annotation.get(PDFName.of("Subtype"));
+    const action = annotation.get(PDFName.of("A"));
+
+    if (subtype !== PDFName.of("Link") || !action) {
+      continue;
+    }
+
+    const actionDict = pdf.context.lookup(action, PDFDict);
+    const uri = actionDict.get(PDFName.of("URI"));
+
+    if (uri instanceof PDFString && uri.decodeText() === expectedUri) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function pdfHasAcroForm(pdf: PDFDocument) {
+  const acroForm = pdf.catalog.get(PDFName.of("AcroForm"));
+
+  return Boolean(acroForm);
 }
 
 function getPdfZipEntryNames(zip: JSZip) {

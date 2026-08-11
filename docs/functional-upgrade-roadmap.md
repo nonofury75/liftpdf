@@ -17,7 +17,7 @@ This roadmap is based on `docs/functional-depth-audit.md`. It prioritizes profes
 | Tool | Feature | Reason | Technology | Estimate | Risk | Tests required | Impact |
 |---|---|---|---|---:|---|---|---|
 | Compress PDF | Before/after visual comparison | Users need to judge scan/image quality after Strong mode | PDF.js thumbnail render | Completed in Phase 54 | Medium | Visual thumbnail render, no pageerror, mobile | More client CPU, privacy preserved |
-| Compress PDF | Link/form/annotation preservation tests | QPDF should preserve structure, but this must be proven | Fixtures + PDF inspection | 1 day | Medium | `/Annots`, `/AcroForm`, link annotations where inspectable | Test-only |
+| Compress PDF | Link/form/annotation preservation tests | QPDF should preserve structure, but this must be proven | Fixtures + PDF inspection | Completed in Phase 55 | Medium | `/Annots`, `/AcroForm`, link annotations where inspectable | Test-only |
 | Compress PDF | Optional remove metadata toggle | Safe and useful when users need smaller/private PDFs | QPDF `--remove-metadata --remove-info` | 0.5-1 day | Low | Metadata-rich fixture before/after | Privacy positive |
 | JPG/PNG/Images to PDF | Editable output filename | Common professional expectation | UI state only | 0.5 day | Low | Download filename tests | No privacy impact |
 | JPG/PNG/Images to PDF | EXIF orientation handling | Phone photos often arrive rotated | Browser EXIF parser or image decode checks | 1-2 days | Medium | EXIF fixture visual/export | Small bundle if parser added |
@@ -67,7 +67,7 @@ This roadmap is based on `docs/functional-depth-audit.md`. It prioritizes profes
 ## Implementation Order
 
 1. Compress PDF professional baseline. Done in Phase 38.
-2. Compress PDF structural preservation tests, metadata toggle and before/after preview.
+2. Compress PDF structural preservation tests, metadata toggle and before/after preview. Done through Phases 43, 54 and 55.
 3. Image-to-PDF output filename + per-image rotation.
 4. Add Page Numbers page range / skip first page.
 5. Watermark page range.
