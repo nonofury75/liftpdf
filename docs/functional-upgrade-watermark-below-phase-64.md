@@ -133,4 +133,23 @@ Validation completed so far:
 
 ## Production Status
 
-Not deployed yet in this local pass.
+Deployment: READY  
+Commit: `1596c85`  
+Deployment URL: https://liftpdf-n0fykjiwi-rachator75010-5712s-projects.vercel.app  
+Production aliases verified by Vercel: https://liftpdf.com, https://www.liftpdf.com  
+
+Production test on `https://liftpdf.com/watermark-pdf`:
+
+- HTTP 200: OK
+- Below-content control visible: OK
+- Upload fixture PDF: OK
+- Generate below-content watermark: OK
+- Download link created as blob PDF: OK
+- Critical page errors: none observed
+- Critical failed requests affecting the workflow: none observed
+
+Observed non-blocking production issue:
+
+- `/_next/image` returned 402 for `/images/seo/watermark-pdf/hero.webp` and `/images/seo/watermark-pdf/thumbnail.webp`.
+- The watermark workflow still completed successfully.
+- This appears unrelated to the Phase 64 PDF engine change and should be tracked separately if image optimization billing/quota is expected to serve those assets.
