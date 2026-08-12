@@ -3,7 +3,15 @@ import path from "node:path";
 import { inflateSync } from "node:zlib";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import JSZip from "jszip";
-import { PDFArray, PDFDict, PDFName, PDFDocument, PDFString } from "pdf-lib";
+import {
+  PDFArray,
+  PDFDict,
+  PDFDocument,
+  PDFName,
+  PDFString,
+  StandardFonts,
+  rgb,
+} from "pdf-lib";
 import { ensureFixtures, fixturesDir } from "./fixtures";
 import {
   getExpectedQpdfPermissionValue,
@@ -2632,6 +2640,181 @@ test.describe("critical PDF workflows", () => {
       "PHASE61-WM",
     );
   });
+
+  test("watermark PDF supports verified below-content text and image layers", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== "chromium", "Deep watermark structure runs once.");
+    const fixtures = await ensureFixtures();
+    const occlusionFixture = path.join(fixturesDir, "phase64-occlusion.pdf");
+    await createPhase64OcclusionPdf(occlusionFixture);
+
+    await page.goto("/watermark-pdf");
+    await uploadFirstFile(page, fixtures.text10);
+    await expect(page.getByText(/10 pages/i).first()).toBeVisible();
+    await page.getByLabel(/Watermark text/i).fill("PHASE64-ABOVE");
+    const aboveBytes = await generateThenDownloadBytes(
+      page,
+      /^Add watermark$/,
+      /^Download watermarked PDF$/,
+      "watermarked.pdf",
+    );
+    expect(await extractPdfPageText(aboveBytes, 1)).toContain("PHASE64-ABOVE");
+    expect(await getFirstContentStreamText(aboveBytes, 0)).not.toContain(
+      "PHASE64-ABOVE",
+    );
+
+    await page.goto("/watermark-pdf");
+    await uploadFirstFile(page, fixtures.text10);
+    await page.getByLabel(/Watermark text/i).fill("PHASE64-BELOW");
+    await page.getByRole("button", { name: /Below content/i }).click();
+    await page.getByRole("button", { name: /Page range/i }).click();
+    await page.getByLabel("Page range").fill("2-3");
+    const belowRangeBytes = await generateThenDownloadBytes(
+      page,
+      /^Add watermark$/,
+      /^Download watermarked PDF$/,
+      "watermarked.pdf",
+    );
+    expect(await getFirstContentStreamText(belowRangeBytes, 1)).toContain(
+      "PHASE64-BELOW",
+    );
+    expect(await getFirstContentStreamText(belowRangeBytes, 2)).toContain(
+      "PHASE64-BELOW",
+    );
+    expect(await getFirstContentStreamText(belowRangeBytes, 0)).not.toContain(
+      "PHASE64-BELOW",
+    );
+    expect(await getFirstContentStreamText(belowRangeBytes, 3)).not.toContain(
+      "PHASE64-BELOW",
+    );
+
+    await page.goto("/watermark-pdf");
+    await uploadFirstFile(page, fixtures.text10);
+    await page.getByLabel(/Watermark text/i).fill("PHASE64-ODD");
+    await page.getByRole("button", { name: /Below content/i }).click();
+    await page.getByRole("button", { name: /Odd pages/i }).click();
+    const oddBelowBytes = await generateThenDownloadBytes(
+      page,
+      /^Add watermark$/,
+      /^Download watermarked PDF$/,
+      "watermarked.pdf",
+    );
+    expect(await getFirstContentStreamText(oddBelowBytes, 0)).toContain("PHASE64-ODD");
+    expect(await getFirstContentStreamText(oddBelowBytes, 1)).not.toContain(
+      "PHASE64-ODD",
+    );
+
+    await page.goto("/watermark-pdf");
+    await uploadFirstFile(page, fixtures.text10);
+    await page.getByLabel(/Watermark text/i).fill("PHASE64-EVEN");
+    await page.getByRole("button", { name: /Below content/i }).click();
+    await page.getByRole("button", { name: /Even pages/i }).click();
+    const evenBelowBytes = await generateThenDownloadBytes(
+      page,
+      /^Add watermark$/,
+      /^Download watermarked PDF$/,
+      "watermarked.pdf",
+    );
+    expect(await getFirstContentStreamText(evenBelowBytes, 0)).not.toContain(
+      "PHASE64-EVEN",
+    );
+    expect(await getFirstContentStreamText(evenBelowBytes, 1)).toContain(
+      "PHASE64-EVEN",
+    );
+
+    await page.goto("/watermark-pdf");
+    await uploadFirstFile(page, fixtures.annotatedPdf);
+    await page.getByLabel(/Watermark text/i).fill("PHASE64-LINK");
+    await page.getByRole("button", { name: /Below content/i }).click();
+    const belowAnnotatedBytes = await generateThenDownloadBytes(
+      page,
+      /^Add watermark$/,
+      /^Download watermarked PDF$/,
+      "watermarked.pdf",
+    );
+    expect(await pdfHasLinkAnnotation(belowAnnotatedBytes, "https://liftpdf.com")).toBe(
+      true,
+    );
+
+    await page.goto("/watermark-pdf");
+    await uploadFirstFile(page, fixtures.formPdf);
+    await page.getByLabel(/Watermark text/i).fill("PHASE64-FORM");
+    await page.getByRole("button", { name: /Below content/i }).click();
+    const belowFormBytes = await generateThenDownloadBytes(
+      page,
+      /^Add watermark$/,
+      /^Download watermarked PDF$/,
+      "watermarked.pdf",
+    );
+    expect(pdfHasAcroForm(await PDFDocument.load(belowFormBytes))).toBe(true);
+
+    await page.goto("/watermark-pdf");
+    await uploadFirstFile(page, fixtures.text1);
+    await page.getByRole("button", { name: /Image watermark/i }).click();
+    await page.locator('input[type="file"]').nth(1).setInputFiles(fixtures.png);
+    await page.getByRole("button", { name: /Below content/i }).click();
+    const belowImageBytes = await generateThenDownloadBytes(
+      page,
+      /^Add watermark$/,
+      /^Download watermarked PDF$/,
+      "watermarked.pdf",
+    );
+    expect(await getFirstContentStreamText(belowImageBytes, 0)).toContain("Do");
+
+    await page.goto("/watermark-pdf");
+    await uploadFirstFile(page, occlusionFixture);
+    await page.getByLabel(/Watermark text/i).fill("PHASE64");
+    await page.getByLabel(/Color/i).fill("#ff0000");
+    await page.getByLabel(/Opacity:/i).fill("1");
+    await page.getByLabel(/Rotation:/i).fill("0");
+    const visibleAboveBytes = await generateThenDownloadBytes(
+      page,
+      /^Add watermark$/,
+      /^Download watermarked PDF$/,
+      "watermarked.pdf",
+    );
+
+    await page.goto("/watermark-pdf");
+    await uploadFirstFile(page, occlusionFixture);
+    await page.getByLabel(/Watermark text/i).fill("PHASE64");
+    await page.getByLabel(/Color/i).fill("#ff0000");
+    await page.getByLabel(/Opacity:/i).fill("1");
+    await page.getByLabel(/Rotation:/i).fill("0");
+    await page.getByRole("button", { name: /Below content/i }).click();
+    const hiddenBelowBytes = await generateThenDownloadBytes(
+      page,
+      /^Add watermark$/,
+      /^Download watermarked PDF$/,
+      "watermarked.pdf",
+    );
+
+    const abovePng = decodePngRgb(
+      await renderFirstPagePdfToPng(
+        page,
+        visibleAboveBytes,
+        "phase64-visible-above.pdf",
+      ),
+    );
+    const belowPng = decodePngRgb(
+      await renderFirstPagePdfToPng(
+        page,
+        hiddenBelowBytes,
+        "phase64-hidden-below.pdf",
+      ),
+    );
+    const aboveCenter = averagePngRegionColor(
+      abovePng,
+      { x: 0.36, y: 0.42, width: 0.28, height: 0.16 },
+    );
+    const belowCenter = averagePngRegionColor(
+      belowPng,
+      { x: 0.36, y: 0.42, width: 0.28, height: 0.16 },
+    );
+    expect(aboveCenter.red).toBeGreaterThan(belowCenter.red + 18);
+    expect(belowCenter.blue + belowCenter.green).toBeLessThan(120);
+  });
 });
 
 test.describe("error states and mobile usability", () => {
@@ -2674,6 +2857,104 @@ test.describe("error states and mobile usability", () => {
 
 async function uploadFirstFile(page: Page, filePath: string | string[]) {
   await page.locator('input[type="file"]').first().setInputFiles(filePath);
+}
+
+async function createPhase64OcclusionPdf(filePath: string) {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const page = pdf.addPage([420, 300]);
+
+  page.drawText("PHASE64 OCCLUSION FIXTURE", {
+    x: 34,
+    y: 250,
+    size: 18,
+    font,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+  page.drawRectangle({
+    x: 105,
+    y: 110,
+    width: 235,
+    height: 76,
+    color: rgb(0, 0, 0),
+  });
+
+  fs.writeFileSync(filePath, Buffer.from(await pdf.save()));
+}
+
+async function getFirstContentStreamText(pdfBytes: Buffer, pageIndex: number) {
+  const pdf = await PDFDocument.load(pdfBytes, { updateMetadata: false });
+  const contents = pdf.getPage(pageIndex).node.get(PDFName.of("Contents"));
+
+  if (!contents || !(contents instanceof PDFArray) || contents.size() === 0) {
+    return "";
+  }
+
+  const firstStream = pdf.context.lookup(contents.get(0)) as {
+    getContents?: () => Uint8Array;
+    getContentsString?: () => string;
+  };
+  const streamBytes = firstStream.getContents?.();
+
+  if (streamBytes) {
+    try {
+      return inflateSync(Buffer.from(streamBytes)).toString("latin1");
+    } catch {
+      return Buffer.from(streamBytes).toString("latin1");
+    }
+  }
+
+  return firstStream.getContentsString?.() ?? "";
+}
+
+async function renderFirstPagePdfToPng(
+  page: Page,
+  pdfBytes: Buffer,
+  fileName: string,
+) {
+  const pdfPath = path.join(fixturesDir, fileName);
+  fs.writeFileSync(pdfPath, pdfBytes);
+  await page.goto("/pdf-to-png");
+  await uploadFirstFile(page, pdfPath);
+  return generateThenDownloadBytes(
+    page,
+    /^Convert to PNG$/,
+    /^Download PNG$/,
+    "page-1.png",
+  );
+}
+
+function averagePngRegionColor(
+  png: { height: number; pixels: Buffer; width: number },
+  region: { x: number; y: number; width: number; height: number },
+) {
+  const startX = Math.max(0, Math.floor(png.width * region.x));
+  const endX = Math.min(png.width, Math.ceil(png.width * (region.x + region.width)));
+  const startY = Math.max(0, Math.floor(png.height * region.y));
+  const endY = Math.min(
+    png.height,
+    Math.ceil(png.height * (region.y + region.height)),
+  );
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+  let count = 0;
+
+  for (let y = startY; y < endY; y += 1) {
+    for (let x = startX; x < endX; x += 1) {
+      const offset = (y * png.width + x) * 3;
+      red += png.pixels[offset];
+      green += png.pixels[offset + 1];
+      blue += png.pixels[offset + 2];
+      count += 1;
+    }
+  }
+
+  return {
+    blue: blue / Math.max(1, count),
+    green: green / Math.max(1, count),
+    red: red / Math.max(1, count),
+  };
 }
 
 function readyMergeFileCards(page: Page) {

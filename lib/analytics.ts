@@ -30,6 +30,7 @@ export type ToolAnalyticsPayload = {
   selectedPageCount?: number;
   workloadClass?: string;
   cancelled?: boolean;
+  watermarkLayer?: string;
 };
 
 export type AnalyticsConsent = "accepted" | "rejected";
@@ -141,5 +142,6 @@ function sanitizePayload(payload: ToolAnalyticsPayload) {
     selected_page_count: payload.selectedPageCount,
     workload_class: payload.workloadClass,
     cancelled: payload.cancelled,
+    watermark_layer: payload.watermarkLayer,
   };
 }

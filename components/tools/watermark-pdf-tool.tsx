@@ -17,6 +17,7 @@ import {
   PDFDocument,
   rgb,
   StandardFonts,
+  type PDFImage,
   type PDFFont,
   type PDFPage,
   type RGB,
@@ -33,9 +34,18 @@ import {
   summarizeFilesForAnalytics,
   useToolAnalytics,
 } from "@/hooks/use-tool-analytics";
+import {
+  prependImageWatermarkStream,
+  prependTextWatermarkStream,
+  verifyPrependedWatermarkStreams,
+  type ImageWatermarkPlacement,
+  type TextWatermarkPlacement,
+} from "@/lib/pdf/watermark-content-stream";
+import { parsePageRangeInput } from "@/lib/page-ranges";
 import { cn } from "@/lib/utils";
 
 type WatermarkMode = "text" | "image";
+type WatermarkLayer = "above" | "below";
 type FontChoice = "helvetica" | "times" | "courier";
 type PageTargetMode = "all" | "odd" | "even" | "range";
 type WatermarkPosition =
@@ -53,6 +63,7 @@ type WatermarkPosition =
 type SelectedPdf = {
   file: File;
   pageCount: number;
+  hasDigitalSignature: boolean;
 };
 
 type PagePreview = {
@@ -93,6 +104,24 @@ const fontOptions: Array<{ label: string; value: FontChoice }> = [
   { label: "Courier", value: "courier" },
 ];
 
+const layerOptions: Array<{
+  label: string;
+  value: WatermarkLayer;
+  description: string;
+}> = [
+  {
+    label: "Above content",
+    value: "above",
+    description: "Place the watermark on top of the existing page content.",
+  },
+  {
+    label: "Below content",
+    value: "below",
+    description:
+      "Place the watermark behind page content when the PDF structure supports it.",
+  },
+];
+
 const pageTargetOptions: Array<{
   label: string;
   value: PageTargetMode;
@@ -124,6 +153,7 @@ export function WatermarkPdfTool() {
   const [selectedPdf, setSelectedPdf] = useState<SelectedPdf | null>(null);
   const [pages, setPages] = useState<PagePreview[]>([]);
   const [mode, setMode] = useState<WatermarkMode>("text");
+  const [layer, setLayer] = useState<WatermarkLayer>("above");
   const [position, setPosition] = useState<WatermarkPosition>("center");
   const [text, setText] = useState("LiftPDF");
   const [font, setFont] = useState<FontChoice>("helvetica");
@@ -288,6 +318,7 @@ export function WatermarkPdfTool() {
       setSelectedPdf({
         file,
         pageCount: pdf.numPages,
+        hasDigitalSignature: await pdfContainsDigitalSignature(file),
       });
       setPages(previews);
       analytics.trackUploadCompleted({
@@ -386,6 +417,7 @@ export function WatermarkPdfTool() {
     clearGeneratedFile();
     analytics.trackConversionStarted({
       mode,
+      watermarkLayer: layer,
       pageCount: selectedPdf.pageCount,
       outputFormat: "pdf",
     });
@@ -399,6 +431,8 @@ export function WatermarkPdfTool() {
         pageCount: pdfPages.length,
       });
       const targetPageSet = new Set(targetPages);
+      const belowWatermarkPageIndexes: number[] = [];
+      const belowWatermarkRefs: string[] = [];
 
       setProgress("Applying watermark...");
       if (mode === "text") {
@@ -410,15 +444,36 @@ export function WatermarkPdfTool() {
             return;
           }
 
-          drawTextWatermark({
+          const placements = getTextWatermarkPlacements({
             page,
             text: text.trim(),
             font: embeddedFont,
-            color,
             size: textSize,
-            opacity: textOpacity,
             rotation: textRotation,
             position,
+          });
+
+          if (layer === "below") {
+            belowWatermarkPageIndexes.push(index);
+            belowWatermarkRefs.push(
+              prependTextWatermarkStream({
+                pdf,
+                page,
+                font: embeddedFont,
+                color,
+                opacity: textOpacity,
+                placements,
+              }),
+            );
+            return;
+          }
+
+          drawTextWatermark({
+            page,
+            font: embeddedFont,
+            color,
+            opacity: textOpacity,
+            placements,
           });
         });
       } else if (imageWatermark) {
@@ -433,24 +488,68 @@ export function WatermarkPdfTool() {
             return;
           }
 
-          drawImageWatermark({
+          const placements = getImageWatermarkPlacements({
             page,
-            image: embeddedImage,
             imageWidth: imageWatermark.width,
             imageHeight: imageWatermark.height,
             sizePercent: imageSize,
-            opacity: imageOpacity,
             rotation: imageRotation,
             position,
+          });
+
+          if (layer === "below") {
+            belowWatermarkPageIndexes.push(index);
+            belowWatermarkRefs.push(
+              prependImageWatermarkStream({
+                pdf,
+                page,
+                image: embeddedImage,
+                opacity: imageOpacity,
+                placements,
+              }),
+            );
+            return;
+          }
+
+          drawImageWatermark({
+            page,
+            image: embeddedImage,
+            opacity: imageOpacity,
+            placements,
           });
         });
       }
 
+      if (
+        layer === "below" &&
+        !verifyPrependedWatermarkStreams({
+          pdf,
+          pageIndexes: belowWatermarkPageIndexes,
+          watermarkRefs: belowWatermarkRefs,
+        })
+      ) {
+        throw new Error("Below-content watermark order could not be verified.");
+      }
+
       setProgress("Generating watermarked PDF...");
       const bytes = await pdf.save({
-        useObjectStreams: true,
+        useObjectStreams: layer === "below" ? false : true,
         addDefaultPage: false,
       });
+      if (layer === "below") {
+        const outputPdf = await PDFDocument.load(bytes);
+        if (
+          !verifyPrependedWatermarkStreams({
+            pdf: outputPdf,
+            pageIndexes: belowWatermarkPageIndexes,
+            watermarkRefs: belowWatermarkRefs,
+          })
+        ) {
+          throw new Error(
+            "Below-content watermark order could not be verified after saving.",
+          );
+        }
+      }
       const buffer = new ArrayBuffer(bytes.byteLength);
       new Uint8Array(buffer).set(bytes);
       const blob = new Blob([buffer], { type: "application/pdf" });
@@ -462,6 +561,7 @@ export function WatermarkPdfTool() {
       setProgress("Watermarked PDF created successfully.");
       analytics.trackConversionCompleted({
         mode,
+        watermarkLayer: layer,
         pageCount: selectedPdf.pageCount,
         outputFormat: "pdf",
         status: "success",
@@ -507,6 +607,7 @@ export function WatermarkPdfTool() {
       return [];
     });
     setMode("text");
+    setLayer("above");
     setPosition("center");
     setText("LiftPDF");
     setFont("helvetica");
@@ -545,6 +646,14 @@ export function WatermarkPdfTool() {
         <div aria-live="polite" className="space-y-3">
           {error ? (
             <StatusNotice tone="error" icon={<Info className="size-4" />} message={error} />
+          ) : null}
+
+          {selectedPdf?.hasDigitalSignature ? (
+            <StatusNotice
+              tone="neutral"
+              icon={<Info className="size-4" />}
+              message="This PDF appears to contain a digital signature. Adding a watermark will modify the file and may invalidate the existing signature."
+            />
           ) : null}
 
           {isLoadingPreview ? (
@@ -742,6 +851,34 @@ export function WatermarkPdfTool() {
               </>
             )}
 
+            <FieldGroup label="Layer">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {layerOptions.map((layerOption) => (
+                  <button
+                    key={layerOption.value}
+                    type="button"
+                    aria-pressed={layer === layerOption.value}
+                    className={cn(
+                      "rounded-xl border px-3 py-3 text-left transition-all duration-[180ms] ease-out hover:-translate-y-0.5 hover:shadow-sm",
+                      layer === layerOption.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-background text-foreground hover:bg-muted",
+                    )}
+                    onClick={() =>
+                      updateWatermark(() => setLayer(layerOption.value))
+                    }
+                  >
+                    <span className="block text-sm font-semibold">
+                      {layerOption.label}
+                    </span>
+                    <span className="mt-1 block text-sm leading-5 text-muted-foreground">
+                      {layerOption.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </FieldGroup>
+
             <FieldGroup label="Position">
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {positionOptions.map((positionOption) => (
@@ -820,6 +957,7 @@ export function WatermarkPdfTool() {
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Watermark changes appear immediately on every page preview.
+                Below-content export is verified in the generated PDF.
               </p>
             </div>
 
@@ -908,6 +1046,10 @@ export function WatermarkPdfTool() {
           <PdfSummaryRow
             label="Type"
             value={mode === "text" ? "Text watermark" : "Image watermark"}
+          />
+          <PdfSummaryRow
+            label="Layer"
+            value={layer === "above" ? "Above content" : "Below content"}
           />
           <PdfSummaryRow label="Position" value={labelForPosition(position)} />
           <PdfSummaryRow label="Opacity" value={activeOpacity.toFixed(1)} />
@@ -1181,26 +1323,49 @@ async function embedSelectedFont(pdf: PDFDocument, font: FontChoice) {
 
 function drawTextWatermark({
   page,
-  text,
   font,
   color,
-  size,
   opacity,
+  placements,
+}: {
+  page: PDFPage;
+  font: PDFFont;
+  color: RGB;
+  opacity: number;
+  placements: TextWatermarkPlacement[];
+}) {
+  placements.forEach((placement) => {
+    page.drawText(placement.text, {
+      x: placement.x,
+      y: placement.y,
+      size: placement.size,
+      font,
+      color,
+      opacity,
+      rotate: degrees(placement.rotation),
+    });
+  });
+}
+
+function getTextWatermarkPlacements({
+  page,
+  text,
+  font,
+  size,
   rotation,
   position,
 }: {
   page: PDFPage;
   text: string;
   font: PDFFont;
-  color: RGB;
   size: number;
-  opacity: number;
   rotation: number;
   position: WatermarkPosition;
-}) {
+}): TextWatermarkPlacement[] {
   const { width, height } = page.getSize();
   const textWidth = font.widthOfTextAtSize(text, size);
   const textHeight = size;
+  const placements: TextWatermarkPlacement[] = [];
 
   if (position === "tile") {
     const xStep = Math.max(180, textWidth + 90);
@@ -1208,19 +1373,17 @@ function drawTextWatermark({
 
     for (let x = 36; x < width; x += xStep) {
       for (let y = 48; y < height; y += yStep) {
-        page.drawText(text, {
+        placements.push({
+          text,
           x,
           y,
           size,
-          font,
-          color,
-          opacity,
-          rotate: degrees(rotation),
+          rotation,
         });
       }
     }
 
-    return;
+    return placements;
   }
 
   const coordinates = getCoordinates({
@@ -1231,40 +1394,59 @@ function drawTextWatermark({
     markHeight: textHeight,
   });
 
-  page.drawText(text, {
-    x: coordinates.x,
-    y: coordinates.y,
-    size,
-    font,
-    color,
-    opacity,
-    rotate: degrees(rotation),
-  });
+  return [
+    {
+      text,
+      x: coordinates.x,
+      y: coordinates.y,
+      size,
+      rotation,
+    },
+  ];
 }
 
 function drawImageWatermark({
   page,
   image,
+  opacity,
+  placements,
+}: {
+  page: PDFPage;
+  image: PDFImage;
+  opacity: number;
+  placements: ImageWatermarkPlacement[];
+}) {
+  placements.forEach((placement) => {
+    page.drawImage(image, {
+      x: placement.x,
+      y: placement.y,
+      width: placement.width,
+      height: placement.height,
+      opacity,
+      rotate: degrees(placement.rotation),
+    });
+  });
+}
+
+function getImageWatermarkPlacements({
+  page,
   imageWidth,
   imageHeight,
   sizePercent,
-  opacity,
   rotation,
   position,
 }: {
   page: PDFPage;
-  image: { width: number; height: number };
   imageWidth: number;
   imageHeight: number;
   sizePercent: number;
-  opacity: number;
   rotation: number;
   position: WatermarkPosition;
-}) {
+}): ImageWatermarkPlacement[] {
   const { width, height } = page.getSize();
   const drawWidth = width * (sizePercent / 100);
   const drawHeight = drawWidth * (imageHeight / imageWidth);
-  const drawableImage = image as Parameters<PDFPage["drawImage"]>[0];
+  const placements: ImageWatermarkPlacement[] = [];
 
   if (position === "tile") {
     const tileWidth = drawWidth * 0.55;
@@ -1274,18 +1456,17 @@ function drawImageWatermark({
 
     for (let x = 36; x < width; x += xStep) {
       for (let y = 48; y < height; y += yStep) {
-        page.drawImage(drawableImage, {
+        placements.push({
           x,
           y,
           width: tileWidth,
           height: tileHeight,
-          opacity,
-          rotate: degrees(rotation),
+          rotation,
         });
       }
     }
 
-    return;
+    return placements;
   }
 
   const coordinates = getCoordinates({
@@ -1296,14 +1477,15 @@ function drawImageWatermark({
     markHeight: drawHeight,
   });
 
-  page.drawImage(drawableImage, {
-    x: coordinates.x,
-    y: coordinates.y,
-    width: drawWidth,
-    height: drawHeight,
-    opacity,
-    rotate: degrees(rotation),
-  });
+  return [
+    {
+      x: coordinates.x,
+      y: coordinates.y,
+      width: drawWidth,
+      height: drawHeight,
+      rotation,
+    },
+  ];
 }
 
 function getCoordinates({
@@ -1499,65 +1681,7 @@ function getTargetPageNumbers({
     return evenPages;
   }
 
-  return parsePageRange(pageRange, pageCount);
-}
-
-function parsePageRange(input: string, pageCount: number) {
-  const trimmedInput = input.trim();
-
-  if (!trimmedInput) {
-    throw new Error("Enter a page range such as 2-5 or 1,3,7.");
-  }
-
-  const pageNumbers: number[] = [];
-  const seenPages = new Set<number>();
-
-  for (const part of trimmedInput.split(",")) {
-    const token = part.trim();
-
-    if (!token) {
-      throw new Error("Enter a page range such as 2-5 or 1,3,7.");
-    }
-
-    const singlePageMatch = /^(\d+)$/.exec(token);
-
-    if (singlePageMatch) {
-      addPageNumber(Number(singlePageMatch[1]));
-      continue;
-    }
-
-    const rangeMatch = /^(\d+)-(\d+)$/.exec(token);
-
-    if (rangeMatch) {
-      const startPage = Number(rangeMatch[1]);
-      const endPage = Number(rangeMatch[2]);
-
-      if (startPage > endPage) {
-        throw new Error("Page ranges must go from low to high, for example 2-5.");
-      }
-
-      for (let pageNumber = startPage; pageNumber <= endPage; pageNumber += 1) {
-        addPageNumber(pageNumber);
-      }
-
-      continue;
-    }
-
-    throw new Error("Enter a page range such as 2-5 or 1,3,7.");
-  }
-
-  return pageNumbers;
-
-  function addPageNumber(pageNumber: number) {
-    if (pageNumber < 1 || pageNumber > pageCount) {
-      throw new Error("Page range cannot include pages outside this PDF.");
-    }
-
-    if (!seenPages.has(pageNumber)) {
-      seenPages.add(pageNumber);
-      pageNumbers.push(pageNumber);
-    }
-  }
+  return parsePageRangeInput(pageRange, pageCount);
 }
 
 function summarizePageTarget(
@@ -1592,4 +1716,38 @@ function isPdfFile(file: File) {
 
 function isImageFile(file: File) {
   return ["image/png", "image/jpeg", "image/webp"].includes(file.type);
+}
+
+async function pdfContainsDigitalSignature(file: File) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  return (
+    bytePatternExists(bytes, "/ByteRange") ||
+    bytePatternExists(bytes, "/Sig") ||
+    bytePatternExists(bytes, "/SubFilter")
+  );
+}
+
+function bytePatternExists(bytes: Uint8Array, pattern: string) {
+  const patternBytes = new TextEncoder().encode(pattern);
+
+  if (patternBytes.length > bytes.length) {
+    return false;
+  }
+
+  for (let offset = 0; offset <= bytes.length - patternBytes.length; offset += 1) {
+    let matches = true;
+
+    for (let index = 0; index < patternBytes.length; index += 1) {
+      if (bytes[offset + index] !== patternBytes[index]) {
+        matches = false;
+        break;
+      }
+    }
+
+    if (matches) {
+      return true;
+    }
+  }
+
+  return false;
 }
