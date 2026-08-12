@@ -4,9 +4,9 @@ import { CompressPdfTool } from "@/components/tools/compress-pdf-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
 import { premiumToolContent } from "@/data/premium-tool-content";
 
-const title = "Compress PDF Online - Free PDF Compressor | LiftPDF";
+const title = "Compress PDF Online - Reduce PDF File Size | LiftPDF";
 const description =
-  "Compress PDF files online for free. Reduce file size and optionally remove document metadata locally in your browser.";
+  "Reduce PDF file size locally with QPDF WASM. Choose Preserve quality, Balanced or Strong compression and optionally remove document metadata.";
 
 export const metadata: Metadata = {
   title: { absolute: title },

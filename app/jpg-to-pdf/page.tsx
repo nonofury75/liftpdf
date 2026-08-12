@@ -5,16 +5,17 @@ import { premiumToolContent } from "@/data/premium-tool-content";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "JPG to PDF Converter - Free Online Tool | LiftPDF",
+    absolute: "JPG to PDF - Convert JPG Images Online | LiftPDF",
   },
   description:
-    "Convert JPG images to a PDF online for free. Upload multiple images, reorder them and download a clean A4 PDF in seconds.",
+    "Convert JPG images to one PDF in your browser. Reorder images, choose page size, orientation, margins and fit mode before downloading.",
   alternates: {
     canonical: "/jpg-to-pdf",
   },
   openGraph: {
-    title: "JPG to PDF Converter - Free Online Tool | LiftPDF",
-    description: "Convert JPG images to a PDF online for free with LiftPDF.",
+    title: "JPG to PDF - Convert JPG Images Online | LiftPDF",
+    description:
+      "Convert JPG images to one PDF in your browser with LiftPDF.",
     url: `${siteConfig.url}/jpg-to-pdf`,
     images: [
       {
@@ -27,8 +28,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "JPG to PDF Converter - Free Online Tool | LiftPDF",
-    description: "Convert JPG images to a PDF online for free with LiftPDF.",
+    title: "JPG to PDF - Convert JPG Images Online | LiftPDF",
+    description:
+      "Convert JPG images to one PDF in your browser with LiftPDF.",
     images: ["/images/seo/jpg-to-pdf/jpg-to-pdf-og.webp"],
   },
 };

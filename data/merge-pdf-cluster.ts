@@ -200,7 +200,7 @@ export const mergePdfGuides: MergePdfGuide[] = [
     title: "Merge PDF Online Free | LiftPDF",
     description:
       "Merge PDF files online for free with a browser-based workflow. Combine files, reorder them and download one PDF.",
-    h1: "Merge PDF Online",
+    h1: "Merge PDF Online Guide",
     intent: "guide",
     primaryKeyword: "merge pdf online",
     secondaryKeywords: [

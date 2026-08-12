@@ -4,7 +4,7 @@ import { ToolPageShell } from "@/components/tools/tool-page-shell";
 import { UnlockPdfTool } from "@/components/tools/unlock-pdf-tool";
 import { premiumToolContent } from "@/data/premium-tool-content";
 
-const title = "Unlock PDF Online Free | Remove PDF Password | LiftPDF";
+const title = "Unlock PDF - Remove Known PDF Passwords | LiftPDF";
 const description =
   "Unlock a password-protected or restricted PDF online for free. Remove PDF encryption or owner-password restrictions locally in your browser.";
 

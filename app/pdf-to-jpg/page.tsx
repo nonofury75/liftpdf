@@ -4,9 +4,9 @@ import { PdfToJpgTool } from "@/components/tools/pdf-to-jpg-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
 import { premiumToolContent } from "@/data/premium-tool-content";
 
-const title = "PDF to JPG Converter - Free Online Tool | LiftPDF";
+const title = "PDF to JPG - Convert PDF Pages to Images | LiftPDF";
 const description =
-  "Convert PDF pages to high-quality JPG images online for free. Fast, secure and easy PDF to JPG converter by LiftPDF.";
+  "Convert all PDF pages, one page or a page range to JPG images in your browser with Standard or High quality output.";
 
 export const metadata: Metadata = {
   title: { absolute: title },

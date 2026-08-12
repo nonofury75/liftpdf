@@ -11,10 +11,10 @@ type ToolCatalogProps = {
 };
 
 const stats = [
-  "17+ PDF tools",
-  "100% Browser Processing",
+  "17 live PDF tools",
+  "Browser-side processing",
   "Free",
-  "No Upload Required",
+  "No account required",
 ];
 
 const privacyItems = [

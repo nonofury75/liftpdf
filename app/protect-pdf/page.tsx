@@ -4,7 +4,7 @@ import { ProtectPdfTool } from "@/components/tools/protect-pdf-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
 import { premiumToolContent } from "@/data/premium-tool-content";
 
-const title = "Protect PDF Online Free | Add Password to PDF | LiftPDF";
+const title = "Protect PDF - Add a Password to PDF | LiftPDF";
 const description =
   "Protect a PDF with AES-256 encryption, an open password and optional PDF permissions directly in your browser.";
 

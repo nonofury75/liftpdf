@@ -4,9 +4,9 @@ import { MergePdfTool } from "@/components/tools/merge-pdf-tool";
 import { ToolPageShell } from "@/components/tools/tool-page-shell";
 import { premiumToolContent } from "@/data/premium-tool-content";
 
-const title = "Merge PDF Online - Free PDF Merger | LiftPDF";
+const title = "Merge PDF Online - Combine PDF Files | LiftPDF";
 const description =
-  "Merge multiple PDF files into one document for free. Fast, secure and easy online PDF merger by LiftPDF.";
+  "Combine multiple PDF files in your browser. Reorder files, isolate invalid or protected PDFs, choose the output name and download one merged PDF.";
 
 export const metadata: Metadata = {
   title: { absolute: title },
