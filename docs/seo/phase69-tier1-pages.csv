@@ -1,0 +1,24 @@
+url,type,priority,primary_intent,seo_role,phase69_action
+https://liftpdf.com,home,TIER1,liftpdf pdf tools,Brand and main product entry,KEEP
+https://liftpdf.com/pdf-tools,tool_index,TIER1,all pdf tools,Full tool catalog and category router,ENRICHED
+https://liftpdf.com/jpg-to-pdf,tool,TIER1,jpg to pdf,High-demand conversion tool,ENRICHED_METADATA
+https://liftpdf.com/images-to-pdf,tool,TIER1,images to pdf,Batch image-to-PDF workflow,KEEP
+https://liftpdf.com/merge-pdf,tool,TIER1,merge pdf,High-demand organization tool,ENRICHED_METADATA_H1
+https://liftpdf.com/compress-pdf,tool,TIER1,compress pdf,High-demand file-size tool,ENRICHED_METADATA
+https://liftpdf.com/pdf-to-jpg,tool,TIER1,pdf to jpg,High-demand export tool,ENRICHED_METADATA
+https://liftpdf.com/protect-pdf,tool,TIER1,protect pdf,Security conversion intent,ENRICHED_METADATA
+https://liftpdf.com/unlock-pdf,tool,TIER1,unlock pdf,Security recovery intent with permission,ENRICHED_METADATA
+https://liftpdf.com/watermark-pdf,tool,TIER1,watermark pdf,Document finishing intent,KEEP
+https://liftpdf.com/split-pdf,tool,TIER1,split pdf,High-demand page organization intent,KEEP
+https://liftpdf.com/learn,editorial_hub,TIER1,learn pdf,Editorial hub,KEEP
+https://liftpdf.com/guides,editorial_hub,TIER1,pdf guides,Guide library hub,KEEP
+https://liftpdf.com/pdf-security,category,TIER1,pdf security tools,Security category hub,ENRICHED
+https://liftpdf.com/organize-pdf,category,TIER1,organize pdf,Organization category hub,KEEP
+https://liftpdf.com/pdf-converter,category,TIER1,pdf converter,Conversion category hub,KEEP
+https://liftpdf.com/pdf-image-tools,category,TIER1,pdf image tools,Image and PDF category hub,KEEP
+https://liftpdf.com/pdf-editor,category,TIER1,pdf editor,Editing category hub,KEEP
+https://liftpdf.com/guides/what-is-a-pdf,guide,TIER1,what is a pdf,Foundational article,KEEP
+https://liftpdf.com/guides/how-to-merge-pdf,guide,TIER1,how to merge pdf,Cornerstone guide,KEEP
+https://liftpdf.com/guides/how-to-convert-jpg-to-pdf,guide,TIER1,how to convert jpg to pdf,Cornerstone guide,KEEP
+https://liftpdf.com/guides/what-is-browser-based-pdf-processing,guide,TIER1,browser based pdf processing,Privacy differentiator guide,KEEP
+https://liftpdf.com/guides/what-is-a-password-protected-pdf,guide,TIER1,password protected pdf,Security explainer,KEEP

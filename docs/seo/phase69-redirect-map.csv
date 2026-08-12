@@ -1,0 +1,9 @@
+source,destination,type,reason
+/guides/merge-pdf-on-windows,/guides/how-to-merge-pdf,PERMANENT,platform variants consolidated
+/guides/merge-pdf-on-mac,/guides/how-to-merge-pdf,PERMANENT,platform variants consolidated
+/guides/merge-pdf-on-iphone,/guides/how-to-merge-pdf,PERMANENT,platform variants consolidated
+/guides/merge-pdf-on-android,/guides/how-to-merge-pdf,PERMANENT,platform variants consolidated
+/guides/jpg-to-pdf-on-windows,/guides/how-to-convert-jpg-to-pdf,PERMANENT,platform variants consolidated
+/guides/jpg-to-pdf-on-mac,/guides/how-to-convert-jpg-to-pdf,PERMANENT,platform variants consolidated
+/guides/jpg-to-pdf-on-iphone,/guides/how-to-convert-jpg-to-pdf,PERMANENT,platform variants consolidated
+/guides/jpg-to-pdf-on-android,/guides/how-to-convert-jpg-to-pdf,PERMANENT,platform variants consolidated
