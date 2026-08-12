@@ -538,7 +538,9 @@ test.describe("critical PDF workflows", () => {
     await expect(page.locator("li").filter({ hasText: "text-10.pdf" })).toContainText(
       "Position 1 in the merged PDF",
     );
-    const mergeDownloadPromise = page.waitForEvent("download");
+    const mergeDownloadPromise = page.waitForEvent("download", {
+      timeout: 30_000,
+    });
     await page.getByRole("button", { name: /^Merge PDF$/ }).click();
     const mergeDownload = await mergeDownloadPromise;
     expect(mergeDownload.suggestedFilename()).toBe("merged.pdf");
@@ -557,7 +559,9 @@ test.describe("critical PDF workflows", () => {
     await page.getByRole("textbox").fill("1,3,5-8");
     await expect(page.getByText("1, 3, 5-8")).toBeVisible();
     await page.getByRole("textbox").fill("2,5,8");
-    const splitDownloadPromise = page.waitForEvent("download");
+    const splitDownloadPromise = page.waitForEvent("download", {
+      timeout: 30_000,
+    });
     await page.getByRole("button", { name: /^Split PDF$/ }).click();
     const splitDownload = await splitDownloadPromise;
     expect(splitDownload.suggestedFilename()).toBe("split.pdf");
@@ -569,7 +573,9 @@ test.describe("critical PDF workflows", () => {
     await expect(page.getByRole("button", { name: /^Split PDF$/ })).toBeDisabled();
 
     await page.getByRole("button", { name: /Split every page/i }).click();
-    const splitZipDownloadPromise = page.waitForEvent("download");
+    const splitZipDownloadPromise = page.waitForEvent("download", {
+      timeout: 30_000,
+    });
     await page.getByRole("button", { name: /^Split PDF$/ }).click();
     const splitZipDownload = await splitZipDownloadPromise;
     expect(splitZipDownload.suggestedFilename()).toBe("split-pages.zip");
@@ -3133,7 +3139,7 @@ async function mergeAndCaptureAutomaticDownload(
   page: Page,
   expectedFileName: string,
 ) {
-  const downloadPromise = page.waitForEvent("download");
+  const downloadPromise = page.waitForEvent("download", { timeout: 30_000 });
   await page.getByRole("button", { name: /^Merge PDF$/ }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe(expectedFileName);

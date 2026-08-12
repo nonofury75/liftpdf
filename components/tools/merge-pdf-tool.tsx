@@ -112,6 +112,12 @@ export function MergePdfTool() {
     };
   }, []);
 
+  function updateFiles(updater: (currentFiles: UploadedPdf[]) => UploadedPdf[]) {
+    const nextFiles = updater(filesRef.current);
+    filesRef.current = nextFiles;
+    setFiles(nextFiles);
+  }
+
   function handleFilesSelected(selectedFiles: File[]) {
     analytics.trackUploadStarted(summarizeFilesForAnalytics(selectedFiles));
     const validFiles = selectedFiles.filter(isPdfFile);
@@ -142,10 +148,7 @@ export function MergePdfTool() {
         file.size === 0 ? "This PDF file is empty." : undefined,
     }));
 
-    setFiles((currentFiles) => [
-      ...currentFiles,
-      ...pendingFiles,
-    ]);
+    updateFiles((currentFiles) => [...currentFiles, ...pendingFiles]);
     analytics.trackUploadCompleted({
       ...summarizeFilesForAnalytics(validFiles),
       outputFormat: "pdf",
@@ -178,7 +181,7 @@ export function MergePdfTool() {
       URL.revokeObjectURL(fileToRemove.previewUrl);
     }
 
-    setFiles(nextFiles);
+    updateFiles(() => nextFiles);
 
     if (
       fileToRemove &&
@@ -205,7 +208,7 @@ export function MergePdfTool() {
 
   function handleMove(id: string, direction: "up" | "down") {
     clearMergedPdfUrl();
-    setFiles((currentFiles) => {
+    updateFiles((currentFiles) => {
       const index = currentFiles.findIndex((file) => file.id === id);
 
       if (index === -1) {
@@ -228,7 +231,7 @@ export function MergePdfTool() {
 
   function handleReorder(draggedId: string, targetId: string) {
     clearMergedPdfUrl();
-    setFiles((currentFiles) => {
+    updateFiles((currentFiles) => {
       const draggedIndex = currentFiles.findIndex((file) => file.id === draggedId);
       const targetIndex = currentFiles.findIndex((file) => file.id === targetId);
 
@@ -340,7 +343,7 @@ export function MergePdfTool() {
         URL.revokeObjectURL(file.previewUrl);
       }
     });
-    setFiles([]);
+    updateFiles(() => []);
     setError(null);
     setOutputFileNameInput(getPdfOutputFileNameBase(mergedFileName));
     setGeneratedFileName(mergedFileName);
@@ -367,26 +370,27 @@ export function MergePdfTool() {
       previewUrl = thumbnail.previewUrl;
       const pageCount = pdf.numPages;
 
-      if (!filesRef.current.some((currentFile) => currentFile.id === id)) {
-        URL.revokeObjectURL(previewUrl);
-        await pdf.destroy();
-        return;
-      }
+      let fileWasUpdated = false;
+      updateFiles((currentFiles) =>
+        currentFiles.map((currentFile) => {
+          if (currentFile.id !== id) {
+            return currentFile;
+          }
 
-      setFiles((currentFiles) =>
-        currentFiles.map((currentFile) =>
-          currentFile.id === id
-            ? {
-                ...currentFile,
-                pageCount,
-                previewHeight: thumbnail.height,
-                previewUrl,
-                previewWidth: thumbnail.width,
-                status: "ready",
-              }
-            : currentFile,
-        ),
+          fileWasUpdated = true;
+          return {
+            ...currentFile,
+            pageCount,
+            previewHeight: thumbnail.height,
+            previewUrl,
+            previewWidth: thumbnail.width,
+            status: "ready",
+          };
+        }),
       );
+      if (!fileWasUpdated) {
+        URL.revokeObjectURL(previewUrl);
+      }
       await pdf.destroy();
     } catch (loadError) {
       if (pdf) {
@@ -398,7 +402,7 @@ export function MergePdfTool() {
       }
 
       const issue = classifyPdfError(loadError);
-      setFiles((currentFiles) =>
+      updateFiles((currentFiles) =>
         currentFiles.map((currentFile) =>
           currentFile.id === id
             ? {
@@ -422,7 +426,7 @@ export function MergePdfTool() {
     status: MergeIssueStatus,
     errorMessage: string,
   ) {
-    setFiles((currentFiles) =>
+    updateFiles((currentFiles) =>
       currentFiles.map((currentFile) =>
         currentFile.id === id
           ? {

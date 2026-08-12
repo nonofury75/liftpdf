@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { shouldBypassImageOptimizer } from "@/lib/image-optimizer-bypass";
 import { SecurityBadges } from "@/components/trust/security-badges";
 
 type ToolHeroImage = {
@@ -48,6 +49,7 @@ export function ToolHero({
               priority
               className="h-auto w-full rounded-2xl"
               sizes="420px"
+              unoptimized={shouldBypassImageOptimizer(image.src)}
             />
           </div>
         ) : null}

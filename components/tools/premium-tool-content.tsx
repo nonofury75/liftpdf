@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { shouldBypassImageOptimizer } from "@/lib/image-optimizer-bypass";
 import {
   ArrowRight,
   BadgeCheck,
@@ -163,6 +164,7 @@ export function PremiumToolContent({
             height={content.heroImage.height}
             className="h-auto w-full rounded-xl shadow-sm"
             sizes="(min-width: 1024px) 560px, 100vw"
+            unoptimized={shouldBypassImageOptimizer(content.heroImage.src)}
           />
         </div>
       </section>
@@ -393,6 +395,7 @@ function GuideSection({ content }: { content: PremiumToolContentData }) {
             loading="lazy"
             decoding="async"
             sizes="(min-width: 1024px) 300px, 100vw"
+            unoptimized={shouldBypassImageOptimizer(content.thumbnail.src)}
           />
         </div>
       </div>
