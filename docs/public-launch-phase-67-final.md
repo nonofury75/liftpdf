@@ -16,7 +16,7 @@ No PDF engine, tool feature, product workflow, SEO page batch, or redesign was a
 | Branch | `main` |
 | Remote | `https://github.com/nonofury75/liftpdf.git` |
 | HEAD before Phase 67 docs | `3edca66` |
-| Phase 67 commit | `cdf5c1b Prepare LiftPDF public launch` |
+| Phase 67 commits | `cdf5c1b Prepare LiftPDF public launch`; `7cfc015 Document Phase 67 production deployment` |
 | V1 tag | `v1.0.0` |
 | V1 release commit | `10f81bd` |
 | Version | `1.0.0` |
@@ -196,15 +196,14 @@ Full E2E was not required because Phase 67 is documentation/acquisition planning
 
 Production is healthy by route smoke.
 
-Vercel production deployment:
+Vercel production deployment was verified with Vercel CLI after the Phase 67 push:
 
 ```text
-dpl_5VmyjhuSiVTQu5YQ2qrf4ZAcH7nE
-https://liftpdf-gpt3pca9g-rachator75010-5712s-projects.vercel.app
 Status: READY
 Alias: https://liftpdf.com
-Created: 2026-08-12 06:43:37 Europe/Paris
 ```
+
+Note: documentation-only commits create new production deployment IDs, so this report records the stable condition that matters for launch: production alias READY and healthy route smoke.
 
 ## 16. Next Action
 

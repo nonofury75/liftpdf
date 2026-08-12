@@ -11,8 +11,8 @@ Scope: public launch baseline after V1 freeze. No product feature, PDF engine, S
 | Production domain | HEALTHY | `https://liftpdf.com` returned 200 in Phase 67 smoke. |
 | V1 release tag | PRESENT | `v1.0.0` exists and resolves to `10f81bd`. |
 | Current HEAD | `3edca66` | Documentation commit after V1 release freeze. |
-| Phase 67 commit | `cdf5c1b` | `Prepare LiftPDF public launch`. |
-| Phase 67 Vercel deployment | READY | `dpl_5VmyjhuSiVTQu5YQ2qrf4ZAcH7nE`, aliased to `https://liftpdf.com`. |
+| Phase 67 commits | `cdf5c1b`, `7cfc015` | Public launch docs and deployment proof docs. |
+| Phase 67 Vercel deployment | READY | Verified with Vercel CLI after push; aliased to `https://liftpdf.com`. |
 | Branch | `main` | Verified locally. |
 | Remote | `https://github.com/nonofury75/liftpdf.git` | Verified locally. |
 | Version | `1.0.0` | `package.json`. |
