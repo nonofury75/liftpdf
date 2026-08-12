@@ -16,6 +16,7 @@ No PDF engine, tool feature, product workflow, SEO page batch, or redesign was a
 | Branch | `main` |
 | Remote | `https://github.com/nonofury75/liftpdf.git` |
 | HEAD before Phase 67 docs | `3edca66` |
+| Phase 67 commit | `cdf5c1b Prepare LiftPDF public launch` |
 | V1 tag | `v1.0.0` |
 | V1 release commit | `10f81bd` |
 | Version | `1.0.0` |
@@ -193,7 +194,17 @@ Full E2E was not required because Phase 67 is documentation/acquisition planning
 
 ## 15. Production
 
-Production is healthy by route smoke. Vercel CLI inspection could not be performed in this session because no Vercel token was available. Phase 66 documents Vercel READY for V1, and Phase 67 independently verified HTTP 200 on the launch-critical routes.
+Production is healthy by route smoke.
+
+Vercel production deployment:
+
+```text
+dpl_5VmyjhuSiVTQu5YQ2qrf4ZAcH7nE
+https://liftpdf-gpt3pca9g-rachator75010-5712s-projects.vercel.app
+Status: READY
+Alias: https://liftpdf.com
+Created: 2026-08-12 06:43:37 Europe/Paris
+```
 
 ## 16. Next Action
 
